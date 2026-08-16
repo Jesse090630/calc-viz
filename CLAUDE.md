@@ -15,7 +15,9 @@
 
 **目标用户**:正在学 AP Calculus AB/BC 的高中生。
 **仓库**:https://github.com/Jesse090630/calc-viz (public,分支 `main`)
-**部署**:待定 —— 见进度日志末尾。
+**线上**:https://jesse090630.github.io/calc-viz/ —— push 到 main 自动部署,
+`npm run check` 是部署门禁(测试不过不上线)。
+构建状态查询(免登录):`https://api.github.com/repos/Jesse090630/calc-viz/actions/runs?per_page=3`
 
 ### 差异点(做任何决策时回来看这一条)
 GeoGebra / Desmos 3D / 各种 volume calculator 都只**显示结果**。
