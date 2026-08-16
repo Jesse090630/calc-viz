@@ -1,0 +1,23 @@
+# Netlify 构建配置。
+#
+# 不写这个文件的话 Netlify 会直接发布仓库根目录 —— 服务的是源码版 index.html,
+# 里面引用的是 /src/main.tsx,浏览器根本跑不了,页面标题对但一片空白。踩过一次。
+[build]
+  command = "npm run build"   # 含 tsc --noEmit && vite build,数学测试在 CI 那边把关
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# 本站用的是 hash 路由(#/shell-method),理论上不需要 SPA 回退。
+# 但留着这条更稳:万一以后换成 path 路由,刷新子路径不会 404。
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 构建产物是内容哈希命名的,可以长期缓存
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
