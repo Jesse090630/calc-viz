@@ -123,8 +123,9 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'Unroll it',
       narration:
         'Cut the shell along one vertical seam and flatten it. It becomes a slab — and a slab is something we already know how to measure: length × height × thickness.',
-      show: [OBJ.axes, OBJ.shell, OBJ.flatLabels],
-      camera: 'three-quarter',
+      // 刻意不显示 axes:摊平后的板已经不绕 y 轴了,再画一根轴穿过它是误导
+      show: [OBJ.shell, OBJ.flatLabels],
+      camera: 'wide', // 摊平后长 2πx ≈ 7.5,three-quarter 会把右端裁掉
       params: { theta: Math.PI * 2 },
       controls: [{ param: 'bend', label: 'unroll', min: 0, max: 1, step: 0.01 }],
       autoplay: { param: 'bend', from: 1, to: 0, delayMs: 900, durationMs: 2000 },
@@ -142,8 +143,9 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'That was not an approximation',
       narration:
         'Textbooks call 2πrhΔx an approximation of the shell. It is not. With r measured at the middle of the shell it equals the true ring volume exactly — compare the two numbers. The only thing we approximated is treating the height as constant across the thickness.',
-      show: [OBJ.axes, OBJ.shell, OBJ.flatLabels],
-      camera: 'three-quarter',
+      // 刻意不显示 axes:摊平后的板已经不绕 y 轴了,再画一根轴穿过它是误导
+      show: [OBJ.shell, OBJ.flatLabels],
+      camera: 'wide', // 摊平后长 2πx ≈ 7.5,three-quarter 会把右端裁掉
       params: { theta: Math.PI * 2, bend: 0 },
       formula: [
         { tex: '2\\pi r h\\,\\Delta x \\;=\\; \\pi\\left(R^{2}-r^{2}\\right)h', highlight: true },
@@ -187,8 +189,17 @@ export const SHELL_METHOD_CHAIN: Chain = {
       show: [OBJ.axes, OBJ.shells],
       camera: 'three-quarter',
       params: { n: 4 },
-      controls: [{ param: 'n', label: 'number of shells  n', min: 1, max: 120, step: 1 }],
-      autoplay: { param: 'n', from: 4, to: 96, delayMs: 800, durationMs: 4200 },
+      controls: [{ param: 'n', label: 'number of shells  n', min: 1, max: 64, step: 1 }],
+      // 刻意用倍增档位而不是连续爬升:这一步要讲的就是"n 翻倍 → 误差缩到 1/4",
+      // 连续变化会把这个倍增关系糊掉。顺带也避免了每帧重建几十个几何体。
+      autoplay: {
+        param: 'n',
+        from: 4,
+        to: 64,
+        steps: [4, 8, 16, 32, 64],
+        delayMs: 800,
+        durationMs: 6500,
+      },
       formula: [
         {
           tex: '\\sum_{i=1}^{n} 2\\pi x_i f(x_i)\\,\\Delta x \\;\\longrightarrow\\; 2\\pi\\!\\int_{0}^{2}\\! x\\,f(x)\\,dx',

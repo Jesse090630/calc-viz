@@ -13,7 +13,7 @@
 export type Params = Readonly<Record<string, number>>;
 
 /** 相机预设。这是通用的取景方式,不含任何概念语义。 */
-export type CameraPreset = 'front' | 'three-quarter' | 'top' | 'free';
+export type CameraPreset = 'front' | 'three-quarter' | 'wide' | 'top' | 'free';
 
 /** 一个可拖动的参数。UI 由 ControlPanel 自动生成。 */
 export interface ControlSpec {
@@ -45,7 +45,15 @@ export interface Autoplay {
   readonly to: number;
   /** 延迟多久才开始动(留给相机过渡) */
   readonly delayMs: number;
+  /** 全程时长(有 steps 时是走完所有档位的总时长) */
   readonly durationMs: number;
+  /**
+   * 逐级跳而不是连续补间。
+   * 两个用处:①有些量本来就该离散地看(例如"n 每翻倍误差缩到 1/4",
+   * 连续爬升反而会把倍增关系糊掉);②避免每帧重建重型几何。
+   * 必须以 from 开头、以 to 结尾(validateChain 会检查)。
+   */
+  readonly steps?: readonly number[];
 }
 
 /** 推导链的一步 */

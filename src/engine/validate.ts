@@ -61,6 +61,11 @@ export function validateChain(chain: Chain): string[] {
       if (a.durationMs <= 0) p(`${w} has durationMs <= 0`);
       if (a.delayMs < 0) p(`${w} has negative delayMs`);
       if (a.from === a.to) p(`${w} goes from ${a.from} to ${a.to} — nothing would move`);
+      if (a.steps) {
+        if (a.steps.length < 2) p(`${w}.steps needs at least 2 values`);
+        if (a.steps[0] !== a.from) p(`${w}.steps must start at from (${a.from})`);
+        if (a.steps[a.steps.length - 1] !== a.to) p(`${w}.steps must end at to (${a.to})`);
+      }
       // 纪律:相机移动与物体运动绝不同时发生。相机过渡约 1.1s,所以延迟不得低于它。
       if (s.camera !== 'free' && a.delayMs < 800) {
         p(`${w} starts after only ${a.delayMs}ms — camera may still be moving (need >= 800)`);

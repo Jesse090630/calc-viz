@@ -21,9 +21,10 @@ export function useAutoplay(
 ): void {
   useEffect(() => {
     if (!autoplay) return;
-    const { param, from, to, delayMs, durationMs } = autoplay;
+    const { param, from, to, delayMs, durationMs, steps } = autoplay;
 
     let raf = 0;
+    let lastStep = -1;
     const start = performance.now() + delayMs;
 
     const frame = (now: number) => {
@@ -33,7 +34,18 @@ export function useAutoplay(
         return;
       }
       const k = Math.min(1, t);
-      setParam(param, from + (to - from) * easeOutCubic(k));
+
+      if (steps && steps.length > 0) {
+        // 逐级跳:只在换档的那一帧写参数,中间帧什么都不做
+        const i = Math.min(steps.length - 1, Math.floor(k * steps.length));
+        if (i !== lastStep) {
+          lastStep = i;
+          setParam(param, steps[i] ?? to);
+        }
+      } else {
+        setParam(param, from + (to - from) * easeOutCubic(k));
+      }
+
       if (k < 1) raf = requestAnimationFrame(frame);
     };
 

@@ -20,12 +20,11 @@ geometry and the symbols change together, one step at a time.
 |---|---|---|
 | 0 | Environment | ✅ done |
 | 1 | Math core (pure functions + tests) | ✅ done |
-| 2 | Chain engine | ⬜ next |
-| 3 | 2D scene layer (SVG) | ⬜ |
-| 4 | 3D scene layer (Three.js) | ⬜ |
-| 5 | Shell Method — flagship chain | ⬜ |
-| 6 | Verification & polish | ⬜ |
-| 7 | 5 more concepts | ⬜ |
+| 2 | Chain engine | ✅ done |
+| 3–4 | Scene layer (Three.js + camera presets) | ✅ done |
+| 5 | Shell Method — flagship chain | ✅ done |
+| 6 | Verification & polish | 🔶 screenshot loop in place |
+| 7 | 5 more concepts | ⬜ next |
 
 ## Getting started
 

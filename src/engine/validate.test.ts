@@ -71,6 +71,18 @@ describe('validateChain 抓得到数据错误', () => {
     expect(has(r, /camera may still be moving/)).toBe(true);
   });
 
+  it('steps 不是从 from 开头 / to 结尾', () => {
+    const r = validateChain(
+      chain([
+        stage({
+          autoplay: { param: 'a', from: 1, to: 8, steps: [2, 4, 6], delayMs: 900, durationMs: 900 },
+        }),
+      ]),
+    );
+    expect(has(r, /steps must start at from/)).toBe(true);
+    expect(has(r, /steps must end at to/)).toBe(true);
+  });
+
   it('autoplay from === to(等于什么都不会动)', () => {
     const r = validateChain(
       chain([stage({ autoplay: { param: 'a', from: 1, to: 1, delayMs: 900, durationMs: 500 } })]),

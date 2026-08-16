@@ -52,7 +52,12 @@ GeoGebra / Desmos 3D / 各种 volume calculator 都只**显示结果**。
 | @react-three/fiber | ^9.7.0 | v9 配 React 19 |
 | @react-three/drei | ^10.7.0 | v10 配 r3f v9 |
 
-2D 图形**手写 SVG 组件**,不引 Mafs / D3(Mafs 已约两年未更新)。
+**架构变更(2026-08-16,原方案的 scene2d/scene3d 双层已废弃)**:
+不做独立的 SVG 二维层。全站**一个 Three.js 场景**,所谓"二维视图"只是把相机切到
+`front` 预设(FOV 18°,拉远到 15.5,接近正交投影)。理由:
+① 2D→3D 不再有交接缝,用户始终看着同一个对象在同一个空间里;
+② 少维护一套坐标系与一套图元;③ 原型已验证这种做法视觉上与真 2D 无异。
+代价:文字与细线不如 SVG 锐利 —— 可接受,标注本来就走 HTML(drei `<Html>`)。
 
 已验证:`npm install` 无 peer 冲突 · `tsc --noEmit` 干净 · `vitest run` 52 passed · `npm run build` 成功。
 
@@ -95,10 +100,17 @@ src/
 │   ├── ChainPlayer.tsx  布局 + 导航 + 键盘;场景由 renderScene prop 注入
 │   ├── FormulaPanel.tsx KaTeX + 单行高亮
 │   └── ControlPanel.tsx 由 stage.controls 自动生成滑块
-├── scene2d/       ⬜ Phase 3 — useMathCoords / Axes / FunctionCurve / RegionFill / …
-├── scene3d/       ⬜ Phase 4 — Stage3D / CameraRig / geometry/shellGeometry / Label3D
-├── concepts/      🔶 shell-method/chain.ts 已写完(9 步数据);场景仍是 PlaceholderScene
-└── ui/            ⬜ 首页与导航
+├── scene/         ✅ 已完成 — 概念无关的图形层
+│   ├── Stage3D.tsx    Canvas + 光照 + OrbitControls
+│   ├── CameraRig.tsx  相机预设与过渡(TRANSITION_MS = 1100)
+│   ├── primitives.tsx Axes / FunctionCurve / RegionFill / SampleRectangle / MathLabel / CircleOutline
+│   ├── theme.ts       配色语义
+│   └── geometry/shellGeometry.ts  参数化壳的三角网格拼装
+├── concepts/      ✅ shell-method 已完整落地
+│   └── shell-method/  chain.ts(9 步数据) + ShellScene.tsx + ShellMesh.tsx
+└── ui/            ⬜ 首页与导航(Phase 7,有多条链时才需要)
+
+tests/e2e/shots.mjs  逐 stage 截图(自带静态服务器,`npm run shots` 一条命令)
 docs/VERIFICATION/ 手算与交叉验证存档
 ```
 
@@ -178,4 +190,17 @@ npm run build    # 生产构建(Vercel 跑的就是这条)
   - 场景仍是 `PlaceholderScene`,目的是让分镜和讲解文字先被验收,不必等 3D 写完。
   - ⚠️ 教训:禁止 3 的正则最初写了词边界 `\b`,`shellCount` 这类驼峰违规全部漏网。
     是变异测试抓出来的,不是 code review。**新增架构规则时必须配一个故意违规的变异测试。**
-- **待办**:GitHub 公开仓库 + Vercel 首次部署(需要 Jesse 的账号操作) → Phase 3 二维场景层。
+- **2026-08-16 · Phase 3 + 4 + 5 完成**。Shell Method 全链跑通,106 个测试 + 9 张逐步截图,console 零错误。
+  - 架构决定:废弃 scene2d/scene3d 双层,改为单一 Three.js 场景 + 相机预设(理由见 §3)。
+  - `math/shellSurface.ts`:壳曲面的顶点函数是**纯数学**,不 import three,
+    因此"弧长守恒""半径守恒""起点对齐"这些几何性质是**单测**验证的,不是靠看画面。
+  - 搭了视觉验证回路:sandbox 里 headless Chromium + swiftshader,`npm run shots` 出 9 张图。
+  - **靠截图抓到的三个 bug**(单测全绿时它们都在):
+    ① `CameraRig` 没等 OrbitControls 就位就设 target,导致 front 视图一直看着 y=0,
+       曲线顶端被切在画面外 —— 单测永远发现不了这种错。
+    ② 取样矩形与区域同处 z=0 造成 z-fighting,矩形上有摩尔纹。
+    ③ 摊平后的板长 2πx≈7.5,`three-quarter` 装不下会裁掉右端 → 新增 `wide` 预设。
+  - 性能:stage 7 原本让 n 连续爬到 96,每帧重建近百个几何体直接卡死。
+    改成**离散倍增档位 [4,8,16,32,64]** —— 顺带更符合教学意图(要讲的就是"n 翻倍误差缩 1/4",
+    连续变化反而把倍增关系糊掉了)。引擎因此新增了 `Autoplay.steps`。
+- **待办**:GitHub 公开仓库 + Vercel 首次部署(需要 Jesse 的账号操作) → Phase 7 复制模板到其余 5 个概念。
