@@ -217,5 +217,17 @@ npm run build    # 生产构建(Vercel 跑的就是这条)
     中点法对一次函数零误差)。而且圆盘堆出来是阶梯、形状肉眼可见地不对,体积却分毫不差。
   - ⚠️ 教训:我最初给 Disk 同时写了"二阶收敛"和"精确"两个断言,自相矛盾,测试报 NaN 抓了出来。
     **先写测试再想清楚数学,好过反过来。**
-- **待办**:托管上线(Vercel / Netlify 的 MCP 端点当时都在 503,需重试)
-  → 其余 4 个概念:Riemann → 导数 → 极限 → 单位圆。
+- **2026-08-16 · 部署尝试记录**(四条路全试过,结论:都差一次人工点击,别再重复踩)
+  | 路径 | 卡在哪 |
+  |---|---|
+  | Vercel 关联 GitHub 仓库 | 报错 "You need to add a Login Connection to your GitHub account" —— 要浏览器 OAuth |
+  | Vercel 直传源码(已成功创建部署) | 站点被 Deployment Protection 拦住,302 跳 SSO;MCP token 无项目写权限,`update_project_deployment_protection` 返回 404 |
+  | Netlify MCP | 服务端持续无响应 |
+  | GitHub Pages Actions | `actions/configure-pages@v5` 的 `enablement: true` 失败 —— 仓库 Actions 默认只有只读权限,给不了 `pages: write` |
+
+  **一次性解法(推荐 GitHub Pages,因为它带 `npm run check` 门禁、push 即部署、且运行状态可通过公开 API 查)**:
+  仓库 Settings → Actions → General → Workflow permissions → 选 "Read and write permissions" → Save。
+  之后任意一次 push 即自动上线到 https://jesse090630.github.io/calc-viz/
+
+  查 CI 状态的办法(不需要登录):`https://api.github.com/repos/Jesse090630/calc-viz/actions/runs?per_page=3`
+- **待办**:上线 → 其余 4 个概念:Riemann → 导数 → 极限 → 单位圆。
