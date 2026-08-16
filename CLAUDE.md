@@ -14,7 +14,8 @@
 产品要回答的是 **"这个公式是从哪来的"**,不是 **"这个公式是什么"**。
 
 **目标用户**:正在学 AP Calculus AB/BC 的高中生。
-**部署**:Vercel,公开访问,公开 GitHub 仓库。
+**仓库**:https://github.com/Jesse090630/calc-viz (public,分支 `main`)
+**部署**:待定 —— 见进度日志末尾。
 
 ### 差异点(做任何决策时回来看这一条)
 GeoGebra / Desmos 3D / 各种 volume calculator 都只**显示结果**。
@@ -203,4 +204,7 @@ npm run build    # 生产构建(Vercel 跑的就是这条)
   - 性能:stage 7 原本让 n 连续爬到 96,每帧重建近百个几何体直接卡死。
     改成**离散倍增档位 [4,8,16,32,64]** —— 顺带更符合教学意图(要讲的就是"n 翻倍误差缩 1/4",
     连续变化反而把倍增关系糊掉了)。引擎因此新增了 `Autoplay.steps`。
-- **待办**:GitHub 公开仓库 + Vercel 首次部署(需要 Jesse 的账号操作) → Phase 7 复制模板到其余 5 个概念。
+- **2026-08-16 · 已发布到 GitHub**。https://github.com/Jesse090630/calc-viz(public)。
+  用 GitHub Desktop 完成(注意:它的 Local Path 输入框**不展开 `~`**,必须填绝对路径)。
+- **待办**:选一个托管平台首次上线 → Phase 7 复制模板到其余 5 个概念
+  (Disk/Washer → Riemann → 导数 → 极限 → 单位圆,顺序按复用度从高到低)。
