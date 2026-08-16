@@ -28,10 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # enablement: true —— 仓库还没开 Pages 的话,这一步会自动开,不需要人进 Settings
+      # 曾经用过 enablement: true 想让 workflow 自己开 Pages,在这个仓库上一直失败
+      # (即使已经把 Workflow permissions 改成 read and write)。
+      # 结论:老老实实要求 Settings → Pages → Source 选 "GitHub Actions",
+      # 那之后这一步就只是读取配置,不再需要任何写权限。
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
