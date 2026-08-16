@@ -1,6 +1,9 @@
 # CLAUDE.md — Calculus Visual Engine
 
-> Claude Code 的上下文锚点。每次新会话先读这个文件。写得越准,产出质量越高。
+> ⚠️ **规则的唯一权威来源是 [`AGENTS.md`](./AGENTS.md)**(所有 AI 代理通用),
+> 工作队列与分镜规格在 [`docs/HANDOFF.md`](./docs/HANDOFF.md)。
+> 本文件保留 **项目进度日志(第 10 节)** 和 Claude 专用的补充说明。
+> 规则若两处不一致,以 `AGENTS.md` 为准 —— 不要在两边各维护一份,那一定会走偏。
 
 ---
 
