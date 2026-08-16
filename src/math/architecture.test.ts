@@ -39,19 +39,22 @@ describe('禁止 1 — src/math/ 不得依赖任何渲染库', () => {
 });
 
 describe('禁止 3 — src/engine/ 不得出现任何具体概念的名字', () => {
-  const CONCEPT_WORDS = /\b(shell|washer|disk|riemann|secant|tangent|unitcircle)\b/i;
+  // ⚠️ 刻意【不加】词边界 \b。违规在现实中长这样:shellRadius / diskGeometry / RiemannBars,
+  //    加了 \b 就全漏掉了(这条规则最初就是这么写的,被变异测试抓出来才改的)。
+  const CONCEPT_WORDS = /shell|washer|disk|riemann|secant|tangent|unit ?circle|solid of revolution/gi;
   const files = filesUnder(join(SRC, 'engine'));
+
+  it('engine 目录下确实有文件(防止规则因为路径写错而空跑)', () => {
+    expect(files.length).toBeGreaterThan(0);
+  });
 
   for (const file of files) {
     it(`${file.replace(SRC, 'src')} 保持概念无关`, () => {
       const code = readFileSync(file, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '') // 去块注释
         .replace(/\/\/.*$/gm, ''); // 去行注释
-      expect(CONCEPT_WORDS.test(code)).toBe(false);
+      const hits = [...new Set(code.match(CONCEPT_WORDS) ?? [])];
+      expect(hits, `engine 层出现了概念专属词汇:${hits.join(', ')}`).toEqual([]);
     });
   }
-
-  it('(engine 目录尚未创建时本组自动跳过)', () => {
-    expect(true).toBe(true);
-  });
 });

@@ -87,10 +87,17 @@ src/
 │   ├── riemann.ts     sampleX / riemannSum / relativeError
 │   ├── solids.ts      shellVolumeExact / shellRiemann / shellSlice / slabVolume / ringVolume
 │   └── *.test.ts      52 个测试,含架构约束检查
-├── engine/        ⬜ Phase 2 — types / store / ChainPlayer / FormulaPanel / ControlPanel
+├── engine/        ✅ 已完成 — 概念无关的推导链引擎
+│   ├── types.ts       Stage / Chain / ControlSpec / FormulaLine / Autoplay / SceneProps
+│   ├── store.ts       createChainStore(chain) 工厂 + paramsForStage
+│   ├── validate.ts    validateChain() —— 校验链数据(TypeScript 查不出的那类错)
+│   ├── useAutoplay.ts Stage.autoplay 的逐帧实现
+│   ├── ChainPlayer.tsx  布局 + 导航 + 键盘;场景由 renderScene prop 注入
+│   ├── FormulaPanel.tsx KaTeX + 单行高亮
+│   └── ControlPanel.tsx 由 stage.controls 自动生成滑块
 ├── scene2d/       ⬜ Phase 3 — useMathCoords / Axes / FunctionCurve / RegionFill / …
 ├── scene3d/       ⬜ Phase 4 — Stage3D / CameraRig / geometry/shellGeometry / Label3D
-├── concepts/      ⬜ Phase 5+ — 每概念一个文件夹:chain.ts + 专用组件
+├── concepts/      🔶 shell-method/chain.ts 已写完(9 步数据);场景仍是 PlaceholderScene
 └── ui/            ⬜ 首页与导航
 docs/VERIFICATION/ 手算与交叉验证存档
 ```
@@ -164,4 +171,11 @@ npm run build    # 生产构建(Vercel 跑的就是这条)
 - **2026-08-16 · Phase 1 完成**。`src/math/` 全部纯函数 + 52 个测试通过。
   做了变异测试:植入 4 个数学错误(中点改左端点、解析解漏 2、xF 系数写错、shellSlice 用左端点),
   全部被测试抓到 —— 确认测试有效而不只是"绿"。
-- **待办**:GitHub 公开仓库 + Vercel 首次部署(需要 Jesse 的账号操作) → Phase 2 chain engine。
+- **2026-08-16 · Phase 2 完成**。引擎全部落地,93 个测试通过。
+  - `renderScene` 作为 prop 注入 —— engine 不 import 任何场景代码,禁止 3 因此是结构性的而非纪律性的。
+  - `Stage.autoplay.delayMs` 把"相机先动、物体后动"变成**声明式**约束,`validateChain` 会拒收 < 800ms 的。
+  - Shell Method 的 9 步链数据已写完(Phase 5 的内容提前落地,同时用来验证类型设计够不够用 —— 够)。
+  - 场景仍是 `PlaceholderScene`,目的是让分镜和讲解文字先被验收,不必等 3D 写完。
+  - ⚠️ 教训:禁止 3 的正则最初写了词边界 `\b`,`shellCount` 这类驼峰违规全部漏网。
+    是变异测试抓出来的,不是 code review。**新增架构规则时必须配一个故意违规的变异测试。**
+- **待办**:GitHub 公开仓库 + Vercel 首次部署(需要 Jesse 的账号操作) → Phase 3 二维场景层。
