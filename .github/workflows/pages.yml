@@ -1,0 +1,49 @@
+# 兜底部署方案:GitHub Pages。
+#
+# 为什么留着它:Vercel / Netlify 都需要第三方账号,而 Pages 只需要这个仓库本身。
+# 启用方式:仓库 Settings → Pages → Source 选 "GitHub Actions",之后每次 push 自动部署。
+# 站点会在 https://<用户名>.github.io/calc-viz/ ——注意子路径,所以下面设了 base。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # 门禁:类型检查与单测不过就不部署。数学错了的版本绝不允许上线。
+      - run: npm run check
+      - run: npm run build
+        env:
+          GITHUB_PAGES: 'true'
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
