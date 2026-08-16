@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vercel
+coverage
+tests/e2e/screenshots/*.actual.png
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
