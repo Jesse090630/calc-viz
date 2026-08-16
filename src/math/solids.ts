@@ -9,7 +9,7 @@
  * 用左/右端点会破坏这个恒等式,也就破坏了这个教学点。
  * ──────────────────────────────────────────────────────────────────────
  */
-import type { CurveSpec, Interval, RiemannRule, ShellSlice } from './types';
+import type { CurveSpec, DiskSlice, Interval, RiemannRule, ShellSlice } from './types';
 import { riemannSum } from './riemann';
 import { adaptiveSimpson } from './quadrature';
 
@@ -73,4 +73,59 @@ export function ringVolume({ x, dx, h }: ShellSlice): number {
   const rOut = x + dx / 2;
   const rIn = x - dx / 2;
   return Math.PI * (rOut * rOut - rIn * rIn) * h;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DISK METHOD — 沿旋转轴方向【横着】切,每一片是一个实心圆盘。
+   被积变量是沿轴的坐标(绕 y 轴旋转时就是 y),curve 要给出"该高度处的半径"。
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** 解析解:V = π ∫ₐᵇ r(t)² dt */
+export function diskVolumeExact(curve: CurveSpec, interval: Interval = curve.domain): number {
+  const [a, b] = interval;
+  return Math.PI * (curve.sqF(b) - curve.sqF(a));
+}
+
+/** 独立数值路径,用于交叉验证 sqF 是否写对 */
+export function diskVolumeNumeric(curve: CurveSpec, interval: Interval = curve.domain): number {
+  const [a, b] = interval;
+  return Math.PI * adaptiveSimpson((t) => curve.f(t) * curve.f(t), a, b);
+}
+
+/** n 个圆盘的黎曼和:Σ π r(tᵢ)² Δt */
+export function diskRiemann(
+  curve: CurveSpec,
+  n: number,
+  rule: RiemannRule = 'mid',
+  interval: Interval = curve.domain,
+): number {
+  return riemannSum((t) => Math.PI * curve.f(t) * curve.f(t), interval, n, rule);
+}
+
+/** 第 i 个圆盘的几何量。t 是沿轴的中点坐标,dt 是厚度,r 是该处半径。 */
+export function diskSlice(
+  curve: CurveSpec,
+  n: number,
+  i: number,
+  interval: Interval = curve.domain,
+): DiskSlice {
+  if (!Number.isInteger(n) || n < 1) throw new Error(`n must be a positive integer, got ${n}`);
+  if (i < 0 || i >= n) throw new Error(`disk index ${i} out of range [0, ${n})`);
+  const [a, b] = interval;
+  const dt = (b - a) / n;
+  const t = a + (i + 0.5) * dt; // 与 Shell 一致,一律取中点
+  return { t, dt, r: curve.f(t) };
+}
+
+export function diskSlices(
+  curve: CurveSpec,
+  n: number,
+  interval: Interval = curve.domain,
+): DiskSlice[] {
+  return Array.from({ length: n }, (_, i) => diskSlice(curve, n, i, interval));
+}
+
+/** 单个圆盘的体积:πr²·Δt */
+export function diskVolume({ r, dt }: DiskSlice): number {
+  return Math.PI * r * r * dt;
 }

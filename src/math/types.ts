@@ -34,6 +34,8 @@ export interface CurveSpec {
   readonly F: (x: number) => number;
   /** x·f(x) 的一个原函数,满足 (xF)' = x·f(x)。Shell Method 需要它求解析解。 */
   readonly xF: (x: number) => number;
+  /** f(x)² 的一个原函数,满足 (sqF)' = f(x)²。Disk / Washer Method 需要它。 */
+  readonly sqF: (x: number) => number;
 
   /** 本项目中使用该曲线的合法区间(必填,不允许省略) */
   readonly domain: Interval;
@@ -47,4 +49,14 @@ export interface ShellSlice {
   readonly dx: number;
   /** 高度 f(x) */
   readonly h: number;
+}
+
+/** 单个圆盘的几何量。同样一律取中点。 */
+export interface DiskSlice {
+  /** 沿旋转轴方向的中点坐标(绕 y 轴旋转时即 y) */
+  readonly t: number;
+  /** 厚度 Δt */
+  readonly dt: number;
+  /** 该处的半径 */
+  readonly r: number;
 }

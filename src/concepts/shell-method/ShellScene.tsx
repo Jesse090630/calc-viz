@@ -21,7 +21,7 @@ import {
   SampleRectangle,
 } from '../../scene/primitives';
 import { COLOR } from '../../scene/theme';
-import { Shell, ShellStack } from './ShellMesh';
+import { Shell, SolidStack, type SolidRing } from '../../scene/RevolutionMesh';
 import { OBJ } from './chain';
 
 const CURVE = PARABOLA_DOWN;
@@ -46,7 +46,16 @@ export function ShellScene({ stage, params, visible }: SceneProps) {
     bend,
   };
 
-  const slices = useMemo(() => shellSlices(CURVE, n, INTERVAL), [n]);
+  const rings = useMemo<SolidRing[]>(
+    () =>
+      shellSlices(CURVE, n, INTERVAL).map((s) => ({
+        rIn: s.x - s.dx / 2,
+        rOut: s.x + s.dx / 2,
+        height: s.h,
+        offsetY: 0, // 壳都立在 y = 0 的地面上
+      })),
+    [n],
+  );
 
   const isFront = stage.camera === 'front';
   const flatLabelsReady = visible(OBJ.flatLabels) && bend < 0.35;
@@ -132,7 +141,7 @@ export function ShellScene({ stage, params, visible }: SceneProps) {
         </>
       )}
 
-      {visible(OBJ.shells) && <ShellStack slices={slices} />}
+      {visible(OBJ.shells) && <SolidStack rings={rings} />}
     </Stage3D>
   );
 }

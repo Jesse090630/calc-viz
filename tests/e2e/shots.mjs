@@ -49,17 +49,22 @@ function serveDist() {
 const server = process.env.SHOT_URL ? null : await serveDist();
 const URL = process.env.SHOT_URL ?? `http://localhost:${PORT}/`;
 
-// stage id 顺序必须与 chain.ts 一致;autoplay 的步要多等
-const STAGES = [
-  ['region', 2000],
-  ['strip', 2000],
-  ['sweep', 5000],
-  ['dims', 2500],
-  ['unroll', 5000],
-  ['exact', 2500],
-  ['many', 2500],
-  ['limit', 7000],
-  ['formula', 2500],
+// 每条链的 stage 顺序必须与 chain.ts 一致;autoplay 的步要多等
+const CHAINS = [
+  {
+    route: 'shell-method',
+    stages: [
+      ['region', 2000], ['strip', 2000], ['sweep', 5000], ['dims', 2500], ['unroll', 5000],
+      ['exact', 2500], ['many', 2500], ['limit', 7000], ['formula', 2500],
+    ],
+  },
+  {
+    route: 'disk-method',
+    stages: [
+      ['same-region', 2000], ['slice-flat', 2000], ['sweep', 5000], ['dims', 2500],
+      ['stack', 2500], ['exact', 2500], ['why', 2500], ['formula', 2500],
+    ],
+  },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -75,19 +80,27 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
 
+// 首页
 await page.goto(URL, { waitUntil: 'networkidle' });
-await page.waitForSelector('canvas', { timeout: 20000 });
-await page.waitForTimeout(1500);
+await page.waitForTimeout(1200);
+await page.screenshot({ path: join(OUT, '00-home.png') });
+console.log(`  00 home      → "${await page.locator('h1').first().innerText()}"`);
 
-for (const [index, [id, wait]] of STAGES.entries()) {
-  if (index > 0) {
-    await page.keyboard.press('ArrowRight');
+for (const { route, stages } of CHAINS) {
+  console.log(`\n  ── ${route} ──`);
+  await page.goto(`${URL}#/${route}`, { waitUntil: 'networkidle' });
+  await page.reload({ waitUntil: 'networkidle' }); // 确保从第 1 步开始
+  await page.waitForSelector('canvas', { timeout: 20000 });
+  await page.waitForTimeout(1800);
+
+  for (const [index, [id, wait]] of stages.entries()) {
+    if (index > 0) await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(wait);
+    const n = String(index + 1).padStart(2, '0');
+    await page.screenshot({ path: join(OUT, `${route}-${n}-${id}.png`) });
+    const title = await page.locator('aside h1').first().innerText();
+    console.log(`  ${n} ${id.padEnd(12)} → "${title}"`);
   }
-  await page.waitForTimeout(wait);
-  const file = join(OUT, `${String(index + 1).padStart(2, '0')}-${id}.png`);
-  await page.screenshot({ path: file });
-  const title = await page.locator('h1').first().innerText();
-  console.log(`  ${String(index + 1).padStart(2, '0')} ${id.padEnd(9)} → "${title}"`);
 }
 
 await browser.close();

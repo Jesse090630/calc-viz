@@ -27,6 +27,12 @@ describe('CurveSpec 自洽性(每条曲线都要过)', () => {
         expect(closed).toBeCloseTo(numeric, 9);
       });
 
+      it('原函数 sqF 满足 sqF(b) − sqF(a) = ∫ f(x)²  ← Disk 解析解的地基', () => {
+        const closed = c.sqF(b) - c.sqF(a);
+        const numeric = adaptiveSimpson((x) => c.f(x) * c.f(x), a, b);
+        expect(closed).toBeCloseTo(numeric, 9);
+      });
+
       it('定义域是非退化区间', () => {
         expect(b).toBeGreaterThan(a);
       });

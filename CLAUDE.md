@@ -206,5 +206,16 @@ npm run build    # 生产构建(Vercel 跑的就是这条)
     连续变化反而把倍增关系糊掉了)。引擎因此新增了 `Autoplay.steps`。
 - **2026-08-16 · 已发布到 GitHub**。https://github.com/Jesse090630/calc-viz(public)。
   用 GitHub Desktop 完成(注意:它的 Local Path 输入框**不展开 `~`**,必须填绝对路径)。
-- **待办**:选一个托管平台首次上线 → Phase 7 复制模板到其余 5 个概念
-  (Disk/Washer → Riemann → 导数 → 极限 → 单位圆,顺序按复用度从高到低)。
+- **2026-08-16 · Phase 7 第一条:Disk Method 完成**。135 个测试,首页 + hash 路由上线。
+  - ⭐ **引擎通用性验收通过:`src/engine/` 零改动**(`git diff --stat HEAD -- src/engine/` 为空)。
+    第二个概念只写了 chain 数据 + 场景装配 + math 里的 disk 函数。
+  - **几何也零新增**:圆盘 = `rIn = 0` 的壳,横着摞而已。`shellSurfacePoint` 原样复用,
+    `ShellMesh` 提升为 `scene/RevolutionMesh`(Shell / SolidStack),Washer 以后也用同一个。
+  - 教学设计:刻意与 Shell **共用同一个立体**(同区域、同轴),只换切法。
+    落点是"两种切法同一个 8π",以及一个几乎没教材讲的反差 ——
+    **Shell 的黎曼和有 O(n⁻²) 误差,Disk 的任意 n 都精确**(被积函数 π(4−y) 是线性的,
+    中点法对一次函数零误差)。而且圆盘堆出来是阶梯、形状肉眼可见地不对,体积却分毫不差。
+  - ⚠️ 教训:我最初给 Disk 同时写了"二阶收敛"和"精确"两个断言,自相矛盾,测试报 NaN 抓了出来。
+    **先写测试再想清楚数学,好过反过来。**
+- **待办**:托管上线(Vercel / Netlify 的 MCP 端点当时都在 503,需重试)
+  → 其余 4 个概念:Riemann → 导数 → 极限 → 单位圆。
