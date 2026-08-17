@@ -168,6 +168,57 @@ export function MathLabel({
   );
 }
 
+/**
+ * 曲线上的一个点。始终正对相机,所以在任何视角下都是一个圆。
+ * derivative / limits / unit-circle 三条链都要用,所以放在通用图元里。
+ */
+export function PointMarker({
+  position,
+  color,
+  radius = 0.055,
+  hollow = false,
+}: {
+  position: [number, number, number];
+  color: string;
+  radius?: number;
+  /** 空心 = 该点不属于函数(极限链里那个"洞") */
+  hollow?: boolean;
+}) {
+  return (
+    <group position={position}>
+      <mesh renderOrder={5}>
+        <circleGeometry args={[radius, 32]} />
+        <meshBasicMaterial color={hollow ? COLOR.background : color} depthTest={false} />
+      </mesh>
+      <mesh renderOrder={6}>
+        <ringGeometry args={[radius * 0.82, radius, 32]} />
+        <meshBasicMaterial color={color} depthTest={false} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+}
+
+/** 直角三角形的两条直角边,用来把 Δx / Δy 画出来 */
+export function RiseRun({
+  from,
+  to,
+  runColor = COLOR.thickness,
+  riseColor = COLOR.height,
+}: {
+  from: readonly [number, number];
+  to: readonly [number, number];
+  runColor?: string;
+  riseColor?: string;
+}) {
+  const corner: [number, number, number] = [to[0], from[1], 0];
+  return (
+    <group>
+      <Line points={[[from[0], from[1], 0], corner]} color={runColor} lineWidth={2} dashed dashSize={0.06} gapSize={0.04} />
+      <Line points={[corner, [to[0], to[1], 0]]} color={riseColor} lineWidth={2} dashed dashSize={0.06} gapSize={0.04} />
+    </group>
+  );
+}
+
 /** 水平放置的圆环线,用来把"绕一圈的长度"画出来 */
 export function CircleOutline({
   radius,

@@ -59,6 +59,13 @@ const CHAINS = [
     ],
   },
   {
+    route: 'derivative',
+    stages: [
+      ['two-points', 2000], ['the-line', 2000], ['slide', 4500], ['identity', 2500],
+      ['both-sides', 2500], ['shrink', 7000], ['tangent', 2500], ['everywhere', 5000],
+    ],
+  },
+  {
     route: 'disk-method',
     stages: [
       ['same-region', 2000], ['slice-flat', 2000], ['sweep', 5000], ['dims', 2500],

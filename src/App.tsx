@@ -7,6 +7,8 @@ import { DISK_METHOD_CHAIN } from './concepts/disk-method/chain';
 import { DiskScene } from './concepts/disk-method/DiskScene';
 import { RIEMANN_SUM_CHAIN } from './concepts/riemann-sum/chain';
 import { RiemannScene } from './concepts/riemann-sum/RiemannScene';
+import { DERIVATIVE_CHAIN } from './concepts/derivative/chain';
+import { DerivativeScene } from './concepts/derivative/DerivativeScene';
 import { Home, BackLink, type ConceptCard } from './ui/Home';
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
@@ -14,6 +16,7 @@ const CHAINS = [
   { chain: SHELL_METHOD_CHAIN, store: createChainStore(SHELL_METHOD_CHAIN), Scene: ShellScene },
   { chain: DISK_METHOD_CHAIN, store: createChainStore(DISK_METHOD_CHAIN), Scene: DiskScene },
   { chain: RIEMANN_SUM_CHAIN, store: createChainStore(RIEMANN_SUM_CHAIN), Scene: RiemannScene },
+  { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
 ] as const;
 
 // 顺序 = 依赖顺序,不是完成顺序。Riemann 是 Shell 的前置知识
@@ -44,8 +47,8 @@ const CARDS: ConceptCard[] = [
     id: 'derivative',
     title: 'Secant → Tangent',
     question: 'What does it actually mean for two points to “become” one?',
-    steps: 0,
-    ready: false,
+    steps: DERIVATIVE_CHAIN.stages.length,
+    ready: true,
   },
   {
     id: 'unit-circle',

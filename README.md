@@ -29,13 +29,19 @@ something you just watched happen.
 
 | Topic | The question it answers | |
 |---|---|---|
+| [Riemann Sums → the Integral](https://calcviz.netlify.app/#/riemann-sum) | Why does adding rectangles become an integral sign? | 8 steps |
 | [Shell Method](https://calcviz.netlify.app/#/shell-method) | Why is there a `2πx` in the integral? | 9 steps |
 | [Disk Method](https://calcviz.netlify.app/#/disk-method) | How am I supposed to know which method to use? | 8 steps |
-| [Riemann Sums → the Integral](https://calcviz.netlify.app/#/riemann-sum) | Why does adding rectangles become an integral sign? | 8 steps |
-| Secant → Tangent | What does it mean for two points to "become" one? | soon |
+| [Secant → Tangent](https://calcviz.netlify.app/#/derivative) | What does it mean for two points to "become" one? | 8 steps |
 | The Unit Circle and sin/cos | Why does going around a circle produce a wave? | soon |
 
-Two things in here I haven't seen taught anywhere else, both of which fell out of building it:
+Three things in here I haven't seen taught anywhere else, all of which fell out of building it:
+
+**The squeeze is the proof, not the picture.** Riemann sums are usually motivated by "the
+rectangles fit better and better", which is a feeling, not an argument. For a decreasing `f` the
+left sum always overestimates and the right sum always underestimates, so the true area is
+*trapped*. The width of that trap is exactly `(f(a) − f(b))·Δx` — proportional to `Δx`, therefore
+forced to zero. There is only one number left in the middle. (Riemann, steps 5–7.)
 
 **`2πrhΔx` is not an approximation.** Textbooks introduce the shell formula as an estimate. With
 `r` measured at the *middle* of the shell it is exactly equal to the true ring volume
