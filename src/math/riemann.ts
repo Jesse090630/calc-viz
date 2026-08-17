@@ -19,6 +19,12 @@ export function sampleX(a: number, b: number, n: number, i: number, rule: Rieman
   }
 }
 
+/** 把区间等分成 n 份时每一份的宽度。 */
+export function partitionWidth([a, b]: Interval, n: number): number {
+  if (!Number.isInteger(n) || n < 1) throw new Error(`n must be a positive integer, got ${n}`);
+  return (b - a) / n;
+}
+
 /** ∫ₐᵇ g(x) dx 的黎曼和近似 */
 export function riemannSum(
   g: (x: number) => number,
@@ -27,7 +33,7 @@ export function riemannSum(
   rule: RiemannRule = 'mid',
 ): number {
   if (!Number.isInteger(n) || n < 1) throw new Error(`n must be a positive integer, got ${n}`);
-  const dx = (b - a) / n;
+  const dx = partitionWidth([a, b], n);
   let sum = 0;
   for (let i = 0; i < n; i++) sum += g(sampleX(a, b, n, i, rule)) * dx;
   return sum;

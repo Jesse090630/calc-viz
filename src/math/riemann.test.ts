@@ -5,6 +5,7 @@ import {
   definiteIntegralExact,
   endpointDifference,
   leftRightGap,
+  partitionWidth,
   riemannRectangles,
   sampleX,
   riemannSum,
@@ -17,6 +18,17 @@ describe('sampleX', () => {
     expect(sampleX(0, 2, 2, 0, 'mid')).toBe(0.5);
     expect(sampleX(0, 2, 2, 0, 'right')).toBe(1);
     expect(sampleX(0, 2, 2, 1, 'mid')).toBe(1.5);
+  });
+});
+
+describe('partitionWidth', () => {
+  it('手算:[0,2] 分 4 份时 Δx=0.5', () => {
+    expect(partitionWidth([0, 2], 4)).toBeCloseTo(0.5, 12);
+  });
+
+  it('非正整数分割明确报错', () => {
+    expect(() => partitionWidth([0, 2], 0)).toThrow();
+    expect(() => partitionWidth([0, 2], 2.5)).toThrow();
   });
 });
 

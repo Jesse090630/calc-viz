@@ -10,6 +10,8 @@ import type { SceneProps } from '../../engine/types';
 import { PARABOLA_DOWN } from '../../math/curves';
 import { circumference } from '../../math/geometry';
 import { shellSlices } from '../../math/solids';
+import type { CurveSpec, Interval } from '../../math/types';
+import type { ViewportCurve } from '../../math/expression';
 import type { ShellSurfaceSpec } from '../../math/shellSurface';
 import { Stage3D } from '../../scene/Stage3D';
 import {
@@ -25,18 +27,37 @@ import { Shell, SolidStack, type SolidRing } from '../../scene/RevolutionMesh';
 import { OBJ } from './chain';
 
 const CURVE = PARABOLA_DOWN;
-const INTERVAL = CURVE.domain;
 const f2 = (v: number): string => v.toFixed(2);
 
-export function ShellScene({ stage, params, visible }: SceneProps) {
+export function ShellScene({
+  stage,
+  params,
+  visible,
+  sourceCurve = CURVE,
+  sourceInterval = sourceCurve.domain,
+  viewport,
+  displayTop = 4,
+  clamped = false,
+}: SceneProps & {
+  sourceCurve?: CurveSpec;
+  sourceInterval?: Interval;
+  viewport?: ViewportCurve;
+  displayTop?: number;
+  clamped?: boolean;
+}) {
   const get = (key: string, fallback: number): number => params[key] ?? fallback;
 
-  const x0 = get('x0', 1.2);
-  const dx = get('dx', 0.3);
+  const sourceX0 = get('x0', 1.2);
+  const sourceDx = get('dx', 0.3);
   const bend = get('bend', 1);
   const theta = get('theta', Math.PI * 2);
   const n = Math.max(1, Math.round(get('n', 8)));
-  const height = CURVE.f(x0);
+  const sourceHeight = sourceCurve.f(sourceX0);
+  const x0 = viewport?.toDisplayX(sourceX0) ?? sourceX0;
+  const dx = viewport?.toDisplayWidth(sourceDx) ?? sourceDx;
+  const height = viewport?.toDisplayY(sourceHeight) ?? sourceHeight;
+  const drawCurve = viewport?.curve ?? sourceCurve;
+  const drawInterval = viewport?.interval ?? sourceInterval;
 
   const spec: ShellSurfaceSpec = {
     rIn: x0 - dx / 2,
@@ -48,24 +69,39 @@ export function ShellScene({ stage, params, visible }: SceneProps) {
 
   const rings = useMemo<SolidRing[]>(
     () =>
-      shellSlices(CURVE, n, INTERVAL).map((s) => ({
-        rIn: s.x - s.dx / 2,
-        rOut: s.x + s.dx / 2,
-        height: s.h,
+      shellSlices(sourceCurve, n, sourceInterval).map((s) => ({
+        rIn: viewport?.toDisplayX(s.x - s.dx / 2) ?? s.x - s.dx / 2,
+        rOut: viewport?.toDisplayX(s.x + s.dx / 2) ?? s.x + s.dx / 2,
+        height: viewport?.toDisplayY(s.h) ?? s.h,
         offsetY: 0, // 壳都立在 y = 0 的地面上
       })),
-    [n],
+    [n, sourceCurve, sourceInterval, viewport],
   );
 
   const isFront = stage.camera === 'front';
   const flatLabelsReady = visible(OBJ.flatLabels) && bend < 0.35;
   const arc = circumference(x0);
+  const sourceArc = circumference(sourceX0);
+  const custom = viewport !== undefined;
+  const topY = viewport?.toDisplayY(displayTop) ?? displayTop;
 
   return (
     <Stage3D preset={stage.camera}>
-      {visible(OBJ.axes) && <Axes depth={!isFront} ticks={isFront} />}
-      {visible(OBJ.curve) && <FunctionCurve curve={CURVE} interval={INTERVAL} />}
-      {visible(OBJ.region) && <RegionFill curve={CURVE} interval={INTERVAL} />}
+      {visible(OBJ.axes) && (
+        <>
+          <Axes depth={!isFront} ticks={isFront && !custom} />
+          {custom && isFront && (
+            <>
+              <MathLabel position={[drawInterval[0], -0.35, 0]} color={COLOR.thickness}>{sourceInterval[0]}</MathLabel>
+              <MathLabel position={[drawInterval[1], -0.35, 0]} color={COLOR.thickness}>{sourceInterval[1]}</MathLabel>
+              <MathLabel position={[-0.2, topY, 0]} color={COLOR.height}>{displayTop}</MathLabel>
+              {clamped && <MathLabel position={[1, 4.35, 0]} color={COLOR.introduce}>view clipped above {displayTop}</MathLabel>}
+            </>
+          )}
+        </>
+      )}
+      {visible(OBJ.curve) && <FunctionCurve curve={drawCurve} interval={drawInterval} />}
+      {visible(OBJ.region) && <RegionFill curve={drawCurve} interval={drawInterval} />}
 
       {visible(OBJ.rect) && (
         <>
@@ -74,13 +110,13 @@ export function ShellScene({ stage, params, visible }: SceneProps) {
             <>
               {/* 压到刻度数字下面一层,否则 x = 1.20 会盖住 x 轴上的 "1" */}
               <MathLabel position={[x0, -0.62, 0]} color="#fde68a">
-                x = {f2(x0)}
+                x = {f2(sourceX0)}
               </MathLabel>
               <MathLabel position={[x0 + dx / 2 + 0.55, height / 2, 0]} color="#93c5fd">
-                f(x) = {f2(height)}
+                f(x) = {f2(sourceHeight)}
               </MathLabel>
               <MathLabel position={[x0, height + 0.36, 0]} color="#cbd5e1">
-                Δx = {f2(dx)}
+                Δx = {f2(sourceDx)}
               </MathLabel>
             </>
           )}
@@ -109,16 +145,16 @@ export function ShellScene({ stage, params, visible }: SceneProps) {
             lineWidth={3}
           />
           <MathLabel position={[x0 / 2, 0.3, 0]} color="#fca5a5">
-            radius = x = {f2(x0)}
+            radius = x = {f2(sourceX0)}
           </MathLabel>
           <MathLabel position={[x0 + dx / 2 + 0.95, height / 2, 0]} color="#93c5fd">
-            height = f(x) = {f2(height)}
+            height = f(x) = {f2(sourceHeight)}
           </MathLabel>
           <MathLabel position={[x0, height + 0.4, 0]} color="#cbd5e1">
-            thickness = Δx = {f2(dx)}
+            thickness = Δx = {f2(sourceDx)}
           </MathLabel>
           <MathLabel position={[0, height + 0.05, x0 + 0.5]} color="#67e8f9">
-            circumference = 2πx = {f2(arc)}
+            circumference = 2πx = {f2(sourceArc)}
           </MathLabel>
         </>
       )}
@@ -129,14 +165,14 @@ export function ShellScene({ stage, params, visible }: SceneProps) {
       {flatLabelsReady && (
         <>
           <MathLabel position={[0, -0.34, 0]} color="#67e8f9">
-            length = 2πx = {f2(arc)}
+            length = 2πx = {f2(sourceArc)}
           </MathLabel>
           {/* 放在板内侧而不是外侧:外侧会被右边的面板裁掉 */}
           <MathLabel position={[arc / 2 - 0.55, height / 2, 0]} color="#93c5fd">
-            f(x) = {f2(height)}
+            f(x) = {f2(sourceHeight)}
           </MathLabel>
           <MathLabel position={[0, height + 0.34, 0]} color="#cbd5e1">
-            Δx = {f2(dx)}
+            Δx = {f2(sourceDx)}
           </MathLabel>
         </>
       )}

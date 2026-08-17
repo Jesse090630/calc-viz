@@ -27,6 +27,7 @@ export type ExpressionErrorCode =
   | 'interval'
   | 'domain'
   | 'negative'
+  | 'radius'
   | 'divergent';
 
 export interface ExpressionError {
@@ -50,6 +51,11 @@ export interface ExpressionCurveInput {
   readonly expression: string;
   readonly a: number;
   readonly b: number;
+}
+
+export interface ExpressionCurveOptions {
+  /** Shell Method 中自变量 x 本身是半径，因此区间不能跨到旋转轴左侧。 */
+  readonly requireNonNegativeDomain?: boolean;
 }
 
 export interface ExpressionRange {
@@ -169,10 +175,16 @@ export function sampleExpressionSegments(
 }
 
 /** 编译并验证一条可用于面积/旋转体场景的非负实函数。 */
-export function compileExpressionCurve(input: ExpressionCurveInput): ExpressionCurveResult {
+export function compileExpressionCurve(
+  input: ExpressionCurveInput,
+  options: ExpressionCurveOptions = {},
+): ExpressionCurveResult {
   const { expression, a, b } = input;
   if (!Number.isFinite(a) || !Number.isFinite(b) || a >= b) {
     return error('interval', 'The interval must use finite numbers with a < b.');
+  }
+  if (options.requireNonNegativeDomain && a < 0) {
+    return error('radius', 'For shells around the y-axis, the x interval must stay at or above zero.');
   }
 
   const compiled = compileExpression(expression);
@@ -268,6 +280,17 @@ export interface ViewportCurve {
   readonly curve: CurveSpec;
   readonly interval: Interval;
   readonly yScale: number;
+  readonly toDisplayX: (sourceX: number) => number;
+  readonly toSourceX: (displayX: number) => number;
+  readonly toDisplayWidth: (sourceWidth: number) => number;
+  readonly toDisplayY: (sourceY: number) => number;
+}
+
+export interface ViewportOptions {
+  readonly xSpan?: number;
+  readonly ySpan?: number;
+  /** Shell 半径轴必须保留 x=0，不能为塞进画面而平移掉内孔。 */
+  readonly preserveZeroX?: boolean;
 }
 
 /**
@@ -275,12 +298,26 @@ export interface ViewportCurve {
  * x 轴只做仿射映射；y 超过安全上限时先裁切，再等比缩放到 4 个世界单位。
  * 真实计算仍全部使用原 curve，这个返回值只给场景绘制。
  */
-export function fitCurveForDisplay(curve: CurveSpec, range: ExpressionRange): ViewportCurve {
+export function fitCurveForDisplay(
+  curve: CurveSpec,
+  range: ExpressionRange,
+  options: ViewportOptions = {},
+): ViewportCurve {
   const [a, b] = curve.domain;
-  const interval: Interval = [0, 2];
-  const yScale = Math.max(1, range.displayMax / 4);
-  const sourceX = (displayX: number): number => a + (displayX / 2) * (b - a);
-  const displayY = (value: number): number => Math.min(DISPLAY_VALUE_LIMIT, value) / yScale;
+  const xSpan = options.xSpan ?? 2;
+  const ySpan = options.ySpan ?? 4;
+  const preserveZeroX = options.preserveZeroX ?? false;
+  const radiusScale = preserveZeroX ? xSpan / b : 0;
+  const interval: Interval = preserveZeroX ? [a * radiusScale, b * radiusScale] : [0, xSpan];
+  const yScale = Math.max(1, range.displayMax / ySpan);
+  const toDisplayX = (sourceX: number): number =>
+    preserveZeroX ? sourceX * radiusScale : ((sourceX - a) / (b - a)) * xSpan;
+  const toSourceX = (displayX: number): number =>
+    preserveZeroX ? displayX / radiusScale : a + (displayX / xSpan) * (b - a);
+  const toDisplayWidth = (sourceWidth: number): number =>
+    preserveZeroX ? sourceWidth * radiusScale : (sourceWidth / (b - a)) * xSpan;
+  const toDisplayY = (value: number): number => Math.min(DISPLAY_VALUE_LIMIT, value) / yScale;
+  const sourcePerDisplay = preserveZeroX ? 1 / radiusScale : (b - a) / xSpan;
 
   return {
     interval,
@@ -289,10 +326,14 @@ export function fitCurveForDisplay(curve: CurveSpec, range: ExpressionRange): Vi
       id: `${curve.id}-viewport`,
       label: curve.label,
       tex: curve.tex,
-      f: (displayX) => displayY(curve.f(sourceX(displayX))),
-      df: (displayX) => (curve.df(sourceX(displayX)) * (b - a)) / (2 * yScale),
+      f: (displayX) => toDisplayY(curve.f(toSourceX(displayX))),
+      df: (displayX) => (curve.df(toSourceX(displayX)) * sourcePerDisplay) / yScale,
       domain: interval,
     },
+    toDisplayX,
+    toSourceX,
+    toDisplayWidth,
+    toDisplayY,
   };
 }
 

@@ -140,8 +140,8 @@ currentShot = 'riemann-sum/custom-input';
 await page.goto(`${URL}#/riemann-sum`, { waitUntil: 'networkidle' });
 await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
 await page.locator('#riemann-expression').fill('x^2');
-await page.getByLabel('interval a').fill('0');
-await page.getByLabel('interval b').fill('2');
+await page.getByLabel('riemann interval a').fill('0');
+await page.getByLabel('riemann interval b').fill('2');
 await page.waitForTimeout(600);
 await page.getByRole('button', { name: 'Build the derivation' }).click();
 for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
@@ -172,6 +172,35 @@ const mobileOverflow = await page.evaluate(() => document.documentElement.scroll
 if (mobileOverflow > 1) errors.push(`[riemann-sum/mobile] horizontal overflow ${mobileOverflow}px`);
 await page.screenshot({ path: join(OUT, 'riemann-custom-mobile.png') });
 console.log('  custom mobile → "390×844 input panel fits without horizontal overflow"');
+
+await page.setViewportSize({ width: 1440, height: 900 });
+for (const custom of [
+  {
+    route: 'shell-method', prefix: 'shell', title: 'Try your own shell region',
+    expression: '2-x', steps: 6, sum: '8.639380', exact: '8.377580', shot: 'shell-custom-linear.png',
+  },
+  {
+    route: 'disk-method', prefix: 'disk', title: 'Try your own disk radius',
+    expression: '2-x', steps: 4, sum: '8.246681', exact: '8.377580', shot: 'disk-custom-linear.png',
+  },
+]) {
+  currentShot = `${custom.route}/custom-input`;
+  await page.goto(`${URL}#/${custom.route}`, { waitUntil: 'networkidle' });
+  await page.locator('summary').filter({ hasText: custom.title }).click();
+  await page.locator(`#${custom.prefix}-expression`).fill(custom.expression);
+  await page.getByLabel(`${custom.prefix} interval a`).fill('0');
+  await page.getByLabel(`${custom.prefix} interval b`).fill('2');
+  await page.waitForTimeout(600);
+  await page.getByRole('button', { name: 'Build the derivation' }).click();
+  for (let i = 0; i < custom.steps; i++) await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(2200);
+  const panel = await page.locator('aside').innerText();
+  if (!panel.includes(custom.sum) || !panel.includes(custom.exact)) {
+    errors.push(`[${currentShot}] expected ${custom.sum} and ${custom.exact}`);
+  }
+  await page.screenshot({ path: join(OUT, custom.shot) });
+  console.log(`  custom ${custom.prefix.padEnd(5)} → "sum ${custom.sum} · volume ${custom.exact}"`);
+}
 
 await browser.close();
 server?.close();

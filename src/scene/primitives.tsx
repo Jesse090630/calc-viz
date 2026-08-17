@@ -68,6 +68,50 @@ export function FunctionCurve({ curve, interval }: { curve: CurveSpec; interval:
   return <Line points={points} color={COLOR.curve} lineWidth={2.5} />;
 }
 
+/** 自变量沿竖轴、函数值沿横轴的曲线 x = r(t)，供 Disk Method 的半径输入复用。 */
+export function SidewaysFunctionCurve({ curve, interval }: { curve: CurveSpec; interval: Interval }) {
+  const points = useMemo(
+    () => Array.from({ length: SAMPLES + 1 }, (_, i) => {
+      const t = interval[0] + ((interval[1] - interval[0]) * i) / SAMPLES;
+      return [curve.f(t), t, 0] as [number, number, number];
+    }),
+    [curve, interval],
+  );
+  return <Line points={points} color={COLOR.curve} lineWidth={2.5} />;
+}
+
+/** y 轴与 x = r(t) 之间的区域。 */
+export function SidewaysRegionFill({
+  curve,
+  interval,
+  color = COLOR.region,
+  opacity = 0.28,
+}: {
+  curve: CurveSpec;
+  interval: Interval;
+  color?: string;
+  opacity?: number;
+}) {
+  const geometry = useMemo(() => {
+    const [a, b] = interval;
+    const shape = new THREE.Shape();
+    shape.moveTo(0, a);
+    for (let i = 0; i <= SAMPLES; i++) {
+      const t = a + ((b - a) * i) / SAMPLES;
+      shape.lineTo(curve.f(t), t);
+    }
+    shape.lineTo(0, b);
+    shape.closePath();
+    return new THREE.ShapeGeometry(shape);
+  }, [curve, interval]);
+
+  return (
+    <mesh geometry={geometry}>
+      <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} />
+    </mesh>
+  );
+}
+
 /** 曲线与 x 轴、y 轴围成的区域 */
 export function RegionFill({
   curve,

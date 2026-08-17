@@ -103,6 +103,15 @@ describe('compileExpressionCurve', () => {
     }
   });
 
+  it('Shell 输入可要求自变量区间也非负，因为 x 是旋转半径', () => {
+    expect(
+      compileExpressionCurve(
+        { expression: '2-x', a: -1, b: 1 },
+        { requireNonNegativeDomain: true },
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'radius' } });
+  });
+
   it('极端值保留真实数学结果，同时标记可视化需要裁切', () => {
     const result = compileExpressionCurve({ expression: '1000*x', a: 0, b: 1 });
     expect(result.ok).toBe(true);
@@ -154,5 +163,36 @@ describe('fitCurveForDisplay', () => {
     expect(fitted.curve.f(0)).toBeCloseTo(4, 12);
     expect(fitted.curve.f(2)).toBeCloseTo(0, 12);
     expect(fitted.yScale).toBe(1);
+  });
+
+  it('Disk 视口把 t 区间放到 4 单位高、半径放到 2 单位宽', () => {
+    const result = compileExpressionCurve({ expression: '2-x', a: 0, b: 2 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const fitted = fitCurveForDisplay(result.curve, result.range, { xSpan: 4, ySpan: 2 });
+    expect(fitted.interval).toEqual([0, 4]);
+    expect(fitted.curve.f(0)).toBeCloseTo(2, 12);
+    expect(fitted.curve.f(4)).toBeCloseTo(0, 12);
+    expect(fitted.toDisplayX(1)).toBeCloseTo(2, 12);
+    expect(fitted.toSourceX(2)).toBeCloseTo(1, 12);
+    expect(fitted.toDisplayWidth(0.5)).toBeCloseTo(1, 12);
+    expect(fitted.toDisplayY(1)).toBeCloseTo(1, 12);
+  });
+
+  it('Shell 视口只缩放半径不平移，区间 [1,3] 必须保留轴心到内半径的空洞', () => {
+    const result = compileExpressionCurve(
+      { expression: '4-x', a: 1, b: 3 },
+      { requireNonNegativeDomain: true },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const fitted = fitCurveForDisplay(result.curve, result.range, {
+      xSpan: 2, ySpan: 4, preserveZeroX: true,
+    });
+    expect(fitted.interval[0]).toBeCloseTo(2 / 3, 12);
+    expect(fitted.interval[1]).toBeCloseTo(2, 12);
+    expect(fitted.toDisplayX(0)).toBe(0);
+    expect(fitted.toDisplayX(1)).toBeCloseTo(2 / 3, 12);
+    expect(fitted.toDisplayWidth(0.5)).toBeCloseTo(1 / 3, 12);
   });
 });

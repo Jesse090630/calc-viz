@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { ChainPlayer } from './engine/ChainPlayer';
 import { createChainStore } from './engine/store';
 import { SHELL_METHOD_CHAIN } from './concepts/shell-method/chain';
-import { ShellScene } from './concepts/shell-method/ShellScene';
 import { DISK_METHOD_CHAIN } from './concepts/disk-method/chain';
-import { DiskScene } from './concepts/disk-method/DiskScene';
 import { RIEMANN_SUM_CHAIN } from './concepts/riemann-sum/chain';
 import { RiemannExperience } from './concepts/riemann-sum/RiemannExperience';
+import { SolidExperience } from './concepts/solid-input/SolidExperience';
 import { DERIVATIVE_CHAIN } from './concepts/derivative/chain';
 import { DerivativeScene } from './concepts/derivative/DerivativeScene';
 import { LIMITS_CHAIN } from './concepts/limits/chain';
@@ -17,8 +16,6 @@ import { Home, BackLink, type ConceptCard } from './ui/Home';
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
-  { chain: SHELL_METHOD_CHAIN, store: createChainStore(SHELL_METHOD_CHAIN), Scene: ShellScene },
-  { chain: DISK_METHOD_CHAIN, store: createChainStore(DISK_METHOD_CHAIN), Scene: DiskScene },
   { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
   { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
   { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(UNIT_CIRCLE_CHAIN), Scene: UnitCircleScene },
@@ -90,6 +87,14 @@ export default function App() {
       <div className="relative">
         <BackLink />
         <RiemannExperience />
+      </div>
+    );
+  }
+  if (route === 'shell-method' || route === 'disk-method') {
+    return (
+      <div className="relative">
+        <BackLink />
+        <SolidExperience method={route === 'shell-method' ? 'shell' : 'disk'} />
       </div>
     );
   }

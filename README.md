@@ -36,9 +36,9 @@ something you just watched happen.
 | [Left and Right Limits](https://calcviz.netlify.app/#/limits) | If there is no value there, what is the limit describing? | 7 steps |
 | [The Unit Circle and sin/cos](https://calcviz.netlify.app/#/unit-circle) | Why does going around a circle produce a wave? | 7 steps |
 
-The Riemann chain also accepts your own explicit function and interval: it recompiles the same
-step-by-step derivation with midpoint rectangles and an independently checked numerical integral,
-while rejecting undefined, divergent, or below-axis inputs before they can enter the scene.
+The Riemann, Shell, and Disk chains also accept your own explicit function and interval: each one
+recompiles a step-by-step midpoint derivation with an independently checked numerical integral,
+while rejecting undefined, divergent, or geometrically invalid inputs before they enter the scene.
 
 Three things in here I haven't seen taught anywhere else, all of which fell out of building it:
 
