@@ -4,6 +4,7 @@ import type { SceneProps } from '../../engine/types';
 import { PARABOLA_DOWN } from '../../math/curves';
 import { definiteIntegralExact } from '../../math/riemann';
 import type { CurveSpec, Interval } from '../../math/types';
+import { formatCoordinate } from '../../math/format';
 import { Axes, FunctionCurve, MathLabel, RegionFill } from '../../scene/primitives';
 import { RiemannBars } from '../../scene/RiemannBars';
 import { Stage3D } from '../../scene/Stage3D';
@@ -68,8 +69,8 @@ export function RiemannScene({
           <Axes depth={false} ticks={!custom} />
           {custom && (
             <>
-              <MathLabel position={[0, -0.35, 0]} color={COLOR.thickness}>{sourceInterval[0]}</MathLabel>
-              <MathLabel position={[2, -0.35, 0]} color={COLOR.thickness}>{sourceInterval[1]}</MathLabel>
+              <MathLabel position={[0, -0.35, 0]} color={COLOR.thickness}>{formatCoordinate(sourceInterval[0])}</MathLabel>
+              <MathLabel position={[2, -0.35, 0]} color={COLOR.thickness}>{formatCoordinate(sourceInterval[1])}</MathLabel>
               <MathLabel position={[-0.18, 4, 0]} color={COLOR.height}>{displayTop}</MathLabel>
               {clamped && (
                 <MathLabel position={[1, 4.35, 0]} color={COLOR.introduce}>

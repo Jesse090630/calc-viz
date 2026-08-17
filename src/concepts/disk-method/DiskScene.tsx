@@ -12,6 +12,7 @@ import { PARABOLA_DOWN, PARABOLA_INVERSE } from '../../math/curves';
 import { diskSlices } from '../../math/solids';
 import type { CurveSpec, Interval } from '../../math/types';
 import type { ViewportCurve } from '../../math/expression';
+import { formatCoordinate } from '../../math/format';
 import type { ShellSurfaceSpec } from '../../math/shellSurface';
 import { Stage3D } from '../../scene/Stage3D';
 import {
@@ -91,8 +92,8 @@ export function DiskScene({
           <Axes depth={!isFront} ticks={isFront && !custom} />
           {custom && isFront && (
             <>
-              <MathLabel position={[-0.25, viewport.interval[0], 0]} color={COLOR.thickness}>{sourceInterval[0]}</MathLabel>
-              <MathLabel position={[-0.25, viewport.interval[1], 0]} color={COLOR.thickness}>{sourceInterval[1]}</MathLabel>
+              <MathLabel position={[-0.25, viewport.interval[0], 0]} color={COLOR.thickness}>{formatCoordinate(sourceInterval[0])}</MathLabel>
+              <MathLabel position={[-0.25, viewport.interval[1], 0]} color={COLOR.thickness}>{formatCoordinate(sourceInterval[1])}</MathLabel>
               <MathLabel position={[radiusLabelX, -0.35, 0]} color={COLOR.radius}>{displayTop}</MathLabel>
               {clamped && <MathLabel position={[1, 4.35, 0]} color={COLOR.introduce}>radius clipped above {displayTop}</MathLabel>}
             </>

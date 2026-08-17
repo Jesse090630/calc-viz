@@ -4,6 +4,7 @@ import { circumference } from '../../math/geometry';
 import { partitionWidth, relativeError, sampleX } from '../../math/riemann';
 import { ringVolume, shellRiemann, shellVolumeExact, slabVolume } from '../../math/solids';
 import type { CurveSpec } from '../../math/types';
+import { formatCoordinate } from '../../math/format';
 import { OBJ } from './chain';
 
 const f2 = (value: number): string => value.toFixed(2);
@@ -12,6 +13,8 @@ const f6 = (value: number): string => value.toFixed(6);
 
 export function makeCustomShellChain(curve: CurveSpec): Chain {
   const [a, b] = curve.domain;
+  const aTex = formatCoordinate(a, 'tex');
+  const bTex = formatCoordinate(b, 'tex');
   const x0 = sampleX(a, b, 1, 0, 'mid');
   const dx = partitionWidth(curve.domain, 6);
   const positionMin = sampleX(a, b, 20, 1, 'left');
@@ -34,7 +37,7 @@ export function makeCustomShellChain(curve: CurveSpec): Chain {
         id: 'custom-region', label: '1', title: 'Your region',
         narration: 'Your function and interval define the flat region that will rotate around the y-axis.',
         show: [OBJ.axes, OBJ.curve, OBJ.region], camera: 'front',
-        formula: [{ tex: curve.tex, highlight: true }, { tex: `${a} \\le x \\le ${b}` }],
+        formula: [{ tex: curve.tex, highlight: true }, { tex: `${aTex} \\le x \\le ${bTex}` }],
       },
       {
         id: 'custom-strip', label: '2', title: 'One vertical strip',
@@ -104,7 +107,7 @@ export function makeCustomShellChain(curve: CurveSpec): Chain {
         show: [OBJ.axes, OBJ.shells], camera: 'three-quarter', params: { n: 4 },
         autoplay: { param: 'n', from: 4, to: 64, steps: [4, 8, 16, 32, 64], delayMs: 800, durationMs: 6500 },
         formula: [
-          { tex: `\\sum 2\\pi x_i f(x_i)\\,\\Delta x \\longrightarrow 2\\pi\\int_{${a}}^{${b}}x f(x)\\,dx`, highlight: true },
+          { tex: `\\sum 2\\pi x_i f(x_i)\\,\\Delta x \\longrightarrow 2\\pi\\int_{${aTex}}^{${bTex}}x f(x)\\,dx`, highlight: true },
           { tex: (p) => `n=${nAt(p)},\\quad\\text{error}=${f4(relativeError(shellRiemann(curve, nAt(p)), exact))}\\%` },
         ],
       },
@@ -113,7 +116,7 @@ export function makeCustomShellChain(curve: CurveSpec): Chain {
         narration: 'Every factor now names a visible measurement from the rotating strip.',
         show: [OBJ.axes, OBJ.curve, OBJ.region], camera: 'front',
         formula: [
-          { tex: `V=2\\pi\\int_{${a}}^{${b}}x f(x)\\,dx`, highlight: true },
+          { tex: `V=2\\pi\\int_{${aTex}}^{${bTex}}x f(x)\\,dx`, highlight: true },
           { tex: `V\\approx ${f6(exact)}` },
         ],
       },

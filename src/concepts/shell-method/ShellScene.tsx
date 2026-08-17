@@ -12,6 +12,7 @@ import { circumference } from '../../math/geometry';
 import { shellSlices } from '../../math/solids';
 import type { CurveSpec, Interval } from '../../math/types';
 import type { ViewportCurve } from '../../math/expression';
+import { formatCoordinate } from '../../math/format';
 import type { ShellSurfaceSpec } from '../../math/shellSurface';
 import { Stage3D } from '../../scene/Stage3D';
 import {
@@ -92,8 +93,8 @@ export function ShellScene({
           <Axes depth={!isFront} ticks={isFront && !custom} />
           {custom && isFront && (
             <>
-              <MathLabel position={[drawInterval[0], -0.35, 0]} color={COLOR.thickness}>{sourceInterval[0]}</MathLabel>
-              <MathLabel position={[drawInterval[1], -0.35, 0]} color={COLOR.thickness}>{sourceInterval[1]}</MathLabel>
+              <MathLabel position={[drawInterval[0], -0.35, 0]} color={COLOR.thickness}>{formatCoordinate(sourceInterval[0])}</MathLabel>
+              <MathLabel position={[drawInterval[1], -0.35, 0]} color={COLOR.thickness}>{formatCoordinate(sourceInterval[1])}</MathLabel>
               <MathLabel position={[-0.2, topY, 0]} color={COLOR.height}>{displayTop}</MathLabel>
               {clamped && <MathLabel position={[1, 4.35, 0]} color={COLOR.introduce}>view clipped above {displayTop}</MathLabel>}
             </>

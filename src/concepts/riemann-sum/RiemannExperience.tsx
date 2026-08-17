@@ -14,6 +14,7 @@ import { RIEMANN_SUM_CHAIN } from './chain';
 import { makeCustomRiemannChain } from './customChain';
 import { RiemannScene } from './RiemannScene';
 import { ExpressionInputPanel } from '../../ui/ExpressionInputPanel';
+import { EXPRESSION_PRESETS, type ExpressionPreset } from '../../math/presets';
 
 const DEFAULT_INPUT: ExpressionCurveInput = { expression: '4 - x^2', a: 0, b: 2 };
 
@@ -78,6 +79,12 @@ export function RiemannExperience() {
     setValidation(compileExpressionCurve(DEFAULT_INPUT));
     setApplied(null);
   };
+  const choosePreset = (preset: ExpressionPreset) => {
+    setExpression(preset.expression);
+    setAText(String(preset.a));
+    setBText(String(preset.b));
+    setValidation(compileExpressionCurve(preset));
+  };
 
   return (
     <>
@@ -95,6 +102,8 @@ export function RiemannExperience() {
         onB={setBText}
         onApply={apply}
         onReset={restore}
+        presets={EXPRESSION_PRESETS.riemann}
+        onPreset={choosePreset}
       />
     </>
   );

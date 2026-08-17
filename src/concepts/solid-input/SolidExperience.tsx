@@ -11,6 +11,7 @@ import {
   type ExpressionCurveResult,
 } from '../../math/expression';
 import { ExpressionInputPanel } from '../../ui/ExpressionInputPanel';
+import { EXPRESSION_PRESETS, type ExpressionPreset } from '../../math/presets';
 import { DISK_METHOD_CHAIN } from '../disk-method/chain';
 import { makeCustomDiskChain } from '../disk-method/customChain';
 import { DiskScene } from '../disk-method/DiskScene';
@@ -103,6 +104,12 @@ export function SolidExperience({ method }: { method: SolidMethod }) {
     setValidation(validate(method, initial));
     setApplied(null);
   };
+  const choosePreset = (preset: ExpressionPreset) => {
+    setExpression(preset.expression);
+    setAText(String(preset.a));
+    setBText(String(preset.b));
+    setValidation(validate(method, preset));
+  };
 
   return (
     <>
@@ -121,6 +128,8 @@ export function SolidExperience({ method }: { method: SolidMethod }) {
         onB={setBText}
         onApply={apply}
         onReset={restore}
+        presets={EXPRESSION_PRESETS[method]}
+        onPreset={choosePreset}
       />
     </>
   );

@@ -17,7 +17,7 @@
 | 左右极限 | `#/limits` | ✅ 已上线,7 步 |
 | Unit Circle → sin/cos | `#/unit-circle` | ✅ 已上线,7 步 |
 
-279 个测试 · `src/engine/` 连续五个概念零改动 · 线上
+287 个测试 · `src/engine/` 连续五个概念零改动 · 线上
 https://calcviz.netlify.app (主) · https://jesse090630.github.io/calc-viz/ (备,push 即自动部署)
 
 ---
@@ -104,7 +104,7 @@ aafc1da feat(riemann-sum): third chain — rectangles squeeze the area into an i
 
 - **T3 = v2.0**:✅ 表达式输入 + 区间输入,**只接到 Riemann 这一条链**(2D,风险最低)
 - **T4 = v2.1**:✅ 接到 Shell / Disk(3D,要处理值域自适应与相机距离)
-- **T5 = v2.2**:预设下拉 + "试试这个"示例列表(空输入框对学生门槛太高)
+- **T5 = v2.2**:✅ 预设下拉 + "试试这个"示例列表(空输入框对学生门槛太高)
 
 **2026-08-16 T3 完成:**mathjs 表达式与解析导数、区间输入、防抖、定义域/奇点/负值/发散拒绝、
 极端值视口裁切均已接入 Riemann;自定义 `x^2,[0,2]` 的第 4 步显示
@@ -116,6 +116,12 @@ aafc1da feat(riemann-sum): third chain — rectangles squeeze the area into an i
 `8π/3 = 8.377580`。现有相机预设未改：输入区间与值域被映射到固定视口，Shell 的 x 缩放
 严格保留半径零点与内孔，Disk 用通用横向图元直接画 `x=r(t)` 而不求逆。3 个 T4 植入错误
 均被测试抓到，桌面和 390×844 截图 console 零错误，`src/engine/` 仍零改动。
+
+**2026-08-16 T5 完成:**Riemann 4 个、Shell 3 个、Disk 3 个预设全部用手算结果钉死，
+并同时出现在下拉与“Try this”快捷入口。真实浏览器分别用下拉和快捷按钮进入三条动态链；
+Sine arch 在 `n=4` 显示 `2.052344`，积分显示 `2.000000`，上下限与轴标签显示 `π` 而不是
+长小数。π 格式与预设端点两项变异均被抓到；287 测试、全套截图、移动端展开面板、console、
+引擎零改动全部通过。**T3–T5 的 v2 工作队列已完成；第 6 节可选方向仍不得自动开始。**
 
 **关键设计约束**(最容易被做错的一条):
 mathjs **不做符号积分**,所以用户函数给不出闭式 `F` / `xF` / `sqF`。

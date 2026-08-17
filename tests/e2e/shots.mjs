@@ -166,31 +166,52 @@ if (!(await page.getByRole('button', { name: 'Build the derivation' }).isDisable
 
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${URL}#/riemann-sum`, { waitUntil: 'networkidle' });
-await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
+const mobileDetails = page.locator('details').filter({ hasText: 'Try your own function' });
+if (!(await mobileDetails.evaluate((element) => element.open))) {
+  await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
+}
 await page.waitForTimeout(500);
 const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
 if (mobileOverflow > 1) errors.push(`[riemann-sum/mobile] horizontal overflow ${mobileOverflow}px`);
+if (!(await page.getByLabel('riemann preset').isVisible())) {
+  errors.push('[riemann-sum/mobile] expanded preset picker is not visible');
+}
 await page.screenshot({ path: join(OUT, 'riemann-custom-mobile.png') });
 console.log('  custom mobile → "390×844 input panel fits without horizontal overflow"');
 
 await page.setViewportSize({ width: 1440, height: 900 });
+currentShot = 'riemann-sum/preset-sine';
+await page.goto(`${URL}#/riemann-sum`, { waitUntil: 'networkidle' });
+const sineDetails = page.locator('details').filter({ hasText: 'Try your own function' });
+if (!(await sineDetails.evaluate((element) => element.open))) {
+  await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
+}
+await page.getByLabel('riemann preset').selectOption('riemann-sine');
+await page.getByRole('button', { name: 'Build the derivation' }).click();
+for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+await page.waitForTimeout(1800);
+const sinePanel = await page.locator('aside').innerText();
+if (!sinePanel.includes('2.052344') || !sinePanel.includes('2.000000')) {
+  errors.push(`[${currentShot}] expected sine M4=2.052344 and integral=2.000000`);
+}
+await page.screenshot({ path: join(OUT, 'riemann-preset-sine.png') });
+console.log('  preset sine  → "M4 2.052344 · integral 2.000000"');
+
 for (const custom of [
   {
     route: 'shell-method', prefix: 'shell', title: 'Try your own shell region',
-    expression: '2-x', steps: 6, sum: '8.639380', exact: '8.377580', shot: 'shell-custom-linear.png',
+    tryLabel: 'Cone side', steps: 6, sum: '8.639380', exact: '8.377580', shot: 'shell-custom-linear.png',
   },
   {
     route: 'disk-method', prefix: 'disk', title: 'Try your own disk radius',
-    expression: '2-x', steps: 4, sum: '8.246681', exact: '8.377580', shot: 'disk-custom-linear.png',
+    presetId: 'disk-cone', steps: 4, sum: '8.246681', exact: '8.377580', shot: 'disk-custom-linear.png',
   },
 ]) {
   currentShot = `${custom.route}/custom-input`;
   await page.goto(`${URL}#/${custom.route}`, { waitUntil: 'networkidle' });
   await page.locator('summary').filter({ hasText: custom.title }).click();
-  await page.locator(`#${custom.prefix}-expression`).fill(custom.expression);
-  await page.getByLabel(`${custom.prefix} interval a`).fill('0');
-  await page.getByLabel(`${custom.prefix} interval b`).fill('2');
-  await page.waitForTimeout(600);
+  if (custom.tryLabel) await page.getByLabel(`${custom.prefix} try ${custom.tryLabel}`).click();
+  if (custom.presetId) await page.getByLabel(`${custom.prefix} preset`).selectOption(custom.presetId);
   await page.getByRole('button', { name: 'Build the derivation' }).click();
   for (let i = 0; i < custom.steps; i++) await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(2200);

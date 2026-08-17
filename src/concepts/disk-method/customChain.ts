@@ -4,6 +4,7 @@ import { circleArea } from '../../math/geometry';
 import { partitionWidth, relativeError, sampleX } from '../../math/riemann';
 import { diskRiemann, diskVolume, diskVolumeExact } from '../../math/solids';
 import type { CurveSpec } from '../../math/types';
+import { formatCoordinate } from '../../math/format';
 import { OBJ } from './chain';
 
 const f2 = (value: number): string => value.toFixed(2);
@@ -12,6 +13,8 @@ const f6 = (value: number): string => value.toFixed(6);
 
 export function makeCustomDiskChain(curve: CurveSpec): Chain {
   const [a, b] = curve.domain;
+  const aTex = formatCoordinate(a, 'tex');
+  const bTex = formatCoordinate(b, 'tex');
   const y0 = sampleX(a, b, 1, 0, 'mid');
   const dy = partitionWidth(curve.domain, 6);
   const yMin = sampleX(a, b, 20, 1, 'left');
@@ -32,7 +35,7 @@ export function makeCustomDiskChain(curve: CurveSpec): Chain {
         id: 'custom-profile', label: '1', title: 'Your radius profile',
         narration: 'Your function gives the radius at every level of the solid.',
         show: [OBJ.axes, OBJ.curve, OBJ.region], camera: 'front',
-        formula: [{ tex: curve.tex, highlight: true }, { tex: `${a} \\le t \\le ${b}` }],
+        formula: [{ tex: curve.tex, highlight: true }, { tex: `${aTex} \\le t \\le ${bTex}` }],
       },
       {
         id: 'custom-slice', label: '2', title: 'One horizontal slice',
@@ -93,7 +96,7 @@ export function makeCustomDiskChain(curve: CurveSpec): Chain {
         show: [OBJ.axes, OBJ.disks], camera: 'three-quarter', params: { n: 4 },
         autoplay: { param: 'n', from: 4, to: 64, steps: [4, 8, 16, 32, 64], delayMs: 800, durationMs: 6200 },
         formula: [
-          { tex: `\\sum \\pi r(t_i)^2\\,\\Delta t \\longrightarrow \\pi\\int_{${a}}^{${b}}r(t)^2\\,dt`, highlight: true },
+          { tex: `\\sum \\pi r(t_i)^2\\,\\Delta t \\longrightarrow \\pi\\int_{${aTex}}^{${bTex}}r(t)^2\\,dt`, highlight: true },
           { tex: (p) => `n=${nAt(p)},\\quad\\text{error}=${f4(relativeError(diskRiemann(curve, nAt(p)), exact))}\\%` },
         ],
       },
@@ -102,7 +105,7 @@ export function makeCustomDiskChain(curve: CurveSpec): Chain {
         narration: 'The visible radius and thickness now account for every factor in the integral.',
         show: [OBJ.axes, OBJ.curve, OBJ.region], camera: 'front',
         formula: [
-          { tex: `V=\\pi\\int_{${a}}^{${b}}r(t)^2\\,dt`, highlight: true },
+          { tex: `V=\\pi\\int_{${aTex}}^{${bTex}}r(t)^2\\,dt`, highlight: true },
           { tex: `V\\approx ${f6(exact)}` },
         ],
       },

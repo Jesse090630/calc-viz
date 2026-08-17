@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { ExpressionCurveResult } from '../math/expression';
+import type { ExpressionPreset } from '../math/presets';
 
 export function ExpressionInputPanel({
   idPrefix,
@@ -15,6 +16,8 @@ export function ExpressionInputPanel({
   onApply,
   onReset,
   readyText,
+  presets,
+  onPreset,
 }: {
   idPrefix: string;
   title: string;
@@ -29,6 +32,8 @@ export function ExpressionInputPanel({
   onApply: () => void;
   onReset: () => void;
   readyText?: string;
+  presets?: readonly ExpressionPreset[];
+  onPreset?: (preset: ExpressionPreset) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const apply = () => {
@@ -43,6 +48,43 @@ export function ExpressionInputPanel({
         {title}
       </summary>
       <div className="border-t border-slate-700 p-3">
+        {presets && onPreset && (
+          <>
+            <label className="block text-[11px] font-medium text-slate-300">
+              preset
+              <select
+                aria-label={`${idPrefix} preset`}
+                value=""
+                onChange={(event) => {
+                  const preset = presets.find((item) => item.id === event.target.value);
+                  if (preset) onPreset(preset);
+                }}
+                className="mt-1 w-full rounded-md border border-slate-600 bg-slate-900 px-2.5 py-2 text-sm outline-none focus:border-cyan-400"
+              >
+                <option value="">Choose a verified example…</option>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>{preset.label} · {preset.hint}</option>
+                ))}
+              </select>
+            </label>
+            <div className="mt-2">
+              <p className="text-[11px] text-slate-400">Try this</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {presets.slice(0, 3).map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    aria-label={`${idPrefix} try ${preset.label}`}
+                    onClick={() => onPreset(preset)}
+                    className="rounded-full border border-slate-600 bg-slate-900 px-2.5 py-1 text-[11px] text-slate-300 hover:border-cyan-500 hover:text-cyan-200"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
         <label className="block text-[11px] font-medium text-slate-300" htmlFor={`${idPrefix}-expression`}>
           {functionLabel}
         </label>

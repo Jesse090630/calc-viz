@@ -2,6 +2,7 @@
 import type { Chain } from '../../engine/types';
 import { relativeError, riemannSum } from '../../math/riemann';
 import type { CurveSpec } from '../../math/types';
+import { formatCoordinate } from '../../math/format';
 import { OBJ } from './chain';
 
 const count = (value: number): number => Math.max(1, Math.round(value));
@@ -10,6 +11,8 @@ const f6 = (value: number): string => value.toFixed(6);
 
 export function makeCustomRiemannChain(curve: CurveSpec, exact: number): Chain {
   const [a, b] = curve.domain;
+  const aTex = formatCoordinate(a, 'tex');
+  const bTex = formatCoordinate(b, 'tex');
   const mid = (n: number): number => riemannSum(curve.f, curve.domain, n, 'mid');
   const error = (n: number): number => relativeError(mid(n), exact);
 
@@ -23,7 +26,7 @@ export function makeCustomRiemannChain(curve: CurveSpec, exact: number): Chain {
         id: 'custom-area', label: '1', title: 'Your area',
         narration: 'The shaded region is the area defined by your function and interval.',
         show: [OBJ.axes, OBJ.curve, OBJ.region], camera: 'front',
-        formula: [{ tex: curve.tex, highlight: true }, { tex: `${a} \\le x \\le ${b}` }],
+        formula: [{ tex: curve.tex, highlight: true }, { tex: `${aTex} \\le x \\le ${bTex}` }],
       },
       {
         id: 'custom-rectangles', label: '2', title: 'Measure with midpoints',
@@ -46,7 +49,7 @@ export function makeCustomRiemannChain(curve: CurveSpec, exact: number): Chain {
         show: [OBJ.axes, OBJ.curve, OBJ.region, OBJ.leftBars], camera: 'front', params: { n: 4 },
         formula: [
           { tex: `M_4 = ${f6(mid(4))}`, highlight: true },
-          { tex: `\\int_{${a}}^{${b}} f(x)\\,dx = ${f6(exact)}` },
+          { tex: `\\int_{${aTex}}^{${bTex}} f(x)\\,dx = ${f6(exact)}` },
         ],
       },
       {
@@ -83,8 +86,8 @@ export function makeCustomRiemannChain(curve: CurveSpec, exact: number): Chain {
         params: { n: 64, morph: 0 },
         autoplay: { param: 'morph', from: 0, to: 1, delayMs: 1200, durationMs: 1800 },
         formula: [
-          { tex: `\\lim_{n\\to\\infty}M_n = \\int_{${a}}^{${b}}f(x)\\,dx`, highlight: true },
-          { tex: `\\int_{${a}}^{${b}}f(x)\\,dx = ${f6(exact)}` },
+          { tex: `\\lim_{n\\to\\infty}M_n = \\int_{${aTex}}^{${bTex}}f(x)\\,dx`, highlight: true },
+          { tex: `\\int_{${aTex}}^{${bTex}}f(x)\\,dx = ${f6(exact)}` },
         ],
       },
     ],
