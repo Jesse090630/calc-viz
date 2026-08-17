@@ -12,9 +12,9 @@
 |---|---|---|
 | Shell Method | `#/shell-method` | ✅ 已上线,9 步 |
 | Disk Method | `#/disk-method` | ✅ 已上线,8 步 |
-| Riemann Sums | `#/riemann-sum` | 🔶 已实现并验收,**待提交/部署** → T0 |
-| Secant → Tangent | `#/derivative` | ⬜ T1 |
-| 左右极限 | `#/limits` | ⬜ T2 |
+| Riemann Sums | `#/riemann-sum` | ✅ 已上线,8 步 |
+| Secant → Tangent | `#/derivative` | ✅ 已上线,8 步 |
+| 左右极限 | `#/limits` | ✅ 已上线,7 步 |
 | Unit Circle → sin/cos | `#/unit-circle` | ⬜ T3 |
 | v2 任意函数输入 | — | ⬜ T5–T7,**四条链全完成前不许开始** |
 
