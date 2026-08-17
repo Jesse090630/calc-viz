@@ -2,7 +2,7 @@
 import { Html } from '@react-three/drei';
 import type { SceneProps } from '../../engine/types';
 import { PARABOLA_DOWN } from '../../math/curves';
-import { definiteIntegralExact, leftRightGap } from '../../math/riemann';
+import { definiteIntegralExact } from '../../math/riemann';
 import { Axes, FunctionCurve, MathLabel, RegionFill } from '../../scene/primitives';
 import { RiemannBars } from '../../scene/RiemannBars';
 import { Stage3D } from '../../scene/Stage3D';
@@ -78,14 +78,24 @@ export function RiemannScene({ stage, params, visible }: SceneProps) {
 
       {visible(OBJ.gap) && (
         <>
-          <MathLabel position={[2.55, 3.25, 0]} color={COLOR.hero}>
+          {/* 标签必须压在它所标注的色块上。原来三个并排飘在 x=2.55 的空地上,
+              读者得自己在标签和图形之间连线 —— 那正是"标签没指向它标注的东西"。
+              夹缝的数值已经在右侧公式面板里,这里不再重复一个浮动 chip。 */}
+          {/* 琥珀色带 = 左端点和比右端点和多出来的部分,在第 i 段上是
+              f(xᵢ) 与 f(xᵢ₊₁) 之间那条。f 递减且凹,所以【最后一段】那条永远最宽,
+              把标签锚在它中间。下限 0.45 是为了 n 很大时标签不至于压到 x 轴上。 */}
+          <MathLabel
+            position={[
+              INTERVAL[1] - (INTERVAL[1] - INTERVAL[0]) / n / 2,
+              Math.max(0.45, CURVE.f(INTERVAL[1] - (INTERVAL[1] - INTERVAL[0]) / n) / 2),
+              0,
+            ]}
+            color={COLOR.hero}
+          >
             upper Lₙ
           </MathLabel>
-          <MathLabel position={[2.55, 2.65, 0]} color={COLOR.introduce}>
+          <MathLabel position={[0.62, 1.15, 0]} color={COLOR.introduce}>
             lower Rₙ
-          </MathLabel>
-          <MathLabel position={[2.55, 2.05, 0]} color={COLOR.result}>
-            gap = {leftRightGap(CURVE, n, INTERVAL).toFixed(6)}
           </MathLabel>
         </>
       )}

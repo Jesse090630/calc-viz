@@ -16,7 +16,16 @@ const CHAINS = [
   { chain: RIEMANN_SUM_CHAIN, store: createChainStore(RIEMANN_SUM_CHAIN), Scene: RiemannScene },
 ] as const;
 
+// 顺序 = 依赖顺序,不是完成顺序。Riemann 是 Shell 的前置知识
+// (Shell 第 6–7 步的 Σ→∫ 直接建立在它上面),所以它排第一。
 const CARDS: ConceptCard[] = [
+  {
+    id: 'riemann-sum',
+    title: 'Riemann Sums → the Integral',
+    question: 'Why does adding up rectangles turn into an integral sign?',
+    steps: RIEMANN_SUM_CHAIN.stages.length,
+    ready: true,
+  },
   {
     id: 'shell-method',
     title: 'The Shell Method',
@@ -29,13 +38,6 @@ const CARDS: ConceptCard[] = [
     title: 'The Disk Method',
     question: 'How am I supposed to know which method to use?',
     steps: DISK_METHOD_CHAIN.stages.length,
-    ready: true,
-  },
-  {
-    id: 'riemann-sum',
-    title: 'Riemann Sums → the Integral',
-    question: 'Why does adding up rectangles turn into an integral sign?',
-    steps: RIEMANN_SUM_CHAIN.stages.length,
     ready: true,
   },
   {
