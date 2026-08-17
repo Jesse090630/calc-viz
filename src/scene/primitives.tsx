@@ -69,7 +69,17 @@ export function FunctionCurve({ curve, interval }: { curve: CurveSpec; interval:
 }
 
 /** 曲线与 x 轴、y 轴围成的区域 */
-export function RegionFill({ curve, interval }: { curve: CurveSpec; interval: Interval }) {
+export function RegionFill({
+  curve,
+  interval,
+  color = COLOR.region,
+  opacity = 0.28,
+}: {
+  curve: CurveSpec;
+  interval: Interval;
+  color?: string;
+  opacity?: number;
+}) {
   const geometry = useMemo(() => {
     const [a, b] = interval;
     const shape = new THREE.Shape();
@@ -85,9 +95,9 @@ export function RegionFill({ curve, interval }: { curve: CurveSpec; interval: In
   return (
     <mesh geometry={geometry}>
       <meshBasicMaterial
-        color={COLOR.region}
+        color={color}
         transparent
-        opacity={0.28}
+        opacity={opacity}
         side={THREE.DoubleSide}
         depthWrite={false}
       />
@@ -101,11 +111,15 @@ export function SampleRectangle({
   dx,
   height,
   color = COLOR.hero,
+  opacity = 0.92,
+  outlineColor = '#fde68a',
 }: {
   x: number;
   dx: number;
   height: number;
   color?: string;
+  opacity?: number;
+  outlineColor?: string;
 }) {
   const edges = useMemo(() => new THREE.EdgesGeometry(new THREE.PlaneGeometry(1, 1)), []);
   // z 抬高一点点:与 RegionFill 同处 z = 0 会 z-fighting,矩形上会出现摩尔纹
@@ -113,10 +127,10 @@ export function SampleRectangle({
     <group position={[x, height / 2, 0.02]} scale={[dx, height, 1]}>
       <mesh>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial color={color} transparent opacity={0.92} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} />
       </mesh>
       <lineSegments geometry={edges}>
-        <lineBasicMaterial color="#fde68a" />
+        <lineBasicMaterial color={outlineColor} transparent opacity={Math.min(1, opacity * 1.1)} />
       </lineSegments>
     </group>
   );

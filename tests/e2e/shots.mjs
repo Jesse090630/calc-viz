@@ -65,6 +65,13 @@ const CHAINS = [
       ['stack', 2500], ['exact', 2500], ['why', 2500], ['formula', 2500],
     ],
   },
+  {
+    route: 'riemann-sum',
+    stages: [
+      ['area', 2000], ['rectangles', 2000], ['too-big', 2000], ['too-small', 2000],
+      ['squeezed', 2200], ['gap', 2200], ['limit', 7000], ['integral', 4500],
+    ],
+  },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -75,12 +82,14 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 const errors = [];
+let currentShot = 'startup';
 page.on('console', (m) => {
-  if (m.type() === 'error') errors.push(m.text());
+  if (m.type() === 'error') errors.push(`[${currentShot}] ${m.text()}`);
 });
-page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
+page.on('pageerror', (e) => errors.push(`PAGEERROR [${currentShot}]: ${e.stack ?? e.message}`));
 
 // 首页
+currentShot = 'home';
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
 await page.screenshot({ path: join(OUT, '00-home.png') });
@@ -88,12 +97,14 @@ console.log(`  00 home      → "${await page.locator('h1').first().innerText()}
 
 for (const { route, stages } of CHAINS) {
   console.log(`\n  ── ${route} ──`);
+  currentShot = `${route}/loading`;
   await page.goto(`${URL}#/${route}`, { waitUntil: 'networkidle' });
   await page.reload({ waitUntil: 'networkidle' }); // 确保从第 1 步开始
   await page.waitForSelector('canvas', { timeout: 20000 });
   await page.waitForTimeout(1800);
 
   for (const [index, [id, wait]] of stages.entries()) {
+    currentShot = `${route}/${id}`;
     if (index > 0) await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(wait);
     const n = String(index + 1).padStart(2, '0');
@@ -107,5 +118,5 @@ await browser.close();
 server?.close();
 
 console.log(errors.length === 0 ? '\n✅ 无 console 错误' : `\n❌ ${errors.length} 个错误:`);
-for (const e of [...new Set(errors)].slice(0, 10)) console.log('   ', e.slice(0, 200));
+for (const e of [...new Set(errors)].slice(0, 10)) console.log('   ', e.slice(0, 1200));
 process.exit(errors.length === 0 ? 0 : 1);

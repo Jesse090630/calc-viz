@@ -235,4 +235,16 @@ npm run build    # 生产构建(Vercel 跑的就是这条)
   之后任意一次 push 即自动上线到 https://jesse090630.github.io/calc-viz/
 
   查 CI 状态的办法(不需要登录):`https://api.github.com/repos/Jesse090630/calc-viz/actions/runs?per_page=3`
-- **待办**:上线 → 其余 4 个概念:Riemann → 导数 → 极限 → 单位圆。
+- **2026-08-16 · Phase 7 第二条:Riemann Sum → 定积分完成**。153 个测试,新增 8 张逐步截图,console 零错误。
+  - 严格沿“左和高估 / 右和低估 → 同屏夹逼 → 夹缝 = 4Δx → Δx → 0 → ∫”推进,
+    `n=4` 显示 `6.250000 / 4.250000 / 5.333333`,`n=64` 夹缝显示 `0.125000`。
+  - 新增通用 `scene/RiemannBars.tsx`;矩形位置与高度全部由 `math/riemann.ts` 产出,
+    `leftRightGap` 的逐矩形求和路径与端点恒等式路径互证,精确面积另与 adaptive Simpson 互证。
+  - ⭐ **引擎通用性再次验收通过:`src/engine/` 零改动**。
+  - ⚠️ 教训:首次逐图检查发现矩形填充淡出后轮廓仍残留;透明度必须同时驱动填充与边线,
+    不能只凭 `npm run shots` 的退出码判断画面对。
+  - ⚠️ 第三条链暴露了跨路由 hook 数量竞态:`ChainPlayer` 直接调用 Scene 函数,Shell / Disk 的 hook 数量
+    恰好相同所以一直没暴露;Riemann Scene 无 hook 后切链会报 React #300。无需改 engine,在 `App` 按
+    `chain.id` 给播放器加 `key` 让每条链正确重挂载;开发与生产截图序列均验证 console 零错误。
+  - 手机竖屏 390×844 实测可用;滑块获焦时方向键只改 n、不翻页,回退再前进参数重置为该步初值。
+- **待办**:部署 → 其余 3 个概念:导数 → 极限 → 单位圆。

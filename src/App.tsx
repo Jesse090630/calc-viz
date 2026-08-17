@@ -5,12 +5,15 @@ import { SHELL_METHOD_CHAIN } from './concepts/shell-method/chain';
 import { ShellScene } from './concepts/shell-method/ShellScene';
 import { DISK_METHOD_CHAIN } from './concepts/disk-method/chain';
 import { DiskScene } from './concepts/disk-method/DiskScene';
+import { RIEMANN_SUM_CHAIN } from './concepts/riemann-sum/chain';
+import { RiemannScene } from './concepts/riemann-sum/RiemannScene';
 import { Home, BackLink, type ConceptCard } from './ui/Home';
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
   { chain: SHELL_METHOD_CHAIN, store: createChainStore(SHELL_METHOD_CHAIN), Scene: ShellScene },
   { chain: DISK_METHOD_CHAIN, store: createChainStore(DISK_METHOD_CHAIN), Scene: DiskScene },
+  { chain: RIEMANN_SUM_CHAIN, store: createChainStore(RIEMANN_SUM_CHAIN), Scene: RiemannScene },
 ] as const;
 
 const CARDS: ConceptCard[] = [
@@ -32,8 +35,8 @@ const CARDS: ConceptCard[] = [
     id: 'riemann-sum',
     title: 'Riemann Sums → the Integral',
     question: 'Why does adding up rectangles turn into an integral sign?',
-    steps: 0,
-    ready: false,
+    steps: RIEMANN_SUM_CHAIN.stages.length,
+    ready: true,
   },
   {
     id: 'derivative',
@@ -72,7 +75,7 @@ export default function App() {
   return (
     <div className="relative">
       <BackLink />
-      <ChainPlayer useChain={active.store} renderScene={active.Scene} />
+      <ChainPlayer key={active.chain.id} useChain={active.store} renderScene={active.Scene} />
     </div>
   );
 }
