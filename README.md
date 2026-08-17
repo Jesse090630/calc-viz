@@ -34,7 +34,7 @@ something you just watched happen.
 | [Disk Method](https://calcviz.netlify.app/#/disk-method) | How am I supposed to know which method to use? | 8 steps |
 | [Secant → Tangent](https://calcviz.netlify.app/#/derivative) | What does it mean for two points to "become" one? | 8 steps |
 | [Left and Right Limits](https://calcviz.netlify.app/#/limits) | If there is no value there, what is the limit describing? | 7 steps |
-| The Unit Circle and sin/cos | Why does going around a circle produce a wave? | soon |
+| [The Unit Circle and sin/cos](https://calcviz.netlify.app/#/unit-circle) | Why does going around a circle produce a wave? | 7 steps |
 
 Three things in here I haven't seen taught anywhere else, all of which fell out of building it:
 
@@ -55,6 +55,12 @@ stack of 2 disks visibly looks nothing like the solid. Slicing decides what you 
 integrating: vertical strips give a cubic, horizontal ones give something linear, and the midpoint
 rule is exact on straight lines. The method is a consequence of the cut, not a rule to memorise.
 (Disk, steps 5b–6.)
+
+**A sine wave is a carried coordinate.** On the unit circle, radians make the angle equal to
+distance walked along the arc. Carry the moving point's vertical coordinate sideways without
+changing its height and the sine wave is forced to appear; carry the horizontal coordinate and
+the same motion gives cosine. A second lap lands on the same trace because the point has returned
+to the same places in the same order. (Unit Circle, steps 2–7.)
 
 ---
 

@@ -224,21 +224,28 @@ export function CircleOutline({
   radius,
   y,
   color = COLOR.introduce,
+  plane = 'horizontal',
 }: {
   radius: number;
   y: number;
   color?: string;
+  plane?: 'horizontal' | 'front';
 }) {
   const points = useMemo(
     () =>
       Array.from({ length: 129 }, (_, i) => {
         const a = (i / 128) * Math.PI * 2;
-        return [Math.cos(a), 0, Math.sin(a)] as [number, number, number];
+        return plane === 'front'
+          ? ([Math.cos(a), Math.sin(a), 0] as [number, number, number])
+          : ([Math.cos(a), 0, Math.sin(a)] as [number, number, number]);
       }),
-    [],
+    [plane],
   );
   return (
-    <group position={[0, y, 0]} scale={[radius, 1, radius]}>
+    <group
+      position={[0, y, 0]}
+      scale={plane === 'front' ? [radius, radius, 1] : [radius, 1, radius]}
+    >
       <Line points={points} color={color} lineWidth={3} />
     </group>
   );

@@ -11,6 +11,8 @@ import { DERIVATIVE_CHAIN } from './concepts/derivative/chain';
 import { DerivativeScene } from './concepts/derivative/DerivativeScene';
 import { LIMITS_CHAIN } from './concepts/limits/chain';
 import { LimitsScene } from './concepts/limits/LimitsScene';
+import { UNIT_CIRCLE_CHAIN } from './concepts/unit-circle/chain';
+import { UnitCircleScene } from './concepts/unit-circle/UnitCircleScene';
 import { Home, BackLink, type ConceptCard } from './ui/Home';
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
@@ -20,6 +22,7 @@ const CHAINS = [
   { chain: RIEMANN_SUM_CHAIN, store: createChainStore(RIEMANN_SUM_CHAIN), Scene: RiemannScene },
   { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
   { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
+  { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(UNIT_CIRCLE_CHAIN), Scene: UnitCircleScene },
 ] as const;
 
 // 顺序 = 依赖顺序,不是完成顺序。Riemann 是 Shell 的前置知识
@@ -64,8 +67,8 @@ const CARDS: ConceptCard[] = [
     id: 'unit-circle',
     title: 'The Unit Circle and sin / cos',
     question: 'Why does going around a circle produce a wave?',
-    steps: 0,
-    ready: false,
+    steps: UNIT_CIRCLE_CHAIN.stages.length,
+    ready: true,
   },
 ];
 

@@ -86,6 +86,13 @@ const CHAINS = [
       ['squeezed', 2200], ['gap', 2200], ['limit', 7000], ['integral', 4500],
     ],
   },
+  {
+    route: 'unit-circle',
+    stages: [
+      ['point', 2200], ['arc-length', 5200], ['drop', 4200], ['carry', 4800],
+      ['trace', 9000], ['cosine', 9000], ['repeat', 9000],
+    ],
+  },
 ];
 
 mkdirSync(OUT, { recursive: true });
