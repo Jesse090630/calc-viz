@@ -31,11 +31,11 @@ export interface CurveSpec {
   /** 解析导数 f'(x) */
   readonly df: (x: number) => number;
   /** f 的一个原函数 F,满足 F' = f (常数项取 F(0)=0 或就近取值) */
-  readonly F: (x: number) => number;
+  readonly F?: (x: number) => number;
   /** x·f(x) 的一个原函数,满足 (xF)' = x·f(x)。Shell Method 需要它求解析解。 */
-  readonly xF: (x: number) => number;
+  readonly xF?: (x: number) => number;
   /** f(x)² 的一个原函数,满足 (sqF)' = f(x)²。Disk / Washer Method 需要它。 */
-  readonly sqF: (x: number) => number;
+  readonly sqF?: (x: number) => number;
 
   /** 本项目中使用该曲线的合法区间(必填,不允许省略) */
   readonly domain: Interval;

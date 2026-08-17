@@ -16,7 +16,9 @@ import { adaptiveSimpson } from './quadrature';
 /** 绕 y 轴旋转,Shell Method 的解析解:V = 2π ∫ₐᵇ x·f(x) dx */
 export function shellVolumeExact(curve: CurveSpec, interval: Interval = curve.domain): number {
   const [a, b] = interval;
-  return 2 * Math.PI * (curve.xF(b) - curve.xF(a));
+  return curve.xF
+    ? 2 * Math.PI * (curve.xF(b) - curve.xF(a))
+    : shellVolumeNumeric(curve, interval);
 }
 
 /**
@@ -83,7 +85,9 @@ export function ringVolume({ x, dx, h }: ShellSlice): number {
 /** 解析解:V = π ∫ₐᵇ r(t)² dt */
 export function diskVolumeExact(curve: CurveSpec, interval: Interval = curve.domain): number {
   const [a, b] = interval;
-  return Math.PI * (curve.sqF(b) - curve.sqF(a));
+  return curve.sqF
+    ? Math.PI * (curve.sqF(b) - curve.sqF(a))
+    : diskVolumeNumeric(curve, interval);
 }
 
 /** 独立数值路径,用于交叉验证 sqF 是否写对 */

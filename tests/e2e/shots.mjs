@@ -135,6 +135,44 @@ for (const { route, stages } of CHAINS) {
   }
 }
 
+// v2.0:真实输入一条不同曲线，确认防抖验证、应用与动态公式都进入浏览器路径。
+currentShot = 'riemann-sum/custom-input';
+await page.goto(`${URL}#/riemann-sum`, { waitUntil: 'networkidle' });
+await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
+await page.locator('#riemann-expression').fill('x^2');
+await page.getByLabel('interval a').fill('0');
+await page.getByLabel('interval b').fill('2');
+await page.waitForTimeout(600);
+await page.getByRole('button', { name: 'Build the derivation' }).click();
+for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+await page.waitForTimeout(1800);
+const customPanel = await page.locator('aside').innerText();
+if (!customPanel.includes('2.625000') || !customPanel.includes('2.666667')) {
+  errors.push(`[${currentShot}] expected M4=2.625000 and integral=2.666667`);
+}
+await page.screenshot({ path: join(OUT, 'riemann-custom-x2.png') });
+console.log('\n  custom x^2  → "M4 2.625000 · integral 2.666667"');
+
+await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
+await page.locator('#riemann-expression').fill('1/x');
+await page.waitForTimeout(600);
+const invalidStatus = await page.getByRole('status').innerText();
+if (!/endpoint|diverge/i.test(invalidStatus)) {
+  errors.push(`[riemann-sum/invalid-input] expected a human endpoint-divergence message`);
+}
+if (!(await page.getByRole('button', { name: 'Build the derivation' }).isDisabled())) {
+  errors.push(`[riemann-sum/invalid-input] invalid input must disable Build the derivation`);
+}
+
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${URL}#/riemann-sum`, { waitUntil: 'networkidle' });
+await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
+await page.waitForTimeout(500);
+const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+if (mobileOverflow > 1) errors.push(`[riemann-sum/mobile] horizontal overflow ${mobileOverflow}px`);
+await page.screenshot({ path: join(OUT, 'riemann-custom-mobile.png') });
+console.log('  custom mobile → "390×844 input panel fits without horizontal overflow"');
+
 await browser.close();
 server?.close();
 

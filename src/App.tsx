@@ -6,7 +6,7 @@ import { ShellScene } from './concepts/shell-method/ShellScene';
 import { DISK_METHOD_CHAIN } from './concepts/disk-method/chain';
 import { DiskScene } from './concepts/disk-method/DiskScene';
 import { RIEMANN_SUM_CHAIN } from './concepts/riemann-sum/chain';
-import { RiemannScene } from './concepts/riemann-sum/RiemannScene';
+import { RiemannExperience } from './concepts/riemann-sum/RiemannExperience';
 import { DERIVATIVE_CHAIN } from './concepts/derivative/chain';
 import { DerivativeScene } from './concepts/derivative/DerivativeScene';
 import { LIMITS_CHAIN } from './concepts/limits/chain';
@@ -19,7 +19,6 @@ import { Home, BackLink, type ConceptCard } from './ui/Home';
 const CHAINS = [
   { chain: SHELL_METHOD_CHAIN, store: createChainStore(SHELL_METHOD_CHAIN), Scene: ShellScene },
   { chain: DISK_METHOD_CHAIN, store: createChainStore(DISK_METHOD_CHAIN), Scene: DiskScene },
-  { chain: RIEMANN_SUM_CHAIN, store: createChainStore(RIEMANN_SUM_CHAIN), Scene: RiemannScene },
   { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
   { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
   { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(UNIT_CIRCLE_CHAIN), Scene: UnitCircleScene },
@@ -86,6 +85,14 @@ function useHashRoute(): string {
 
 export default function App() {
   const route = useHashRoute();
+  if (route === 'riemann-sum') {
+    return (
+      <div className="relative">
+        <BackLink />
+        <RiemannExperience />
+      </div>
+    );
+  }
   const active = CHAINS.find((c) => c.chain.id === route);
 
   if (!active) return <Home concepts={CARDS} />;

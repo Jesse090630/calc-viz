@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { PARABOLA_DOWN } from './curves';
+import type { CurveSpec } from './types';
 import { adaptiveSimpson } from './quadrature';
 import { relativeError } from './riemann';
 import {
   shellVolumeExact,
   shellVolumeNumeric,
+  diskVolumeExact,
+  diskVolumeNumeric,
   shellRiemann,
   shellSlice,
   shellSlices,
@@ -28,6 +31,28 @@ describe('Shell 解析解', () => {
     // x² = 4 − y  ⇒  半径² = 4 − y,y 从 0 到 4
     const disk = Math.PI * adaptiveSimpson((y) => 4 - y, 0, 4);
     expect(disk).toBeCloseTo(EXACT, 10);
+  });
+
+  it('用户曲线没有 xF 时自动退回数值积分', () => {
+    const userCurve = {
+      id: 'user-parabola', label: 'y=4-x^2', tex: 'f(x)=4-x^2',
+      f: (x: number) => 4 - x * x, df: (x: number) => -2 * x,
+      domain: [0, 2] as const,
+    } as CurveSpec;
+    expect(shellVolumeExact(userCurve)).toBeCloseTo(EXACT, 10);
+    expect(shellVolumeExact(userCurve)).toBeCloseTo(shellVolumeNumeric(userCurve), 12);
+  });
+});
+
+describe('Disk 用户曲线回退', () => {
+  it('没有 sqF 时自动退回数值积分，手算 π∫₀²(2−x)²dx = 8π/3', () => {
+    const userCurve = {
+      id: 'user-linear', label: 'r=2-x', tex: 'r(x)=2-x',
+      f: (x: number) => 2 - x, df: () => -1,
+      domain: [0, 2] as const,
+    } as CurveSpec;
+    expect(diskVolumeExact(userCurve)).toBeCloseTo((8 * Math.PI) / 3, 10);
+    expect(diskVolumeExact(userCurve)).toBeCloseTo(diskVolumeNumeric(userCurve), 12);
   });
 });
 

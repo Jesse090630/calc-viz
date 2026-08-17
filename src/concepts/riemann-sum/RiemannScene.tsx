@@ -3,6 +3,7 @@ import { Html } from '@react-three/drei';
 import type { SceneProps } from '../../engine/types';
 import { PARABOLA_DOWN } from '../../math/curves';
 import { definiteIntegralExact } from '../../math/riemann';
+import type { CurveSpec, Interval } from '../../math/types';
 import { Axes, FunctionCurve, MathLabel, RegionFill } from '../../scene/primitives';
 import { RiemannBars } from '../../scene/RiemannBars';
 import { Stage3D } from '../../scene/Stage3D';
@@ -34,7 +35,26 @@ function SumToIntegral({ progress }: { progress: number }) {
   );
 }
 
-export function RiemannScene({ stage, params, visible }: SceneProps) {
+export function RiemannScene({
+  stage,
+  params,
+  visible,
+  curve = CURVE,
+  interval = INTERVAL,
+  exact = EXACT,
+  sourceInterval = INTERVAL,
+  custom = false,
+  clamped = false,
+  displayTop = 4,
+}: SceneProps & {
+  curve?: CurveSpec;
+  interval?: Interval;
+  exact?: number;
+  sourceInterval?: Interval;
+  custom?: boolean;
+  clamped?: boolean;
+  displayTop?: number;
+}) {
   const n = Math.max(1, Math.round(params.n ?? 4));
   const morph = Math.max(0, Math.min(1, params.morph ?? 0));
   const finalStage = stage.id === 'integral';
@@ -43,21 +63,37 @@ export function RiemannScene({ stage, params, visible }: SceneProps) {
 
   return (
     <Stage3D preset={stage.camera}>
-      {visible(OBJ.axes) && <Axes depth={false} ticks />}
+      {visible(OBJ.axes) && (
+        <>
+          <Axes depth={false} ticks={!custom} />
+          {custom && (
+            <>
+              <MathLabel position={[0, -0.35, 0]} color={COLOR.thickness}>{sourceInterval[0]}</MathLabel>
+              <MathLabel position={[2, -0.35, 0]} color={COLOR.thickness}>{sourceInterval[1]}</MathLabel>
+              <MathLabel position={[-0.18, 4, 0]} color={COLOR.height}>{displayTop}</MathLabel>
+              {clamped && (
+                <MathLabel position={[1, 4.35, 0]} color={COLOR.introduce}>
+                  view clipped above {displayTop}
+                </MathLabel>
+              )}
+            </>
+          )}
+        </>
+      )}
       {visible(OBJ.region) && (
         <RegionFill
-          curve={CURVE}
-          interval={INTERVAL}
+          curve={curve}
+          interval={interval}
           color={finalStage ? COLOR.result : COLOR.region}
           opacity={regionOpacity}
         />
       )}
       {visible(OBJ.leftBars) && (
         <RiemannBars
-          curve={CURVE}
-          interval={INTERVAL}
+          curve={curve}
+          interval={interval}
           n={n}
-          rule="left"
+          rule={custom ? 'mid' : 'left'}
           color={COLOR.hero}
           opacity={barsOpacity}
           depthOffset={0.02}
@@ -65,8 +101,8 @@ export function RiemannScene({ stage, params, visible }: SceneProps) {
       )}
       {visible(OBJ.rightBars) && (
         <RiemannBars
-          curve={CURVE}
-          interval={INTERVAL}
+          curve={curve}
+          interval={interval}
           n={n}
           rule="right"
           color={COLOR.introduce}
@@ -74,7 +110,7 @@ export function RiemannScene({ stage, params, visible }: SceneProps) {
           depthOffset={0.05}
         />
       )}
-      {visible(OBJ.curve) && <FunctionCurve curve={CURVE} interval={INTERVAL} />}
+      {visible(OBJ.curve) && <FunctionCurve curve={curve} interval={interval} />}
 
       {visible(OBJ.gap) && (
         <>
@@ -104,7 +140,7 @@ export function RiemannScene({ stage, params, visible }: SceneProps) {
         <>
           <SumToIntegral progress={morph} />
           <MathLabel position={[1, 0.7, 0.18]} color={COLOR.result}>
-            A = {EXACT.toFixed(6)}
+            A = {exact.toFixed(6)}
           </MathLabel>
         </>
       )}

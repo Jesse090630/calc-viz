@@ -4,6 +4,7 @@
  * solids.ts 只是把被积函数换成 2πx·f(x) 后调用这里,不重复实现求和逻辑。
  */
 import type { CurveSpec, Interval, RiemannRule } from './types';
+import { adaptiveSimpson } from './quadrature';
 
 /** 第 i 个子区间(共 n 个)的取样点。i 从 0 开始。 */
 export function sampleX(a: number, b: number, n: number, i: number, rule: RiemannRule): number {
@@ -66,13 +67,13 @@ export function riemannRectangles(
   }));
 }
 
-/** 曲线自带解析原函数给出的定积分精确值。 */
+/** 曲线有解析原函数时使用闭式，否则自动退回自适应 Simpson。 */
 export function definiteIntegralExact(
   curve: CurveSpec,
   interval: Interval = curve.domain,
 ): number {
   const [a, b] = interval;
-  return curve.F(b) - curve.F(a);
+  return curve.F ? curve.F(b) - curve.F(a) : adaptiveSimpson(curve.f, a, b);
 }
 
 /** 左右端点和夹缝恒等式中的端点差系数 f(a) − f(b)。 */

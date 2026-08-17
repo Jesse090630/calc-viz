@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PARABOLA_DOWN } from './curves';
+import type { CurveSpec } from './types';
 import {
   definiteIntegralExact,
   endpointDifference,
@@ -107,6 +108,22 @@ describe('riemannRectangles', () => {
 describe('definiteIntegralExact', () => {
   it('手算:∫₀²(4−x²)dx = 16/3', () => {
     expect(definiteIntegralExact(PARABOLA_DOWN, [0, 2])).toBeCloseTo(16 / 3, 12);
+  });
+
+  it('用户曲线没有 F 时自动退回自适应 Simpson，仍得 16/3', () => {
+    const userCurve = {
+      id: 'user-parabola',
+      label: 'y = 4 - x^2',
+      tex: 'f(x)=4-x^2',
+      f: (x: number) => 4 - x * x,
+      df: (x: number) => -2 * x,
+      domain: [0, 2] as const,
+    } as CurveSpec;
+    expect(definiteIntegralExact(userCurve)).toBeCloseTo(16 / 3, 10);
+    expect(definiteIntegralExact(userCurve)).toBeCloseTo(
+      riemannSum(userCurve.f, userCurve.domain, 20000, 'mid'),
+      6,
+    );
   });
 });
 

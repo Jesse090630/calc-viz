@@ -36,6 +36,10 @@ something you just watched happen.
 | [Left and Right Limits](https://calcviz.netlify.app/#/limits) | If there is no value there, what is the limit describing? | 7 steps |
 | [The Unit Circle and sin/cos](https://calcviz.netlify.app/#/unit-circle) | Why does going around a circle produce a wave? | 7 steps |
 
+The Riemann chain also accepts your own explicit function and interval: it recompiles the same
+step-by-step derivation with midpoint rectangles and an independently checked numerical integral,
+while rejecting undefined, divergent, or below-axis inputs before they can enter the scene.
+
 Three things in here I haven't seen taught anywhere else, all of which fell out of building it:
 
 **The squeeze is the proof, not the picture.** Riemann sums are usually motivated by "the
@@ -117,7 +121,7 @@ Nothing on screen is hard-coded, and no single derivation is trusted on its own.
 
 ## Stack
 
-React 19 · Vite · TypeScript (strict) · Three.js + react-three-fiber · KaTeX · Zustand ·
+React 19 · Vite · TypeScript (strict) · Three.js + react-three-fiber · KaTeX · mathjs · Zustand ·
 Tailwind · Vitest · Playwright
 
 ## License

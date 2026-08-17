@@ -17,7 +17,7 @@
 | 左右极限 | `#/limits` | ✅ 已上线,7 步 |
 | Unit Circle → sin/cos | `#/unit-circle` | ✅ 已上线,7 步 |
 
-251 个测试 · `src/engine/` 连续五个概念零改动 · 线上
+272 个测试 · `src/engine/` 连续五个概念零改动 · 线上
 https://calcviz.netlify.app (主) · https://jesse090630.github.io/calc-viz/ (备,push 即自动部署)
 
 ---
@@ -102,9 +102,14 @@ aafc1da feat(riemann-sum): third chain — rectangles squeeze the area into an i
 
 **五条链全部上线之前不许开始。** 完整规格见 `HANDOFF.md` 第 5 节。
 
-- **T3 = v2.0**:表达式输入 + 区间输入,**只接到 Riemann 这一条链**(2D,风险最低)
+- **T3 = v2.0**:✅ 表达式输入 + 区间输入,**只接到 Riemann 这一条链**(2D,风险最低)
 - **T4 = v2.1**:接到 Shell / Disk(3D,要处理值域自适应与相机距离)
 - **T5 = v2.2**:预设下拉 + "试试这个"示例列表(空输入框对学生门槛太高)
+
+**2026-08-16 T3 完成:**mathjs 表达式与解析导数、区间输入、防抖、定义域/奇点/负值/发散拒绝、
+极端值视口裁切均已接入 Riemann;自定义 `x^2,[0,2]` 的第 4 步显示
+`M₄ = 2.625000` 与 `∫ = 2.666667`。闭式 `F/xF/sqF` 已改为可选，三种精确值入口缺失闭式时
+自动退回 adaptive Simpson；8 个植入错误均被测试抓到，`src/engine/` 零改动。
 
 **关键设计约束**(最容易被做错的一条):
 mathjs **不做符号积分**,所以用户函数给不出闭式 `F` / `xF` / `sqF`。
