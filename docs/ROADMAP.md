@@ -15,9 +15,9 @@
 | Disk Method | `#/disk-method` | ✅ 已上线,8 步 |
 | Secant → Tangent | `#/derivative` | ✅ 已上线,8 步 |
 | 左右极限 | `#/limits` | ✅ 已上线,7 步 |
-| Unit Circle → sin/cos | `#/unit-circle` | ⬜ **T1,下一个任务** |
+| Unit Circle → sin/cos | `#/unit-circle` | ✅ 已上线,7 步 |
 
-223 个测试 · `src/engine/` 连续四个概念零改动 · 线上
+251 个测试 · `src/engine/` 连续五个概念零改动 · 线上
 https://calcviz.netlify.app (主) · https://jesse090630.github.io/calc-viz/ (备,push 即自动部署)
 
 ---
@@ -77,7 +77,10 @@ aafc1da feat(riemann-sum): third chain — rectangles squeeze the area into an i
 
 ---
 
-## 4. T2 — 五条链完成后的打磨
+## 4. T2 — 六条链完成后的打磨
+
+**2026-08-16 审计已完成:**逐幕证据与优先级见
+[`docs/T2_AUDIT.md`](./T2_AUDIT.md);按 AGENTS.md §4.6,当前只列问题、未做大范围改动。
 
 **这一阶段先只列问题清单,不要动手改**,等 Jesse 圈定范围。收尾期禁止大重构。
 
