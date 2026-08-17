@@ -33,6 +33,7 @@ something you just watched happen.
 | [Shell Method](https://calcviz.netlify.app/#/shell-method) | Why is there a `2πx` in the integral? | 9 steps |
 | [Disk Method](https://calcviz.netlify.app/#/disk-method) | How am I supposed to know which method to use? | 8 steps |
 | [Secant → Tangent](https://calcviz.netlify.app/#/derivative) | What does it mean for two points to "become" one? | 8 steps |
+| [Left and Right Limits](https://calcviz.netlify.app/#/limits) | If there is no value there, what is the limit describing? | 7 steps |
 | The Unit Circle and sin/cos | Why does going around a circle produce a wave? | soon |
 
 Three things in here I haven't seen taught anywhere else, all of which fell out of building it:

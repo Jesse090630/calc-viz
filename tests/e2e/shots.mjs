@@ -66,6 +66,13 @@ const CHAINS = [
     ],
   },
   {
+    route: 'limits',
+    stages: [
+      ['hole', 2000], ['from-left', 6000], ['from-right', 6000], ['agree', 2500],
+      ['not-the-value', 2500], ['disagree', 6000], ['no-limit', 2500],
+    ],
+  },
+  {
     route: 'disk-method',
     stages: [
       ['same-region', 2000], ['slice-flat', 2000], ['sweep', 5000], ['dims', 2500],
