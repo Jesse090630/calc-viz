@@ -13,12 +13,16 @@ import { LimitsScene } from './concepts/limits/LimitsScene';
 import { UNIT_CIRCLE_CHAIN } from './concepts/unit-circle/chain';
 import { UnitCircleScene } from './concepts/unit-circle/UnitCircleScene';
 import { Home, BackLink, type ConceptCard } from './ui/Home';
+import { FormulaDeck } from './ui/FormulaDeck';
+import { TRIG_RATES_CHAIN } from './concepts/trig-rates/chain';
+import { TrigRatesScene } from './concepts/trig-rates/TrigRatesScene';
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
   { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
   { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
   { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(UNIT_CIRCLE_CHAIN), Scene: UnitCircleScene },
+  { chain: TRIG_RATES_CHAIN, store: createChainStore(TRIG_RATES_CHAIN), Scene: TrigRatesScene },
 ] as const;
 
 // 顺序 = 依赖顺序,不是完成顺序。Riemann 是 Shell 的前置知识
@@ -66,6 +70,13 @@ const CARDS: ConceptCard[] = [
     steps: UNIT_CIRCLE_CHAIN.stages.length,
     ready: true,
   },
+  {
+    id: 'trig-rates',
+    title: 'Trig Derivatives ↔ Integrals',
+    question: 'Why do sin and cos keep turning into each other?',
+    steps: TRIG_RATES_CHAIN.stages.length,
+    ready: true,
+  },
 ];
 
 /** 极简 hash 路由。没有依赖、没有构建配置,静态托管上刷新也不会 404。 */
@@ -82,30 +93,35 @@ function useHashRoute(): string {
 
 export default function App() {
   const route = useHashRoute();
+  let page: React.ReactNode;
   if (route === 'riemann-sum') {
-    return (
+    page = (
       <div className="relative">
         <BackLink />
         <RiemannExperience />
       </div>
     );
-  }
-  if (route === 'shell-method' || route === 'disk-method') {
-    return (
+  } else if (route === 'shell-method' || route === 'disk-method') {
+    page = (
       <div className="relative">
         <BackLink />
         <SolidExperience method={route === 'shell-method' ? 'shell' : 'disk'} />
       </div>
     );
+  } else {
+    const active = CHAINS.find((c) => c.chain.id === route);
+    page = active ? (
+      <div className="relative">
+        <BackLink />
+        <ChainPlayer key={active.chain.id} useChain={active.store} renderScene={active.Scene} />
+      </div>
+    ) : <Home concepts={CARDS} />;
   }
-  const active = CHAINS.find((c) => c.chain.id === route);
-
-  if (!active) return <Home concepts={CARDS} />;
 
   return (
-    <div className="relative">
-      <BackLink />
-      <ChainPlayer key={active.chain.id} useChain={active.store} renderScene={active.Scene} />
-    </div>
+    <>
+      {page}
+      <FormulaDeck />
+    </>
   );
 }

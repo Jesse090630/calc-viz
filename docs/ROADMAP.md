@@ -6,7 +6,7 @@
 
 ---
 
-## 1. 当前状态(2026-08-16)
+## 1. 当前状态(2026-08-17)
 
 | 概念 | 路由 | 状态 |
 |---|---|---|
@@ -16,8 +16,10 @@
 | Secant → Tangent | `#/derivative` | ✅ 已上线,8 步 |
 | 左右极限 | `#/limits` | ✅ 已上线,7 步 |
 | Unit Circle → sin/cos | `#/unit-circle` | ✅ 已上线,7 步 |
+| Unit-circle velocity → trig 导数 / 积分 | `#/trig-rates` | ✅ 本地完成,8 步;待本次部署 |
+| 全站 Formula Deck | 每个路由右上角 | ✅ 本地完成,PDF 五页共 120 张卡;待本次部署 |
 
-287 个测试 · `src/engine/` 连续五个概念零改动 · 线上
+310 个测试 · `src/engine/` 连续六个新增概念零改动 · 线上版本将在本次 push 后更新
 https://calcviz.netlify.app (主) · https://jesse090630.github.io/calc-viz/ (备,push 即自动部署)
 
 ---
@@ -137,6 +139,9 @@ v2 的解析器必须沿用它。NaN 不会让任何东西崩溃,它只会变成
 ---
 
 ## 6. 之后(还没排期,不要主动开始)
+
+**2026-08-17 Jesse 已明确授权并完成其中一项:**全站 Formula Deck + Unit-circle velocity →
+trig derivatives / integrals 八步链；其余方向仍未授权。
 
 - FTC(微积分基本定理):累积函数 `A(x) = ∫ₐˣ f`,拖 x 看 A 的斜率就是 f。
   `RiemannBars` 已经为它准备好了。

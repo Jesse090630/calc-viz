@@ -35,6 +35,12 @@ something you just watched happen.
 | [Secant → Tangent](https://calcviz.netlify.app/#/derivative) | What does it mean for two points to "become" one? | 8 steps |
 | [Left and Right Limits](https://calcviz.netlify.app/#/limits) | If there is no value there, what is the limit describing? | 7 steps |
 | [The Unit Circle and sin/cos](https://calcviz.netlify.app/#/unit-circle) | Why does going around a circle produce a wave? | 7 steps |
+| [Trig Derivatives ↔ Integrals](https://calcviz.netlify.app/#/trig-rates) | Why do sin and cos keep turning into each other? | 8 steps |
+
+The **Formula deck** button is available from every page. It turns Jesse's five-page AP Calculus
+reference into 120 searchable cards covering derivative and integral rules, limits, summations,
+area and volume, the complete special-angle unit circle, notation, and trigonometric identities.
+Amber “Why?” tags jump from a memorised formula to the matching visual derivation.
 
 The Riemann, Shell, and Disk chains also accept your own explicit function and interval: each one
 recompiles a step-by-step midpoint derivation with an independently checked numerical integral,
@@ -67,6 +73,12 @@ distance walked along the arc. Carry the moving point's vertical coordinate side
 changing its height and the sine wave is forced to appear; carry the horizontal coordinate and
 the same motion gives cosine. A second lap lands on the same trace because the point has returned
 to the same places in the same order. (Unit Circle, steps 2–7.)
+
+**Sine and cosine differentiate into each other because velocity is tangent.** A point walking
+counterclockwise around the unit circle has radius `(cos θ, sin θ)`. Shrink a chord velocity until
+it becomes the tangent, then rotate that radius by 90°: the velocity is `(-sin θ, cos θ)`. Its two
+components are exactly the derivatives of the two coordinates, and reversing those arrows gives
+the matching integrals. (Trig Derivatives ↔ Integrals, steps 2–8.)
 
 ---
 

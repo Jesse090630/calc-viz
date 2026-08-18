@@ -93,6 +93,14 @@ const CHAINS = [
       ['trace', 9000], ['cosine', 9000], ['repeat', 9000],
     ],
   },
+  {
+    route: 'trig-rates',
+    stages: [
+      ['moving-point', 2200], ['two-positions', 2200], ['divide-by-time', 2200],
+      ['shrink-gap', 6500], ['tangent-vector', 2200], ['sine-rate', 2200],
+      ['cosine-rate', 2200], ['reverse-arrows', 2200],
+    ],
+  },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -116,6 +124,34 @@ await page.waitForTimeout(1200);
 await page.screenshot({ path: join(OUT, '00-home.png') });
 console.log(`  00 home      → "${await page.locator('h1').first().innerText()}"`);
 
+// 全站公式抽屉:桌面打开、搜索与 Why 跳转,再检查手机宽度。
+currentShot = 'formula-deck/desktop';
+await page.getByRole('button', { name: 'Open formula deck' }).click();
+await page.getByRole('dialog', { name: 'Formula deck' }).waitFor();
+await page.screenshot({ path: join(OUT, 'formula-deck-desktop.png') });
+await page.getByPlaceholder('Search sin, product rule, area…').fill('Sine');
+const sineCard = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Sine', exact: true }) }).first();
+if (!(await sineCard.isVisible())) errors.push('[formula-deck/search] derivative Sine card is missing');
+await sineCard.getByRole('link', { name: /watch the derivation/i }).click();
+await page.waitForSelector('canvas', { timeout: 20000 });
+if (!page.url().endsWith('#/trig-rates')) errors.push('[formula-deck/why] Sine Why link did not open trig-rates');
+console.log('  formula deck → "search Sine · Why opens trig-rates"');
+
+currentShot = 'formula-deck/mobile';
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(URL, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Open formula deck' }).click();
+await page.getByRole('dialog', { name: 'Formula deck' }).waitFor();
+const deckOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+if (deckOverflow > 1) errors.push(`[formula-deck/mobile] horizontal overflow ${deckOverflow}px`);
+await page.screenshot({ path: join(OUT, 'formula-deck-mobile.png') });
+await page.keyboard.press('Escape');
+if (await page.getByRole('dialog', { name: 'Formula deck' }).isVisible().catch(() => false)) {
+  errors.push('[formula-deck/mobile] Escape did not close the drawer');
+}
+await page.setViewportSize({ width: 1440, height: 900 });
+console.log('  formula mobile → "390×844 · no horizontal overflow · Escape closes"');
+
 for (const { route, stages } of CHAINS) {
   console.log(`\n  ── ${route} ──`);
   currentShot = `${route}/loading`;
@@ -134,6 +170,23 @@ for (const { route, stages } of CHAINS) {
     console.log(`  ${n} ${id.padEnd(12)} → "${title}"`);
   }
 }
+
+// 新链手机末幕:画布、两条反向公式与底部导航必须同时可达。
+currentShot = 'trig-rates/mobile';
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${URL}#/trig-rates`, { waitUntil: 'networkidle' });
+await page.waitForSelector('canvas', { timeout: 20000 });
+for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowRight');
+await page.waitForTimeout(2200);
+const trigMobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+if (trigMobileOverflow > 1) errors.push(`[trig-rates/mobile] horizontal overflow ${trigMobileOverflow}px`);
+const trigMobilePanel = await page.locator('aside').innerText();
+if (!trigMobilePanel.includes('Reverse the derivative arrows') || !trigMobilePanel.includes('+C')) {
+  errors.push('[trig-rates/mobile] final derivative/integral formulas are not visible');
+}
+await page.screenshot({ path: join(OUT, 'trig-rates-mobile.png') });
+console.log('\n  trig mobile → "390×844 final formulas · no horizontal overflow"');
+await page.setViewportSize({ width: 1440, height: 900 });
 
 // v2.0:真实输入一条不同曲线，确认防抖验证、应用与动态公式都进入浏览器路径。
 currentShot = 'riemann-sum/custom-input';
