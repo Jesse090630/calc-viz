@@ -16,10 +16,10 @@
 | Secant → Tangent | `#/derivative` | ✅ 已上线,8 步 |
 | 左右极限 | `#/limits` | ✅ 已上线,7 步 |
 | Unit Circle → sin/cos | `#/unit-circle` | ✅ 已上线,7 步 |
-| Unit-circle velocity → trig 导数 / 积分 | `#/trig-rates` | ✅ 本地完成,8 步;待本次部署 |
-| 全站 Formula Deck | 每个路由右上角 | ✅ 本地完成,PDF 五页共 120 张卡;待本次部署 |
+| Unit-circle velocity → trig 导数 / 积分 | `#/trig-rates` | ✅ 已上线,8 步 |
+| 全站 Formula Deck | 每个路由右上角 | ✅ 已上线,PDF 五页共 120 张卡 |
 
-310 个测试 · `src/engine/` 连续六个新增概念零改动 · 线上版本将在本次 push 后更新
+310 个测试 · `src/engine/` 连续六个新增概念零改动 · 主站与备用站均已实测
 https://calcviz.netlify.app (主) · https://jesse090630.github.io/calc-viz/ (备,push 即自动部署)
 
 ---

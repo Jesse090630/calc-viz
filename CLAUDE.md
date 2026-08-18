@@ -179,4 +179,6 @@
     必须逐页看图，才会发现要补齐四象限 17 个标准角。
   - ⚠️ 教训二：首轮 `npm run shots` 全绿且 console 为零，第 4 幕 P/Q 标签仍在 `Δθ=0.05` 时重叠；
     逐张看图后把标签锚到点的两侧，并新增 390×844 新链末幕验收，第二轮全套截图才通过。
+  - 已发布到 `main`；GitHub Pages Actions 成功，Netlify production deploy `6a83d8bcd52e491f0978a5c6`
+    为 `ready`，两站均从 Formula Deck 搜索 Sine 后走到第 8 幕，console 零错误。
 - **待办**:Formula Deck 与 trig-rates 已完成；ROADMAP 第 6 节其余方向未经 Jesse 明确授权不要开始。
