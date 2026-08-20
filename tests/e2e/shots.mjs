@@ -234,6 +234,52 @@ await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(URL, { waitUntil: 'networkidle' });
 console.log('  home mobile  → "390×844 · live scene + thesis · no horizontal overflow"');
 
+// Calc Type Board:独立路由、符号/名称/读法搜索、分类和 Why 跳转都走真实浏览器路径。
+currentShot = 'notation-board/desktop';
+const typeBoardEntry = page.getByRole('link', { name: 'Open calc type board' });
+if (!(await typeBoardEntry.isVisible())) errors.push('[notation-board/entry] global toolbar link is not visible');
+await typeBoardEntry.click();
+await page.getByRole('heading', { name: 'Learn to read calculus before you calculate it.' }).waitFor();
+if (!page.url().endsWith('#/notation')) errors.push('[notation-board/route] toolbar did not open #/notation');
+const notationStatus = await page.getByRole('status').innerText();
+if (!notationStatus.toLowerCase().includes('31 symbols')) errors.push(`[notation-board/count] expected 31 symbols, got ${notationStatus}`);
+await page.screenshot({ path: join(OUT, 'notation-board-desktop.png') });
+
+const notationSearch = page.getByPlaceholder('Search ∫, integral, dee ex, stretched S…');
+await notationSearch.fill('dee ex');
+const dxCard = page.locator('[data-notation-card="dx"]');
+if (!(await dxCard.isVisible())) errors.push('[notation-board/search-say] “dee ex” did not find dx');
+const dxText = (await dxCard.innerText()).toLowerCase();
+if (!dxText.includes('dee ex') || !dxText.includes('not decoration') || !dxText.includes('times x')) {
+  errors.push('[notation-board/dx] pronunciation or substantive misconception is missing');
+}
+await notationSearch.fill('stretched S');
+const integralCard = page.locator('[data-notation-card="integral"]');
+if (!(await integralCard.isVisible())) errors.push('[notation-board/search-description] “stretched S” did not find integral');
+await notationSearch.fill('');
+await page.getByRole('button', { name: 'Relations & logic' }).click();
+if (await page.locator('[data-notation-card]').count() !== 8) {
+  errors.push('[notation-board/category] Relations & logic must contain exactly 8 cards');
+}
+await page.getByRole('button', { name: 'All', exact: true }).click();
+await notationSearch.fill('stretched S');
+await integralCard.getByRole('link', { name: /watch the derivation/i }).click();
+await page.waitForSelector('canvas', { timeout: 20000 });
+if (!page.url().endsWith('#/riemann-sum')) errors.push('[notation-board/why] integral Why link did not open riemann-sum');
+console.log('  type board   → "31 symbols · search by say/shape · 8 relation cards · Why opens Riemann"');
+
+currentShot = 'notation-board/mobile';
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${URL}#/notation`, { waitUntil: 'networkidle' });
+const notationMobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+if (notationMobileOverflow > 1) errors.push(`[notation-board/mobile] horizontal overflow ${notationMobileOverflow}px`);
+await page.getByPlaceholder('Search ∫, integral, dee ex, stretched S…').fill('dee ex');
+await page.locator('[data-notation-card="dx"]').scrollIntoViewIfNeeded();
+await page.screenshot({ path: join(OUT, 'notation-board-mobile.png') });
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(URL, { waitUntil: 'networkidle' });
+console.log('  type mobile  → "390×844 · dx pronunciation + misconception · no horizontal overflow"');
+
 // 全站公式抽屉:桌面打开、搜索与 Why 跳转,再检查手机宽度。
 currentShot = 'formula-deck/desktop';
 await page.getByRole('button', { name: 'Open formula deck' }).click();

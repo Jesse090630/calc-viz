@@ -16,6 +16,7 @@ import { UNIT_CIRCLE_CHAIN } from './concepts/unit-circle/chain';
 import { UnitCircleScene } from './concepts/unit-circle/UnitCircleScene';
 import { Home, BackLink, type ConceptCard } from './ui/Home';
 import { FormulaDeck } from './ui/FormulaDeck';
+import { NotationBoard } from './ui/NotationBoard';
 import { TRIG_RATES_CHAIN } from './concepts/trig-rates/chain';
 import { TrigRatesScene } from './concepts/trig-rates/TrigRatesScene';
 import { FEATURES } from './config';
@@ -173,7 +174,9 @@ function useHashRoute(): string {
 export default function App() {
   const route = useHashRoute();
   let page: React.ReactNode;
-  if (route === 'riemann-sum') {
+  if (route === 'notation') {
+    page = <NotationBoard />;
+  } else if (route === 'riemann-sum') {
     page = FEATURES.customFunctionInput ? (
       <div className="relative">
         <BackLink />
@@ -215,7 +218,23 @@ export default function App() {
   return (
     <>
       {page}
-      <FormulaDeck />
+      <div data-learning-tools className="fixed right-4 top-4 z-30 flex items-center gap-2">
+        <a
+          href="#/notation"
+          aria-label="Open calc type board"
+          aria-current={route === 'notation' ? 'page' : undefined}
+          className={
+            'flex items-center gap-2 rounded-xl border bg-slate-950/90 px-3 py-2 text-xs font-semibold shadow-lg shadow-black/25 backdrop-blur transition hover:bg-slate-900 ' +
+            (route === 'notation'
+              ? 'border-cyan-300 bg-cyan-400/15 text-cyan-100'
+              : 'border-cyan-400/40 text-cyan-100 hover:border-cyan-300')
+          }
+        >
+          <span aria-hidden="true" className="text-base leading-none">∂</span>
+          <span className="hidden sm:inline">Type board</span>
+        </a>
+        <FormulaDeck />
+      </div>
     </>
   );
 }

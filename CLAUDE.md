@@ -224,4 +224,17 @@
   - ⚠️ 教训二：自动化先 `fill()` hero 滑块会留下焦点；随后按“可见元素数量”循环 Tab，最后一次
     会跳出页面并被误报为缺焦点环。焦点审计前重新载入页面、从首个真实停靠点开始，验收脚本
     才和用户实际从页面顶部键盘导航的路径一致。
-- **待办**:ROADMAP v4 W3 已完成；下一项是 W4，按 AGENTS.md 一次一个任务，等待 Jesse 确认。
+- **2026-08-20 · ROADMAP v4 W4 Calc Type Board 完成**。317 个测试全绿，`src/engine/`
+  零改动；全站工具条现在把 114 张 Formula Deck 公式卡与 31 张 Type Board 符号卡并排但分工明确。
+  - 独立 `#/notation` 路由按 Operators / Change & limits / Relations & logic / Functions & structure /
+    Greek alphabet 分组；每张卡都钉死 symbol、name、say、means、example、confusion 六个字段，
+    五张代表卡另有“读法与误解必须具体”的回归断言。
+  - 搜索同时覆盖符号、正式名称、读法和外观描述；真实浏览器验证 `dee ex` 找到 `dx`，
+    `stretched S` 找到 integral，Relations 恰好 8 张，Integral 的 Why 跳到 Riemann。
+  - ⚠️ 教训一：新板子写完后复审发现 Formula Deck 还留着 6 张旧 notation 卡；“两个入口都能查”
+    不等于职责清楚。删掉重复展示并加边界测试后，Deck 才真正只装公式、Board 才只装符号。
+  - ⚠️ 教训二：第一轮自动验收把 CSS 转成的大写状态文字当成失败；修正断言后逐图又发现手机滚动时
+    sticky 搜索栏会贴住全站工具条。把它锚到工具条下方后重跑完整 7 链截图，console 零错误。
+  - 桌面与 390×844 手机截图都人工看过；31 张卡、读法搜索、分类、Why 跳转、焦点环与无横向溢出
+    均由浏览器路径覆盖。本工单没有新增数学量，因此不适用双路径计算或数学变异测试。
+- **待办**:ROADMAP v4 W4 已完成；下一项是 W5，按 AGENTS.md 一次一个任务，等待 Jesse 确认。

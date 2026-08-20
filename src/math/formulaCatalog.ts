@@ -3,8 +3,7 @@ export type FormulaCategory =
   | 'derivatives'
   | 'integrals'
   | 'geometry'
-  | 'trigonometry'
-  | 'notation';
+  | 'trigonometry';
 
 export interface FormulaEntry {
   readonly id: string;
@@ -186,16 +185,6 @@ export const FORMULA_SECTIONS: readonly FormulaSection[] = [
     ],
   },
   {
-    id: 'notation', category: 'notation', title: 'How to read the notation', entries: [
-      entry('limit-notation', 'Limits', 4, [String.raw`\lim_{x\to a}f(x):\ \text{the limit of }f(x)\text{ as }x\text{ approaches }a`, String.raw`x\to\infty:\ \text{as }x\text{ goes to infinity}`], { deriveRoute: 'limits' }),
-      entry('derivative-reading', 'Derivatives', 4, [String.raw`\frac d{dx}[f(x)]:\ \text{derivative of }f\text{ with respect to }x`, String.raw`f'(x):\ \text{“f prime of x”}`, String.raw`\frac{dy}{dx}:\ \text{rate of change of }y\text{ with respect to }x`], { deriveRoute: 'derivative' }),
-      entry('integral-reading', 'Integrals', 4, [String.raw`\int f(x)\,dx:\ \text{integral of }f\text{ with respect to }x`, String.raw`dx:\ \text{the variable of integration}`, String.raw`\int_a^b f(x)\,dx:\ \text{evaluate }F(b)-F(a)`], { deriveRoute: 'riemann-sum' }),
-      entry('summation-reading', 'Summation', 4, [String.raw`\sum_{k=1}^n a_k:\ \text{sum from }k=1\text{ to }n`, String.raw`k=\text{index},\quad n=\text{number of terms}`]),
-      entry('composition-reading', 'Function composition', 4, [String.raw`f(g(x)):\ \text{put }g(x)\text{ into }f\text{; inside first}`]),
-      entry('power-reading', 'Powers & parentheses', 4, [String.raw`(g(x))^2=g^2(x):\ \text{square the whole function}`]),
-    ],
-  },
-  {
     id: 'trig-identities', category: 'trigonometry', title: 'Trigonometric identities', entries: [
       entry('tan-cot', 'Tangent & cotangent', 5, [String.raw`\tan\theta=\frac{\sin\theta}{\cos\theta}`, String.raw`\cot\theta=\frac{\cos\theta}{\sin\theta}`]),
       entry('reciprocal-identities', 'Reciprocal identities', 5, [String.raw`\csc\theta=\frac1{\sin\theta},\quad\sin\theta=\frac1{\csc\theta}`, String.raw`\sec\theta=\frac1{\cos\theta},\quad\cos\theta=\frac1{\sec\theta}`, String.raw`\cot\theta=\frac1{\tan\theta},\quad\tan\theta=\frac1{\cot\theta}`]),
@@ -221,7 +210,6 @@ export const FORMULA_CATEGORIES: readonly { readonly id: 'all' | FormulaCategory
   { id: 'integrals', label: 'Integrals' },
   { id: 'geometry', label: 'Area & volume' },
   { id: 'trigonometry', label: 'Trig' },
-  { id: 'notation', label: 'Notation' },
 ];
 
 export function searchFormulaSections(

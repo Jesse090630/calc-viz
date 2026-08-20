@@ -44,7 +44,7 @@ export function FormulaDeck() {
         aria-label="Open formula deck"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="fixed right-4 top-4 z-30 flex items-center gap-2 rounded-xl border border-amber-400/40 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-100 shadow-lg shadow-black/25 backdrop-blur transition hover:border-amber-300 hover:bg-slate-900"
+        className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-100 shadow-lg shadow-black/25 backdrop-blur transition hover:border-amber-300 hover:bg-slate-900"
       >
         <span aria-hidden="true" className="text-base leading-none">∫</span>
         <span className="hidden sm:inline">Formula deck</span>

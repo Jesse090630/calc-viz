@@ -38,9 +38,14 @@ something you just watched happen.
 | [Trig Derivatives ↔ Integrals](https://calcviz.netlify.app/#/trig-rates) | Why do sin and cos keep turning into each other? | 8 steps |
 
 The **Formula deck** button is available from every page. It turns Jesse's five-page AP Calculus
-reference into 120 searchable cards covering derivative and integral rules, limits, summations,
-area and volume, the complete special-angle unit circle, notation, and trigonometric identities.
+reference into 114 searchable cards covering derivative and integral rules, limits, summations,
+area and volume, the complete special-angle unit circle, and trigonometric identities.
 Amber “Why?” tags jump from a memorised formula to the matching visual derivation.
+
+The **Calc Type Board** sits beside it and answers a different question: how do you read the
+symbols? Its 31 cards pair notation with pronunciation, meaning in context, and the misconception
+students most often carry into the next line. Search by symbol, formal name, or what it sounds like
+at [#/notation](https://calcviz.netlify.app/#/notation).
 
 Three things in here I haven't seen taught anywhere else, all of which fell out of building it:
 

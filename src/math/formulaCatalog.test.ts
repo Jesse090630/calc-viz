@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FORMULA_SECTIONS, searchFormulaSections } from './formulaCatalog';
+import { FORMULA_CATEGORIES, FORMULA_SECTIONS, searchFormulaSections } from './formulaCatalog';
 
 describe('公式卡片库', () => {
   const entries = FORMULA_SECTIONS.flatMap((section) => section.entries);
 
   it('PDF 的三组编号主表完整:31 条导数、28 条不定积分、15 条定积分', () => {
+    expect(entries).toHaveLength(114);
     expect(entries.filter((item) => /^d-\d\d$/.test(item.id))).toHaveLength(31);
     expect(entries.filter((item) => /^i-\d\d$/.test(item.id))).toHaveLength(28);
     expect(entries.filter((item) => /^di-\d\d$/.test(item.id))).toHaveLength(15);
@@ -28,6 +29,11 @@ describe('公式卡片库', () => {
     for (const item of entries) {
       if (item.deriveRoute) expect(routes.has(item.deriveRoute)).toBe(true);
     }
+  });
+
+  it('Formula Deck 只收公式,读法与误解只归 Calc Type Board', () => {
+    expect(FORMULA_CATEGORIES.map((category) => category.id)).not.toContain('notation');
+    expect(entries.some((item) => item.id.endsWith('-reading') || item.id === 'limit-notation')).toBe(false);
   });
 
   it('搜索会跨标题、公式与别名,分类筛选不会串栏', () => {
