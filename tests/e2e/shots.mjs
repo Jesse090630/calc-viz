@@ -117,12 +117,64 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => errors.push(`PAGEERROR [${currentShot}]: ${e.stack ?? e.message}`));
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+
+async function auditKeyboardFocus(label) {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  const visibleCount = await page.locator(FOCUSABLE).evaluateAll((elements) =>
+    elements.filter((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    }).length,
+  );
+  const failures = [];
+  const seen = [];
+  for (let index = 0; index < visibleCount; index += 1) {
+    await page.keyboard.press('Tab');
+    const focus = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!(element instanceof HTMLElement)) return null;
+      const style = getComputedStyle(element);
+      return {
+        name: element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 60) ?? element.tagName,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+        outlineColor: style.outlineColor,
+      };
+    });
+    seen.push(focus?.name ?? 'none');
+    if (!focus || focus.outlineStyle === 'none' || Number.parseFloat(focus.outlineWidth) < 3) {
+      failures.push(`${focus?.name ?? 'no active element'} (${focus?.outlineStyle ?? 'none'} ${focus?.outlineWidth ?? '0'})`);
+    }
+  }
+  if (failures.length > 0) errors.push(`[${label}/focus] ${failures.join(', ')}`);
+  console.log(`  ${label} focus → "${visibleCount} tab stops · ${new Set(seen).size} identified · 3px rings"`);
+}
+
 // 首页
 currentShot = 'home';
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
+const homeTitles = await page.locator('main h2').allInnerTexts();
+const expectedHomeTitles = [
+  'Left and Right Limits',
+  'Secant → Tangent',
+  'Riemann Sums → the Integral',
+  'The Shell Method',
+  'The Disk Method',
+  'The Unit Circle and sin / cos',
+  'Trig Derivatives ↔ Integrals',
+];
+if (homeTitles.join('|') !== expectedHomeTitles.join('|')) {
+  errors.push(`[home/order] expected ${expectedHomeTitles.join(' → ')}, got ${homeTitles.join(' → ')}`);
+}
+await auditKeyboardFocus('home');
+await page.evaluate(() => scrollTo(0, 0));
 await page.screenshot({ path: join(OUT, '00-home.png') });
-console.log(`  00 home      → "${await page.locator('h1').first().innerText()}"`);
+console.log(`  00 home      → "${await page.locator('h1').first().innerText()} · Limits before Derivative"`);
 
 // 全站公式抽屉:桌面打开、搜索与 Why 跳转,再检查手机宽度。
 currentShot = 'formula-deck/desktop';
@@ -144,13 +196,23 @@ await page.getByRole('button', { name: 'Open formula deck' }).click();
 await page.getByRole('dialog', { name: 'Formula deck' }).waitFor();
 const deckOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
 if (deckOverflow > 1) errors.push(`[formula-deck/mobile] horizontal overflow ${deckOverflow}px`);
+const categoryMetrics = await page.getByRole('navigation', { name: 'Formula categories' }).evaluate((element) => ({
+  clientWidth: element.clientWidth,
+  scrollWidth: element.scrollWidth,
+}));
+if (categoryMetrics.scrollWidth <= categoryMetrics.clientWidth) {
+  errors.push('[formula-deck/mobile] category row does not expose a horizontal scroll affordance');
+}
+if (!(await page.locator('[data-category-scroll-hint]').isVisible())) {
+  errors.push('[formula-deck/mobile] category scroll hint is not visible');
+}
 await page.screenshot({ path: join(OUT, 'formula-deck-mobile.png') });
 await page.keyboard.press('Escape');
 if (await page.getByRole('dialog', { name: 'Formula deck' }).isVisible().catch(() => false)) {
   errors.push('[formula-deck/mobile] Escape did not close the drawer');
 }
 await page.setViewportSize({ width: 1440, height: 900 });
-console.log('  formula mobile → "390×844 · no horizontal overflow · Escape closes"');
+console.log('  formula mobile → "390×844 · right fade/arrow · no page overflow · Escape closes"');
 
 for (const { route, stages } of CHAINS) {
   console.log(`\n  ── ${route} ──`);
@@ -170,6 +232,33 @@ for (const { route, stages } of CHAINS) {
     console.log(`  ${n} ${id.padEnd(12)} → "${title}"`);
   }
 }
+
+// Unit Circle 手机末幕:现有 wide 相机必须同时装下圆与完整 2π 时间轴。
+currentShot = 'unit-circle/mobile';
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${URL}#/unit-circle`, { waitUntil: 'networkidle' });
+await page.waitForSelector('canvas', { timeout: 20000 });
+for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+await page.waitForTimeout(9000);
+const unitMobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+if (unitMobileOverflow > 1) errors.push(`[unit-circle/mobile] horizontal overflow ${unitMobileOverflow}px`);
+const unitMobilePanel = await page.locator('aside').innerText();
+if (!unitMobilePanel.toLowerCase().includes('step 7 of 7') || !unitMobilePanel.includes('A second lap draws the same wave')) {
+  errors.push('[unit-circle/mobile] final stage content is not visible');
+}
+const unitNavBounds = await page.getByRole('button', { name: 'Previous step' }).evaluate((button) => {
+  const element = button.parentElement;
+  if (!element) throw new Error('Previous step button has no navigation parent');
+  const rect = element.getBoundingClientRect();
+  return { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left, position: getComputedStyle(element).position };
+});
+if (unitNavBounds.position !== 'fixed' || unitNavBounds.left < -1 || unitNavBounds.right > 391 || unitNavBounds.bottom > 845) {
+  errors.push(`[unit-circle/mobile] bottom navigation escaped viewport: ${JSON.stringify(unitNavBounds)}`);
+}
+await auditKeyboardFocus('unit-circle/mobile');
+await page.screenshot({ path: join(OUT, 'unit-circle-mobile.png') });
+console.log('\n  unit mobile → "390×844 final circle + 2π axis · fixed nav · keyboard focus rings"');
+await page.setViewportSize({ width: 1440, height: 900 });
 
 // 新链手机末幕:画布、两条反向公式与底部导航必须同时可达。
 currentShot = 'trig-rates/mobile';

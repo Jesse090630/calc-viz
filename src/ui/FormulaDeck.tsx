@@ -92,24 +92,33 @@ export function FormulaDeck() {
                   className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400"
                 />
               </label>
-              <nav aria-label="Formula categories" className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {FORMULA_CATEGORIES.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={category === item.id}
-                    onClick={() => setCategory(item.id)}
-                    className={
-                      'shrink-0 rounded-full border px-3 py-1.5 text-xs transition ' +
-                      (category === item.id
-                        ? 'border-amber-400 bg-amber-400/15 text-amber-100'
-                        : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-white')
-                    }
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </nav>
+              <div className="relative mt-3">
+                <nav aria-label="Formula categories" className="flex gap-2 overflow-x-auto pb-1 pr-9">
+                  {FORMULA_CATEGORIES.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={category === item.id}
+                      onClick={() => setCategory(item.id)}
+                      className={
+                        'shrink-0 rounded-full border px-3 py-1.5 text-xs transition ' +
+                        (category === item.id
+                          ? 'border-amber-400 bg-amber-400/15 text-amber-100'
+                          : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-white')
+                      }
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </nav>
+                <div
+                  aria-hidden="true"
+                  data-category-scroll-hint
+                  className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-slate-950 via-slate-950/85 to-transparent"
+                >
+                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs text-amber-300">→</span>
+                </div>
+              </div>
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">

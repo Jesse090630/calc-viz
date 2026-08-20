@@ -36,15 +36,29 @@ const DISK_STORE = createChainStore(DISK_METHOD_CHAIN);
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
-  { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
   { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
+  { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
   { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(UNIT_CIRCLE_CHAIN), Scene: UnitCircleScene },
   { chain: TRIG_RATES_CHAIN, store: createChainStore(TRIG_RATES_CHAIN), Scene: TrigRatesScene },
 ] as const;
 
-// 顺序 = 依赖顺序,不是完成顺序。Riemann 是 Shell 的前置知识
-// (Shell 第 6–7 步的 Σ→∫ 直接建立在它上面),所以它排第一。
+// 顺序 = 依赖顺序,不是完成顺序。Limits 是 derivative 的语言地基,
+// Riemann 则是 Shell 第 6–7 步 Σ→∫ 的前置知识。
 const CARDS: ConceptCard[] = [
+  {
+    id: 'limits',
+    title: 'Left and Right Limits',
+    question: 'If the function has no value there, what is the limit even describing?',
+    steps: LIMITS_CHAIN.stages.length,
+    ready: true,
+  },
+  {
+    id: 'derivative',
+    title: 'Secant → Tangent',
+    question: 'What does it actually mean for two points to “become” one?',
+    steps: DERIVATIVE_CHAIN.stages.length,
+    ready: true,
+  },
   {
     id: 'riemann-sum',
     title: 'Riemann Sums → the Integral',
@@ -64,20 +78,6 @@ const CARDS: ConceptCard[] = [
     title: 'The Disk Method',
     question: 'How am I supposed to know which method to use?',
     steps: DISK_METHOD_CHAIN.stages.length,
-    ready: true,
-  },
-  {
-    id: 'derivative',
-    title: 'Secant → Tangent',
-    question: 'What does it actually mean for two points to “become” one?',
-    steps: DERIVATIVE_CHAIN.stages.length,
-    ready: true,
-  },
-  {
-    id: 'limits',
-    title: 'Left and Right Limits',
-    question: 'If the function has no value there, what is the limit even describing?',
-    steps: LIMITS_CHAIN.stages.length,
     ready: true,
   },
   {
@@ -149,7 +149,7 @@ export default function App() {
   } else {
     const active = CHAINS.find((c) => c.chain.id === route);
     page = active ? (
-      <div className="relative">
+      <div className={`relative ${active.chain.id === 'unit-circle' ? 'unit-circle-page' : ''}`}>
         <BackLink />
         <ChainPlayer key={active.chain.id} useChain={active.store} renderScene={active.Scene} />
       </div>
