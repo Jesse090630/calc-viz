@@ -103,6 +103,16 @@ const CHAINS = [
   },
 ];
 
+const RECOMMENDED_NEXT = {
+  limits: '#/derivative',
+  derivative: '#/riemann-sum',
+  'riemann-sum': '#/shell-method',
+  'shell-method': '#/disk-method',
+  'disk-method': '#/unit-circle',
+  'unit-circle': '#/trig-rates',
+  'trig-rates': '#/limits',
+};
+
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch({
@@ -158,7 +168,24 @@ async function auditKeyboardFocus(label) {
 currentShot = 'home';
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
-const homeTitles = await page.locator('main h2').allInnerTexts();
+await page.waitForSelector('[data-home-hero] canvas', { timeout: 20000 });
+const hero = page.locator('[data-home-hero]');
+const heroSliders = hero.locator('input[type="range"]');
+if (await heroSliders.count() !== 1) errors.push(`[home/hero] expected exactly one slider, got ${await heroSliders.count()}`);
+const heroNumbersAt4 = await hero.locator('[aria-live="polite"]').innerText();
+if (!heroNumbersAt4.includes('4.250000') || !heroNumbersAt4.includes('5.333333') || !heroNumbersAt4.includes('6.250000')) {
+  errors.push('[home/hero] n=4 must show 4.250000 ≤ 5.333333 ≤ 6.250000');
+}
+await page.waitForTimeout(1800);
+if (await heroSliders.inputValue() !== '4') errors.push('[home/hero] the static demo must not autoplay');
+await heroSliders.fill('8');
+const heroNumbersAt8 = await hero.locator('[aria-live="polite"]').innerText();
+if (!heroNumbersAt8.includes('4.812500') || !heroNumbersAt8.includes('5.333333') || !heroNumbersAt8.includes('5.812500')) {
+  errors.push('[home/hero] n=8 must show 4.812500 ≤ 5.333333 ≤ 5.812500');
+}
+await heroSliders.fill('4');
+
+const homeTitles = await page.locator('[data-concept-card] h3').allInnerTexts();
 const expectedHomeTitles = [
   'Left and Right Limits',
   'Secant → Tangent',
@@ -171,10 +198,41 @@ const expectedHomeTitles = [
 if (homeTitles.join('|') !== expectedHomeTitles.join('|')) {
   errors.push(`[home/order] expected ${expectedHomeTitles.join(' → ')}, got ${homeTitles.join(' → ')}`);
 }
+const trackTitles = await page.locator('section[aria-labelledby^="track-"] h2').allInnerTexts();
+if (trackTitles.map((title) => title.toLowerCase()).join('|') !== 'foundations|integration|3d volume|trigonometry') {
+  errors.push(`[home/tracks] unexpected track order: ${trackTitles.join(' → ')}`);
+}
+const thumbnails = page.locator('[data-concept-card] img');
+if (await thumbnails.count() !== 7) errors.push(`[home/thumbnails] expected 7 static images, got ${await thumbnails.count()}`);
+for (let index = 0; index < await thumbnails.count(); index += 1) {
+  const thumbnail = thumbnails.nth(index);
+  await thumbnail.scrollIntoViewIfNeeded();
+  await thumbnail.evaluate((image) => image.decode());
+  const loaded = await thumbnail.evaluate((image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
+  if (!loaded) errors.push(`[home/thumbnails] image ${index + 1} did not load`);
+}
+await page.screenshot({ path: join(OUT, 'home-tracks.png'), fullPage: true });
+// range.fill() 会把焦点留在滑块；重新载入后从文档第一个停靠点开始审计完整 Tab 顺序。
+await page.goto(URL, { waitUntil: 'networkidle' });
+await page.waitForSelector('[data-home-hero] canvas', { timeout: 20000 });
 await auditKeyboardFocus('home');
 await page.evaluate(() => scrollTo(0, 0));
 await page.screenshot({ path: join(OUT, '00-home.png') });
-console.log(`  00 home      → "${await page.locator('h1').first().innerText()} · Limits before Derivative"`);
+console.log(`  00 home      → "interactive squeeze · 7 static thumbnails · 4 dependency tracks"`);
+
+currentShot = 'home/mobile';
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(URL, { waitUntil: 'networkidle' });
+await page.waitForSelector('[data-home-hero] canvas', { timeout: 20000 });
+const homeMobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+if (homeMobileOverflow > 1) errors.push(`[home/mobile] horizontal overflow ${homeMobileOverflow}px`);
+if (!(await page.getByRole('heading', { name: 'Drag the picture. Watch the formula tighten.' }).isVisible())) {
+  errors.push('[home/mobile] hero thesis is not visible');
+}
+await page.screenshot({ path: join(OUT, 'home-mobile.png') });
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(URL, { waitUntil: 'networkidle' });
+console.log('  home mobile  → "390×844 · live scene + thesis · no horizontal overflow"');
 
 // 全站公式抽屉:桌面打开、搜索与 Why 跳转,再检查手机宽度。
 currentShot = 'formula-deck/desktop';
@@ -230,6 +288,16 @@ for (const { route, stages } of CHAINS) {
     await page.screenshot({ path: join(OUT, `${route}-${n}-${id}.png`) });
     const title = await page.locator('aside h1').first().innerText();
     console.log(`  ${n} ${id.padEnd(12)} → "${title}"`);
+  }
+
+  const recommendation = page.locator('[data-recommended-next]');
+  if (!(await recommendation.isVisible().catch(() => false))) {
+    errors.push(`[${route}/recommended-next] final stage has no visible recommendation`);
+  } else {
+    const href = await recommendation.getAttribute('href');
+    if (href !== RECOMMENDED_NEXT[route]) {
+      errors.push(`[${route}/recommended-next] expected ${RECOMMENDED_NEXT[route]}, got ${href}`);
+    }
   }
 }
 

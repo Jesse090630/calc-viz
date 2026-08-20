@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { ChainPlayer } from './engine/ChainPlayer';
-import { createChainStore } from './engine/store';
+import { createChainStore, type ChainStoreHook } from './engine/store';
+import type { Chain, SceneProps } from './engine/types';
 import { SHELL_METHOD_CHAIN } from './concepts/shell-method/chain';
 import { ShellScene } from './concepts/shell-method/ShellScene';
 import { DISK_METHOD_CHAIN } from './concepts/disk-method/chain';
@@ -34,6 +35,60 @@ const RIEMANN_STORE = createChainStore(RIEMANN_SUM_CHAIN);
 const SHELL_STORE = createChainStore(SHELL_METHOD_CHAIN);
 const DISK_STORE = createChainStore(DISK_METHOD_CHAIN);
 
+interface Recommendation {
+  readonly id: string;
+  readonly title: string;
+}
+
+const RECOMMENDED_NEXT: Readonly<Record<string, Recommendation>> = {
+  limits: { id: 'derivative', title: 'Secant → Tangent' },
+  derivative: { id: 'riemann-sum', title: 'Riemann Sums → the Integral' },
+  'riemann-sum': { id: 'shell-method', title: 'The Shell Method' },
+  'shell-method': { id: 'disk-method', title: 'The Disk Method' },
+  'disk-method': { id: 'unit-circle', title: 'The Unit Circle and sin / cos' },
+  'unit-circle': { id: 'trig-rates', title: 'Trig Derivatives ↔ Integrals' },
+  'trig-rates': { id: 'limits', title: 'Left and Right Limits' },
+};
+
+function recommendedAfter(chainId: string): Recommendation {
+  const recommendation = RECOMMENDED_NEXT[chainId];
+  if (!recommendation) throw new Error(`Missing recommendation after ${chainId}`);
+  return recommendation;
+}
+
+function LessonPage({
+  chain,
+  useChain,
+  renderScene,
+  className = '',
+}: {
+  chain: Chain;
+  useChain: ChainStoreHook;
+  renderScene: (props: SceneProps) => React.ReactNode;
+  className?: string;
+}) {
+  const index = useChain((state) => state.index);
+  const recommendation = recommendedAfter(chain.id);
+
+  return (
+    <div className={`relative ${className}`}>
+      <BackLink />
+      <ChainPlayer key={chain.id} useChain={useChain} renderScene={renderScene} />
+      {index === chain.stages.length - 1 ? (
+        <a
+          data-recommended-next
+          aria-label={`Recommended next: ${recommendation.title}`}
+          href={`#/${recommendation.id}`}
+          className="recommended-next fixed bottom-0 left-[4.75rem] right-[4.75rem] z-[21] flex h-[4.1875rem] flex-col items-center justify-center border-x border-amber-400/30 bg-slate-950/95 px-2 text-center shadow-xl shadow-black/40 backdrop-blur md:left-auto md:right-[4.75rem] md:w-[230px]"
+        >
+          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-amber-400">Recommended next</span>
+          <strong className="mt-0.5 text-xs text-slate-100">{recommendation.title} →</strong>
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
   { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
@@ -51,6 +106,7 @@ const CARDS: ConceptCard[] = [
     question: 'If the function has no value there, what is the limit even describing?',
     steps: LIMITS_CHAIN.stages.length,
     ready: true,
+    track: 'Foundations',
   },
   {
     id: 'derivative',
@@ -58,6 +114,7 @@ const CARDS: ConceptCard[] = [
     question: 'What does it actually mean for two points to “become” one?',
     steps: DERIVATIVE_CHAIN.stages.length,
     ready: true,
+    track: 'Foundations',
   },
   {
     id: 'riemann-sum',
@@ -65,6 +122,7 @@ const CARDS: ConceptCard[] = [
     question: 'Why does adding up rectangles turn into an integral sign?',
     steps: RIEMANN_SUM_CHAIN.stages.length,
     ready: true,
+    track: 'Integration',
   },
   {
     id: 'shell-method',
@@ -72,6 +130,7 @@ const CARDS: ConceptCard[] = [
     question: 'Why is there a 2πx in the integral? Where does that come from?',
     steps: SHELL_METHOD_CHAIN.stages.length,
     ready: true,
+    track: '3D Volume',
   },
   {
     id: 'disk-method',
@@ -79,6 +138,7 @@ const CARDS: ConceptCard[] = [
     question: 'How am I supposed to know which method to use?',
     steps: DISK_METHOD_CHAIN.stages.length,
     ready: true,
+    track: '3D Volume',
   },
   {
     id: 'unit-circle',
@@ -86,6 +146,7 @@ const CARDS: ConceptCard[] = [
     question: 'Why does going around a circle produce a wave?',
     steps: UNIT_CIRCLE_CHAIN.stages.length,
     ready: true,
+    track: 'Trigonometry',
   },
   {
     id: 'trig-rates',
@@ -93,6 +154,7 @@ const CARDS: ConceptCard[] = [
     question: 'Why do sin and cos keep turning into each other?',
     steps: TRIG_RATES_CHAIN.stages.length,
     ready: true,
+    track: 'Trigonometry',
   },
 ];
 
@@ -112,47 +174,41 @@ export default function App() {
   const route = useHashRoute();
   let page: React.ReactNode;
   if (route === 'riemann-sum') {
-    page = (
+    page = FEATURES.customFunctionInput ? (
       <div className="relative">
         <BackLink />
-        {FEATURES.customFunctionInput ? (
-          <Suspense fallback={null}>
-            <CustomRiemannExperience />
-          </Suspense>
-        ) : (
-          <ChainPlayer
-            key={RIEMANN_SUM_CHAIN.id}
-            useChain={RIEMANN_STORE}
-            renderScene={RiemannScene}
-          />
-        )}
+        <Suspense fallback={null}>
+          <CustomRiemannExperience />
+        </Suspense>
       </div>
+    ) : (
+      <LessonPage chain={RIEMANN_SUM_CHAIN} useChain={RIEMANN_STORE} renderScene={RiemannScene} />
     );
   } else if (route === 'shell-method' || route === 'disk-method') {
     const shell = route === 'shell-method';
-    page = (
+    page = FEATURES.customFunctionInput ? (
       <div className="relative">
         <BackLink />
-        {FEATURES.customFunctionInput ? (
-          <Suspense fallback={null}>
-            <CustomSolidExperience method={shell ? 'shell' : 'disk'} />
-          </Suspense>
-        ) : (
-          <ChainPlayer
-            key={shell ? SHELL_METHOD_CHAIN.id : DISK_METHOD_CHAIN.id}
-            useChain={shell ? SHELL_STORE : DISK_STORE}
-            renderScene={shell ? ShellScene : DiskScene}
-          />
-        )}
+        <Suspense fallback={null}>
+          <CustomSolidExperience method={shell ? 'shell' : 'disk'} />
+        </Suspense>
       </div>
+    ) : (
+      <LessonPage
+        chain={shell ? SHELL_METHOD_CHAIN : DISK_METHOD_CHAIN}
+        useChain={shell ? SHELL_STORE : DISK_STORE}
+        renderScene={shell ? ShellScene : DiskScene}
+      />
     );
   } else {
     const active = CHAINS.find((c) => c.chain.id === route);
     page = active ? (
-      <div className={`relative ${active.chain.id === 'unit-circle' ? 'unit-circle-page' : ''}`}>
-        <BackLink />
-        <ChainPlayer key={active.chain.id} useChain={active.store} renderScene={active.Scene} />
-      </div>
+      <LessonPage
+        chain={active.chain}
+        useChain={active.store}
+        renderScene={active.Scene}
+        className={active.chain.id === 'unit-circle' ? 'unit-circle-page' : ''}
+      />
     ) : <Home concepts={CARDS} />;
   }
 
