@@ -18,6 +18,7 @@ import { DiskScene } from '../disk-method/DiskScene';
 import { SHELL_METHOD_CHAIN } from '../shell-method/chain';
 import { makeCustomShellChain } from '../shell-method/customChain';
 import { ShellScene } from '../shell-method/ShellScene';
+import { FEATURES } from '../../config';
 
 type SolidMethod = 'shell' | 'disk';
 
@@ -46,6 +47,7 @@ export function SolidExperience({ method }: { method: SolidMethod }) {
   const [applied, setApplied] = useState<ExpressionCurveResult | null>(null);
 
   useEffect(() => {
+    if (!FEATURES.customFunctionInput) return;
     const task = createDebouncedTask(
       (input: ExpressionCurveInput) => setValidation(validate(method, input)),
       INPUT_DEBOUNCE_MS,
@@ -54,7 +56,8 @@ export function SolidExperience({ method }: { method: SolidMethod }) {
     return task.cancel;
   }, [method, expression, aText, bText]);
 
-  const active = applied?.ok ? applied : null;
+  const active: ExpressionCurveResult | null =
+    FEATURES.customFunctionInput && applied?.ok ? applied : null;
   const chain = useMemo(() => {
     if (!active) return method === 'shell' ? SHELL_METHOD_CHAIN : DISK_METHOD_CHAIN;
     return method === 'shell'
@@ -114,23 +117,25 @@ export function SolidExperience({ method }: { method: SolidMethod }) {
   return (
     <>
       <ChainPlayer key={chain.id} useChain={store} renderScene={renderScene} />
-      <ExpressionInputPanel
-        idPrefix={method}
-        title={method === 'shell' ? 'Try your own shell region' : 'Try your own disk radius'}
-        functionLabel={method === 'shell' ? 'height f(x)' : 'radius r(t) · type t as x'}
-        expression={expression}
-        aText={aText}
-        bText={bText}
-        validation={validation}
-        readyText="Ready · the profile is finite throughout the interval."
-        onExpression={setExpression}
-        onA={setAText}
-        onB={setBText}
-        onApply={apply}
-        onReset={restore}
-        presets={EXPRESSION_PRESETS[method]}
-        onPreset={choosePreset}
-      />
+      {FEATURES.customFunctionInput && (
+        <ExpressionInputPanel
+          idPrefix={method}
+          title={method === 'shell' ? 'Try your own shell region' : 'Try your own disk radius'}
+          functionLabel={method === 'shell' ? 'height f(x)' : 'radius r(t) · type t as x'}
+          expression={expression}
+          aText={aText}
+          bText={bText}
+          validation={validation}
+          readyText="Ready · the profile is finite throughout the interval."
+          onExpression={setExpression}
+          onA={setAText}
+          onB={setBText}
+          onApply={apply}
+          onReset={restore}
+          presets={EXPRESSION_PRESETS[method]}
+          onPreset={choosePreset}
+        />
+      )}
     </>
   );
 }

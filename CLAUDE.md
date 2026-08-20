@@ -181,4 +181,15 @@
     逐张看图后把标签锚到点的两侧，并新增 390×844 新链末幕验收，第二轮全套截图才通过。
   - 已发布到 `main`；GitHub Pages Actions 成功，Netlify production deploy `6a83d8bcd52e491f0978a5c6`
     为 `ready`，两站均从 Formula Deck 搜索 Sine 后走到第 8 幕，console 零错误。
-- **待办**:Formula Deck 与 trig-rates 已完成；ROADMAP 第 6 节其余方向未经 Jesse 明确授权不要开始。
+- **2026-08-19 · ROADMAP v4 W1 自定义函数输入下线**。310 个测试保持不减，
+  `src/engine/` 零改动；Riemann / Shell / Disk 默认只走原有精选曲线，输入框、预设与 “Try this”
+  入口由 `src/config.ts` 的 `FEATURES.customFunctionInput` 统一关闭。
+  - `src/math/expression.ts`、三条动态链、预设及其全部测试原样保留；临时把 flag 改回 `true` 后，
+    三个入口立即恢复，浏览器实际用 `x^2,[0,2]` 重建 Riemann 链并再次读到
+    `M₄ = 2.625000` / `∫ = 2.666667`，随后恢复为 `false`。
+  - ⚠️ 教训一：只在叶子组件处写“不渲染”虽然视觉正确，静态 import 仍会把 mathjs 塞进首页包。
+    把开关分支提到 `App`、仅在开启时加载自定义体验后，首包从 gzip 601.17 kB 降到 414.04 kB；
+    这不是 W6 的全站路由拆分，七条内置链仍保持原加载方式。
+  - ⚠️ 教训二：截图脚本原本无条件寻找输入面板，功能正确下线后反而超时。现在脚本同时守住两态：
+    flag 开时继续跑原来的动态输入数字验收，关时明确断言三条链都没有入口；最终全套截图 console 零错误。
+- **待办**:ROADMAP v4 W1 已完成；下一项是 W2，未经 Jesse 确认不要开始。

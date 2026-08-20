@@ -191,6 +191,8 @@ await page.setViewportSize({ width: 1440, height: 900 });
 // v2.0:真实输入一条不同曲线，确认防抖验证、应用与动态公式都进入浏览器路径。
 currentShot = 'riemann-sum/custom-input';
 await page.goto(`${URL}#/riemann-sum`, { waitUntil: 'networkidle' });
+const customInputEnabled = await page.locator('summary').filter({ hasText: 'Try your own function' }).count() > 0;
+if (customInputEnabled) {
 await page.locator('summary').filter({ hasText: 'Try your own function' }).click();
 await page.locator('#riemann-expression').fill('x^2');
 await page.getByLabel('riemann interval a').fill('0');
@@ -274,6 +276,20 @@ for (const custom of [
   }
   await page.screenshot({ path: join(OUT, custom.shot) });
   console.log(`  custom ${custom.prefix.padEnd(5)} → "sum ${custom.sum} · volume ${custom.exact}"`);
+}
+} else {
+  for (const [route, title] of [
+    ['riemann-sum', 'Try your own function'],
+    ['shell-method', 'Try your own shell region'],
+    ['disk-method', 'Try your own disk radius'],
+  ]) {
+    currentShot = `${route}/custom-input-disabled`;
+    await page.goto(`${URL}#/${route}`, { waitUntil: 'networkidle' });
+    if (await page.locator('summary').filter({ hasText: title }).count() > 0) {
+      errors.push(`[${currentShot}] custom input entry must not render while the feature flag is off`);
+    }
+  }
+  console.log('\n  custom input → "feature flag off · all three UI entries absent"');
 }
 
 await browser.close();

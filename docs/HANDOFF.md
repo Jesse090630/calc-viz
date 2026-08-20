@@ -262,6 +262,9 @@ m(h) = ((1+h)² − 1)/h = (2h + h²)/h = 2 + h        (h ≠ 0)
 
 ## 5. v2 规格:开放任意函数输入
 
+> **已下线(未删除)。** 主线 UI 入口由 `src/config.ts` 的 feature flag 关闭;
+> `src/math/expression.ts`、动态链生成逻辑与全部测试继续保留。后续独立项目见 `docs/ROADMAP.md` W1。
+
 **只有在 4 条链全部完成后才开始。**
 
 ### 目标

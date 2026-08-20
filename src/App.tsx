@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { ChainPlayer } from './engine/ChainPlayer';
 import { createChainStore } from './engine/store';
 import { SHELL_METHOD_CHAIN } from './concepts/shell-method/chain';
+import { ShellScene } from './concepts/shell-method/ShellScene';
 import { DISK_METHOD_CHAIN } from './concepts/disk-method/chain';
+import { DiskScene } from './concepts/disk-method/DiskScene';
 import { RIEMANN_SUM_CHAIN } from './concepts/riemann-sum/chain';
-import { RiemannExperience } from './concepts/riemann-sum/RiemannExperience';
-import { SolidExperience } from './concepts/solid-input/SolidExperience';
+import { RiemannScene } from './concepts/riemann-sum/RiemannScene';
 import { DERIVATIVE_CHAIN } from './concepts/derivative/chain';
 import { DerivativeScene } from './concepts/derivative/DerivativeScene';
 import { LIMITS_CHAIN } from './concepts/limits/chain';
@@ -16,6 +17,22 @@ import { Home, BackLink, type ConceptCard } from './ui/Home';
 import { FormulaDeck } from './ui/FormulaDeck';
 import { TRIG_RATES_CHAIN } from './concepts/trig-rates/chain';
 import { TrigRatesScene } from './concepts/trig-rates/TrigRatesScene';
+import { FEATURES } from './config';
+
+const CustomRiemannExperience = lazy(() =>
+  import('./concepts/riemann-sum/RiemannExperience').then(({ RiemannExperience }) => ({
+    default: RiemannExperience,
+  })),
+);
+const CustomSolidExperience = lazy(() =>
+  import('./concepts/solid-input/SolidExperience').then(({ SolidExperience }) => ({
+    default: SolidExperience,
+  })),
+);
+
+const RIEMANN_STORE = createChainStore(RIEMANN_SUM_CHAIN);
+const SHELL_STORE = createChainStore(SHELL_METHOD_CHAIN);
+const DISK_STORE = createChainStore(DISK_METHOD_CHAIN);
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
@@ -98,14 +115,35 @@ export default function App() {
     page = (
       <div className="relative">
         <BackLink />
-        <RiemannExperience />
+        {FEATURES.customFunctionInput ? (
+          <Suspense fallback={null}>
+            <CustomRiemannExperience />
+          </Suspense>
+        ) : (
+          <ChainPlayer
+            key={RIEMANN_SUM_CHAIN.id}
+            useChain={RIEMANN_STORE}
+            renderScene={RiemannScene}
+          />
+        )}
       </div>
     );
   } else if (route === 'shell-method' || route === 'disk-method') {
+    const shell = route === 'shell-method';
     page = (
       <div className="relative">
         <BackLink />
-        <SolidExperience method={route === 'shell-method' ? 'shell' : 'disk'} />
+        {FEATURES.customFunctionInput ? (
+          <Suspense fallback={null}>
+            <CustomSolidExperience method={shell ? 'shell' : 'disk'} />
+          </Suspense>
+        ) : (
+          <ChainPlayer
+            key={shell ? SHELL_METHOD_CHAIN.id : DISK_METHOD_CHAIN.id}
+            useChain={shell ? SHELL_STORE : DISK_STORE}
+            renderScene={shell ? ShellScene : DiskScene}
+          />
+        )}
       </div>
     );
   } else {

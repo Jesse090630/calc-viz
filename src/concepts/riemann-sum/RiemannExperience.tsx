@@ -15,6 +15,7 @@ import { makeCustomRiemannChain } from './customChain';
 import { RiemannScene } from './RiemannScene';
 import { ExpressionInputPanel } from '../../ui/ExpressionInputPanel';
 import { EXPRESSION_PRESETS, type ExpressionPreset } from '../../math/presets';
+import { FEATURES } from '../../config';
 
 const DEFAULT_INPUT: ExpressionCurveInput = { expression: '4 - x^2', a: 0, b: 2 };
 
@@ -32,6 +33,7 @@ export function RiemannExperience() {
   const [applied, setApplied] = useState<ExpressionCurveResult | null>(null);
 
   useEffect(() => {
+    if (!FEATURES.customFunctionInput) return;
     const task = createDebouncedTask(
       (input: ExpressionCurveInput) => setValidation(compileExpressionCurve(input)),
       INPUT_DEBOUNCE_MS,
@@ -40,7 +42,8 @@ export function RiemannExperience() {
     return task.cancel;
   }, [expression, aText, bText]);
 
-  const active = applied?.ok ? applied : null;
+  const active: ExpressionCurveResult | null =
+    FEATURES.customFunctionInput && applied?.ok ? applied : null;
   const chain = useMemo(
     () => (active ? makeCustomRiemannChain(active.curve, active.integral) : RIEMANN_SUM_CHAIN),
     [active],
@@ -89,22 +92,24 @@ export function RiemannExperience() {
   return (
     <>
       <ChainPlayer key={chain.id} useChain={store} renderScene={renderScene} />
-      <ExpressionInputPanel
-        idPrefix="riemann"
-        title="Try your own function"
-        functionLabel="f(x)"
-        expression={expression}
-        aText={aText}
-        bText={bText}
-        validation={validation}
-        onExpression={setExpression}
-        onA={setAText}
-        onB={setBText}
-        onApply={apply}
-        onReset={restore}
-        presets={EXPRESSION_PRESETS.riemann}
-        onPreset={choosePreset}
-      />
+      {FEATURES.customFunctionInput && (
+        <ExpressionInputPanel
+          idPrefix="riemann"
+          title="Try your own function"
+          functionLabel="f(x)"
+          expression={expression}
+          aText={aText}
+          bText={bText}
+          validation={validation}
+          onExpression={setExpression}
+          onA={setAText}
+          onB={setBText}
+          onApply={apply}
+          onReset={restore}
+          presets={EXPRESSION_PRESETS.riemann}
+          onPreset={choosePreset}
+        />
+      )}
     </>
   );
 }

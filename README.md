@@ -42,12 +42,6 @@ reference into 120 searchable cards covering derivative and integral rules, limi
 area and volume, the complete special-angle unit circle, notation, and trigonometric identities.
 Amber “Why?” tags jump from a memorised formula to the matching visual derivation.
 
-The Riemann, Shell, and Disk chains also accept your own explicit function and interval: each one
-recompiles a step-by-step midpoint derivation with an independently checked numerical integral,
-while rejecting undefined, divergent, or geometrically invalid inputs before they enter the scene.
-Verified presets and “Try this” examples provide a low-friction starting point before students edit
-the expression themselves.
-
 Three things in here I haven't seen taught anywhere else, all of which fell out of building it:
 
 **The squeeze is the proof, not the picture.** Riemann sums are usually motivated by "the
