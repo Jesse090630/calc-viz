@@ -38,6 +38,30 @@ describe('禁止 1 — src/math/ 不得依赖任何渲染库', () => {
   }
 });
 
+describe('⭐ W7/W8 专属:推导对数的模块不许用 Math.log 抄近路', () => {
+  // 整条链要推的结论就是"那块面积是一个对数"。
+  // 用 Math.log 去算它等于把结论当前提,推导变成循环论证。
+  // 这条规则不能靠自觉 —— 它看起来只是"省事",而且改完测试照样全绿。
+  const GUARDED = ['logIntegral.ts', 'tanIntegral.ts'];
+
+  for (const name of GUARDED) {
+    const file = join(SRC, 'math', name);
+    if (!existsSync(file)) continue;
+    it(`src/math/${name} 的主路径不出现 Math.log`, () => {
+      const code = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '');
+      expect(code.includes('Math.log'), `${name} 用 Math.log 抄了近路`).toBe(false);
+    });
+  }
+
+  it('但测试文件里【必须】有 Math.log —— 那是第二条独立验证路径', () => {
+    const testFile = join(SRC, 'math', 'logIntegral.test.ts');
+    if (!existsSync(testFile)) return;
+    expect(readFileSync(testFile, 'utf8').includes('Math.log')).toBe(true);
+  });
+});
+
 describe('禁止 3 — src/engine/ 不得出现任何具体概念的名字', () => {
   // ⚠️ 刻意【不加】词边界 \b。违规在现实中长这样:shellRadius / diskGeometry / RiemannBars,
   //    加了 \b 就全漏掉了(这条规则最初就是这么写的,被变异测试抓出来才改的)。

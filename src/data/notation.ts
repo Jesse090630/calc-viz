@@ -26,6 +26,20 @@ export const NOTATION_CATEGORIES: readonly {
 
 export const NOTATION_ENTRIES: readonly NotationEntry[] = [
   {
+    id: 'natural-log', category: 'operators', symbol: String.raw`\ln`, name: 'Natural logarithm', say: '“ell en”, or “natural log”',
+    means: 'The logarithm whose base is e — the area under 1/x from 1 out to the input.',
+    example: String.raw`\int \frac{dx}{x} = \ln|x| + C`,
+    confusion: 'It is not an abbreviation of “line”, and ln x is not log x times n. It is one symbol naming one specific logarithm.',
+    whyLink: 'log-integral',
+  },
+  {
+    id: 'euler-number', category: 'operators', symbol: String.raw`e`, name: 'Euler’s number', say: '“ee”, the letter — never “eee” or “exp”',
+    means: 'The point where the running area under 1/x first reaches exactly 1, so e ≈ 2.718282.',
+    example: String.raw`\int_1^{e} \frac{dx}{x} = 1`,
+    confusion: 'It was not chosen for convenience and it is not a variable. The area condition pins it down; nothing else could be the base.',
+    whyLink: 'log-integral',
+  },
+  {
     id: 'integral', category: 'operators', symbol: String.raw`\int`, name: 'Integral sign', say: '“integral”',
     means: 'A stretched S from the Latin summa: add infinitely thin pieces.',
     example: String.raw`\int_0^2 f(x)\,dx`,

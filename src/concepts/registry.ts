@@ -53,6 +53,15 @@ export const CONCEPTS: readonly ConceptMeta[] = [
     steps: 8,
     ready: true,
     track: 'Integration',
+    next: 'log-integral',
+  },
+  {
+    id: 'log-integral',
+    title: 'Why ∫dx/x Is a Logarithm',
+    question: 'Every other power gives a power. Why does this one give a logarithm?',
+    steps: 8,
+    ready: true,
+    track: 'Integration',
     next: 'shell-method',
   },
   {

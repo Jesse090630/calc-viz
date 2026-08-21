@@ -87,6 +87,14 @@ const CHAINS = [
     ],
   },
   {
+    route: 'log-integral',
+    stages: [
+      ['hole-in-the-rule', 2000], ['watch-it-break', 7500], ['zero-over-zero', 2200],
+      ['that-number', 2200], ['stretch-squash', 4200], ['times-becomes-plus', 2200],
+      ['only-logs', 2200], ['that-is-why', 2200],
+    ],
+  },
+  {
     route: 'unit-circle',
     stages: [
       ['point', 2200], ['arc-length', 5200], ['drop', 4200], ['carry', 4800],
@@ -106,7 +114,8 @@ const CHAINS = [
 const RECOMMENDED_NEXT = {
   limits: '#/derivative',
   derivative: '#/riemann-sum',
-  'riemann-sum': '#/shell-method',
+  'riemann-sum': '#/log-integral',
+  'log-integral': '#/shell-method',
   'shell-method': '#/disk-method',
   'disk-method': '#/unit-circle',
   'unit-circle': '#/trig-rates',

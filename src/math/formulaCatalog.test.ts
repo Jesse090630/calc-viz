@@ -25,7 +25,7 @@ describe('公式卡片库', () => {
   });
 
   it('所有“看推导”按钮只指向站内已有或本次新增的链', () => {
-    const routes = new Set(['derivative', 'riemann-sum', 'disk-method', 'shell-method', 'limits', 'unit-circle', 'trig-rates']);
+    const routes = new Set(['derivative', 'riemann-sum', 'disk-method', 'shell-method', 'limits', 'unit-circle', 'trig-rates', 'log-integral']);
     for (const item of entries) {
       if (item.deriveRoute) expect(routes.has(item.deriveRoute)).toBe(true);
     }

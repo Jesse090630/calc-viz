@@ -137,7 +137,7 @@ export const FORMULA_SECTIONS: readonly FormulaSection[] = [
       entry('sum-linearity', 'Linearity of summation', 1, [String.raw`\sum(a_k\pm b_k)=\sum a_k\pm\sum b_k`, String.raw`\sum ca_k=c\sum a_k`]),
     ],
   },
-  { id: 'derivative-rules', category: 'derivatives', title: 'Derivative rules', entries: ruleEntries(derivativeRules, 2, { 'd-20': 'trig-rates', 'd-21': 'trig-rates' }) },
+  { id: 'derivative-rules', category: 'derivatives', title: 'Derivative rules', entries: ruleEntries(derivativeRules, 2, { 'd-09': 'log-integral', 'd-10': 'log-integral', 'd-20': 'trig-rates', 'd-21': 'trig-rates' }) },
   {
     id: 'limits-logs-inverses', category: 'derivatives', title: 'Special limits, logs & inverses', entries: [
       entry('special-limits', 'Special trigonometric limits', 2, [String.raw`\lim_{x\to0}\frac{\sin x}{x}=1`, String.raw`\lim_{x\to0}\frac{x}{\sin x}=1`, String.raw`\lim_{x\to0}\frac{1-\cos x}{x}=0`, String.raw`\lim_{x\to0}\frac{x}{1-\cos x}\text{ does not exist}`], { deriveRoute: 'limits' }),
@@ -146,7 +146,7 @@ export const FORMULA_SECTIONS: readonly FormulaSection[] = [
       entry('function-square', 'Square of a function', 2, [String.raw`(g(x))^2=g^2(x)`]),
     ],
   },
-  { id: 'indefinite-integrals', category: 'integrals', title: 'Indefinite integrals', entries: ruleEntries(integralRules, 3, { 'i-10': 'trig-rates', 'i-11': 'trig-rates' }) },
+  { id: 'indefinite-integrals', category: 'integrals', title: 'Indefinite integrals', entries: ruleEntries(integralRules, 3, { 'i-05': 'log-integral', 'i-10': 'trig-rates', 'i-11': 'trig-rates' }) },
   { id: 'definite-integrals', category: 'integrals', title: 'Definite integral properties', entries: ruleEntries(definiteRules, 3, { 'di-01': 'riemann-sum', 'di-14': 'riemann-sum' }) },
   {
     id: 'area-volume', category: 'geometry', title: 'Average, area & volume', entries: [

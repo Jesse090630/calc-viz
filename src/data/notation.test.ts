@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { NOTATION_ENTRIES, searchNotationEntries } from './notation';
 
 describe('Calc Type Board notation catalog', () => {
-  it('covers every required group with 31 focused cards', () => {
-    expect(NOTATION_ENTRIES).toHaveLength(31);
-    expect(new Set(NOTATION_ENTRIES.map((entry) => entry.id)).size).toBe(31);
-    expect(NOTATION_ENTRIES.filter((entry) => entry.category === 'operators')).toHaveLength(6);
+  it('covers every required group with 33 focused cards', () => {
+    expect(NOTATION_ENTRIES).toHaveLength(33);
+    expect(new Set(NOTATION_ENTRIES.map((entry) => entry.id)).size).toBe(33);
+    expect(NOTATION_ENTRIES.filter((entry) => entry.category === 'operators')).toHaveLength(8);
     expect(NOTATION_ENTRIES.filter((entry) => entry.category === 'change')).toHaveLength(4);
     expect(NOTATION_ENTRIES.filter((entry) => entry.category === 'relations')).toHaveLength(8);
     expect(NOTATION_ENTRIES.filter((entry) => entry.category === 'structure')).toHaveLength(5);
@@ -53,7 +53,7 @@ describe('Calc Type Board notation catalog', () => {
   });
 
   it('why links point to existing lessons or the planned epsilon-delta route', () => {
-    const routes = new Set(['riemann-sum', 'limits', 'derivative', 'unit-circle', 'epsilon-delta']);
+    const routes = new Set(['riemann-sum', 'limits', 'derivative', 'unit-circle', 'log-integral', 'epsilon-delta']);
     for (const entry of NOTATION_ENTRIES) {
       if (entry.whyLink) expect(routes.has(entry.whyLink), entry.id).toBe(true);
     }

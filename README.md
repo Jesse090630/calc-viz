@@ -30,6 +30,7 @@ something you just watched happen.
 | Topic | The question it answers | |
 |---|---|---|
 | [Riemann Sums → the Integral](https://calcviz.netlify.app/#/riemann-sum) | Why does adding rectangles become an integral sign? | 8 steps |
+| [Why ∫dx/x Is a Logarithm](https://calcviz.netlify.app/#/log-integral) | Every other power gives a power — why does this one give a log? | 8 steps |
 | [Shell Method](https://calcviz.netlify.app/#/shell-method) | Why is there a `2πx` in the integral? | 9 steps |
 | [Disk Method](https://calcviz.netlify.app/#/disk-method) | How am I supposed to know which method to use? | 8 steps |
 | [Secant → Tangent](https://calcviz.netlify.app/#/derivative) | What does it mean for two points to "become" one? | 8 steps |

@@ -11,6 +11,7 @@ import type { Chain } from '../engine/types';
 import { LIMITS_CHAIN } from './limits/chain';
 import { DERIVATIVE_CHAIN } from './derivative/chain';
 import { RIEMANN_SUM_CHAIN } from './riemann-sum/chain';
+import { LOG_INTEGRAL_CHAIN } from './log-integral/chain';
 import { SHELL_METHOD_CHAIN } from './shell-method/chain';
 import { DISK_METHOD_CHAIN } from './disk-method/chain';
 import { UNIT_CIRCLE_CHAIN } from './unit-circle/chain';
@@ -20,6 +21,7 @@ const REAL_CHAINS: readonly Chain[] = [
   LIMITS_CHAIN,
   DERIVATIVE_CHAIN,
   RIEMANN_SUM_CHAIN,
+  LOG_INTEGRAL_CHAIN,
   SHELL_METHOD_CHAIN,
   DISK_METHOD_CHAIN,
   UNIT_CIRCLE_CHAIN,
@@ -53,7 +55,8 @@ describe('推荐顺序自洽', () => {
 
   it('recommendedAfter 返回的是下一个概念本身', () => {
     expect(recommendedAfter('limits').id).toBe('derivative');
-    expect(recommendedAfter('riemann-sum').id).toBe('shell-method');
+    expect(recommendedAfter('riemann-sum').id).toBe('log-integral');
+    expect(recommendedAfter('log-integral').id).toBe('shell-method');
   });
 
   it('next 链条走一圈能覆盖所有概念(没有孤岛)', () => {

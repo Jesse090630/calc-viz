@@ -18,6 +18,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   limits: lazy(() => import('./concepts/limits/page')),
   derivative: lazy(() => import('./concepts/derivative/page')),
   'riemann-sum': lazy(() => import('./concepts/riemann-sum/page')),
+  'log-integral': lazy(() => import('./concepts/log-integral/page')),
   'shell-method': lazy(() => import('./concepts/shell-method/page')),
   'disk-method': lazy(() => import('./concepts/disk-method/page')),
   'unit-circle': lazy(() => import('./concepts/unit-circle/page')),
