@@ -114,6 +114,10 @@ const TRACKS: readonly { id: ConceptTrack; note: string }[] = [
 ];
 
 const THUMBNAILS: Readonly<Record<string, { src: string; alt: string }>> = {
+  'log-integral': {
+    src: new URL('../../tests/e2e/screenshots/log-integral-05-stretch-squash.png', import.meta.url).href,
+    alt: 'Two blocks under one over x, the right one wider and shorter, both labelled with the same area.',
+  },
   limits: {
     src: new URL('../../tests/e2e/screenshots/limits-05-not-the-value.png', import.meta.url).href,
     alt: 'A curve approaching a hole while the function value is marked separately.',

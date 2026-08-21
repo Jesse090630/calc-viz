@@ -74,3 +74,19 @@ describe('推荐顺序自洽', () => {
     expect(() => conceptById('nope')).toThrow(/Unknown concept/);
   });
 });
+
+describe('⚠️ 首页需要的每一项配套资源都要跟上', () => {
+  // 这条是被线上事故逼出来的:W7 把 log-integral 加进登记表却没配缩略图,
+  // Home 直接抛错、首页一张卡都渲染不出来。
+  // 单条链的截图完全看不到这个 —— 只有真的打开首页才会撞上。
+  it('每个概念都在 Home 的 THUMBNAILS 里有一张图', async () => {
+    const source = await import('node:fs').then((fs) =>
+      fs.readFileSync(new URL('../ui/Home.tsx', import.meta.url), 'utf8'),
+    );
+    const block = source.slice(source.indexOf('const THUMBNAILS'), source.indexOf('function ConceptLink'));
+    for (const c of CONCEPTS) {
+      const key = /^[a-z]+$/.test(c.id) ? `${c.id}:` : `'${c.id}':`;
+      expect(block.includes(key), `${c.id} 缺首页缩略图`).toBe(true);
+    }
+  });
+});
