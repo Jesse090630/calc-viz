@@ -8,6 +8,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { usePrefersReducedMotion } from '../accessibility/usePrefersReducedMotion';
 import type { CameraPreset } from '../engine/types';
 
 export const TRANSITION_MS = 1100;
@@ -44,6 +45,7 @@ interface Tween {
 }
 
 export function CameraRig({ preset }: { preset: CameraPreset }) {
+  const reduceMotion = usePrefersReducedMotion();
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const controls = useThree((s) => s.controls) as { target: THREE.Vector3; update: () => void } | null;
   const tween = useRef<Tween | null>(null);
@@ -57,8 +59,9 @@ export function CameraRig({ preset }: { preset: CameraPreset }) {
     if (applied.current === preset) return;
     const to = CAMERA_PRESETS[preset];
 
-    if (applied.current === null) {
-      // 首帧:直接就位,不做过渡
+    if (applied.current === null || reduceMotion) {
+      // 首帧或系统要求减弱动态效果:直接就位,不做过渡
+      tween.current = null;
       camera.position.set(...to.position);
       camera.fov = to.fov;
       camera.updateProjectionMatrix();
@@ -73,7 +76,7 @@ export function CameraRig({ preset }: { preset: CameraPreset }) {
       };
     }
     applied.current = preset;
-  }, [preset, camera, controls]);
+  }, [preset, camera, controls, reduceMotion]);
 
   useFrame(() => {
     const t = tween.current;

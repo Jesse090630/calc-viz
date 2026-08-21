@@ -54,6 +54,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'The region',
       narration:
         'We start with the region bounded by y = 4 − x², the x-axis and the y-axis. Nothing is rotating yet — just look at the flat shape we are about to spin.',
+      altText: 'A downward parabola, the coordinate axes, and a shaded region show the flat area between x equals zero and two.',
       show: [OBJ.axes, OBJ.curve, OBJ.region],
       camera: 'front',
     },
@@ -64,6 +65,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'One thin strip',
       narration:
         'Pull one vertical rectangle out of the region. Its position is x, its width is Δx, and its height is not free — it is forced to be f(x). Drag the sliders and watch the height follow the curve.',
+      altText: 'One narrow vertical rectangle stands inside the shaded region with adjustable position, width, and curve-determined height.',
       show: [OBJ.axes, OBJ.curve, OBJ.region, OBJ.rect],
       camera: 'front',
       params: { theta: Math.PI * 2, bend: 1 },
@@ -84,6 +86,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'Sweep it around the y-axis',
       narration:
         'The camera moves first, then the rectangle starts turning — never both at once, or you lose track of what is moving. Watch the rectangle sweep through space. The solid it leaves behind is a cylindrical shell.',
+      altText: 'From an angled view, the vertical rectangle rotates around the y-axis and sweeps out a hollow cylindrical shell.',
       show: [OBJ.axes, OBJ.curve, OBJ.rect, OBJ.shell],
       camera: 'three-quarter',
       params: { bend: 1 },
@@ -103,6 +106,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'What are its dimensions?',
       narration:
         'Three measurements describe this shell completely, and all three were already visible in the flat rectangle. The one thing that is new is the distance the rectangle travelled: one full circle of radius x.',
+      altText: 'A completed cylindrical shell is labeled with radius, height, thickness, and its circular circumference.',
       show: [OBJ.axes, OBJ.shell, OBJ.dimLabels, OBJ.circRing],
       camera: 'three-quarter',
       params: { theta: Math.PI * 2, bend: 1 },
@@ -123,6 +127,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'Unroll it',
       narration:
         'Cut the shell along one vertical seam and flatten it. It becomes a slab — and a slab is something we already know how to measure: length × height × thickness.',
+      altText: 'The cylindrical shell opens along a vertical seam and flattens into a long rectangular slab.',
       // 刻意不显示 axes:摊平后的板已经不绕 y 轴了,再画一根轴穿过它是误导
       show: [OBJ.shell, OBJ.flatLabels],
       camera: 'wide', // 摊平后长 2πx ≈ 7.5,three-quarter 会把右端裁掉
@@ -143,6 +148,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'That was not an approximation',
       narration:
         'Textbooks call 2πrhΔx an approximation of the shell. It is not. With r measured at the middle of the shell it equals the true ring volume exactly — compare the two numbers. The only thing we approximated is treating the height as constant across the thickness.',
+      altText: 'The flattened slab remains visible with labels showing that its volume exactly matches the corresponding cylindrical ring.',
       // 刻意不显示 axes:摊平后的板已经不绕 y 轴了,再画一根轴穿过它是误导
       show: [OBJ.shell, OBJ.flatLabels],
       camera: 'wide', // 摊平后长 2πx ≈ 7.5,three-quarter 会把右端裁掉
@@ -166,6 +172,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'Many shells',
       narration:
         'Slice the region into n rectangles and spin all of them. Together the shells fill the solid — but not perfectly, because each one pretends its height is constant. Drag n and watch the gap close.',
+      altText: 'Several concentric cylindrical shells of different heights stack together to approximate the rotated solid.',
       show: [OBJ.axes, OBJ.curve, OBJ.shells],
       camera: 'three-quarter',
       controls: [{ param: 'n', label: 'number of shells  n', min: 1, max: 40, step: 1 }],
@@ -186,6 +193,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'Let Δx → 0',
       narration:
         'Every time n doubles the error drops to about a quarter. The sum is converging, and it is converging to one specific number. A sum of infinitely many infinitely thin shells is exactly what an integral is.',
+      altText: 'The number of concentric shells doubles from four to sixty-four and their stepped outer boundary becomes smoother.',
       show: [OBJ.axes, OBJ.shells],
       camera: 'three-quarter',
       params: { n: 4 },
@@ -218,6 +226,7 @@ export const SHELL_METHOD_CHAIN: Chain = {
       title: 'The formula',
       narration:
         'Every symbol on this line is something you watched happen. 2πx is the circle the rectangle traced. f(x) is its height. dx is what Δx became. Nothing here was memorised.',
+      altText: 'The view returns to the original parabola and shaded region while the completed shell integral is assembled in the panel.',
       show: [OBJ.axes, OBJ.curve, OBJ.region],
       camera: 'front',
       formula: [

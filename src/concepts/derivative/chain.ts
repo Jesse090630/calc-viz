@@ -58,6 +58,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'Two points on the curve',
       narration:
         'P sits at x = 1 and stays there. Q sits h to its right. Everything that follows is about what happens to the line through them as Q slides toward P.',
+      altText: 'An upward parabola carries a fixed point P at one comma one and a movable point Q to its right.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.pointQ],
       camera: 'front',
       controls: [H_CONTROL],
@@ -79,6 +80,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'The line through them',
       narration:
         'Draw the line joining P and Q — a secant. Its slope is rise over run, and both of those are things you can measure off the picture right now.',
+      altText: 'A secant line joins P and Q on the parabola, with a right triangle marking the horizontal run and vertical rise.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.pointQ, OBJ.secantLine, OBJ.triangle],
       camera: 'front',
       params: { h: 1 },
@@ -96,6 +98,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'Slide Q toward P',
       narration:
         'Drag h down. The secant pivots around P, and its slope keeps changing — but notice it is not wandering. It is heading somewhere.',
+      altText: 'Point Q slides toward fixed point P while the secant line pivots and the rise-run triangle shrinks.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.pointQ, OBJ.secantLine, OBJ.triangle],
       camera: 'front',
       params: { h: 1 },
@@ -113,6 +116,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'The slope is literally 2 + h',
       narration:
         'Do the algebra once and the mystery goes away. The h in the denominator cancels, and what is left is 2 plus the gap itself. From here you can predict every number before you drag.',
+      altText: 'The parabola shows P, nearby Q, and their secant while the panel identifies its changing slope as two plus h.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.pointQ, OBJ.secantLine],
       camera: 'front',
       params: { h: 0.5 },
@@ -130,6 +134,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'Come in from the other side too',
       narration:
         'Push h negative and Q moves to the left of P. The secant now leans the other way, but the slope closes on the same number from below. Both sides agree — that is what makes the limit exist.',
+      altText: 'Point Q sits to the left of P and the secant approaches the same tangent direction from the opposite side.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.pointQ, OBJ.secantLine],
       camera: 'front',
       params: { h: -0.1 },
@@ -146,6 +151,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'Let h → 0',
       narration:
         'h halves, then halves again. The "+ h" on the end of the slope is the entire error, so watching it shrink is watching the limit happen. The secant becomes indistinguishable from a single line.',
+      altText: 'Point Q advances toward P in smaller steps and the secant becomes visually indistinguishable from the limiting line.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.pointQ, OBJ.secantLine],
       camera: 'front',
       params: { h: 0.5 },
@@ -170,6 +176,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'The tangent line',
       narration:
         'Q is gone. What is left is not a very short secant — it is the line the secants were converging to, and its slope is exactly 2. That number is the derivative at x = 1.',
+      altText: 'Only point P and the amber tangent line remain on the parabola, with tangent slope two.',
       show: [OBJ.axes, OBJ.curve, OBJ.pointP, OBJ.tangentLine],
       camera: 'front',
       formula: [
@@ -184,6 +191,7 @@ export const DERIVATIVE_CHAIN: Chain = {
       title: 'Do it at every point',
       narration:
         'Nothing about x = 1 was special. Run the same argument at every x and the slopes themselves trace out a new function — which is all a derivative ever was.',
+      altText: 'A tangent point slides along the parabola and its tangent line rotates to match the local slope at every position.',
       show: [OBJ.axes, OBJ.curve, OBJ.slidingTangent],
       camera: 'front',
       params: { x0: 0.5 },

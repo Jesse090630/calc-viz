@@ -1,12 +1,13 @@
 import katex from 'katex';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
+import { useModalAccessibility } from '../accessibility/useModalAccessibility';
 import {
   NOTATION_CATEGORIES,
   searchNotationEntries,
   type NotationCategory,
   type NotationEntry,
 } from '../data/notation';
-import { BackLink } from './Home';
 
 const CATEGORY_ACCENTS: Readonly<Record<NotationCategory, string>> = {
   operators: 'border-cyan-400/45 bg-cyan-400/10 text-cyan-200',
@@ -81,9 +82,19 @@ function NotationCard({ entry }: { entry: NotationEntry }) {
   );
 }
 
-export function NotationBoard() {
+export function NotationBoard({
+  open,
+  onClose,
+  returnFocusRef,
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly returnFocusRef: RefObject<HTMLElement | null>;
+}) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<'all' | NotationCategory>('all');
+  const dialogRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const entries = useMemo(() => searchNotationEntries(query, category), [query, category]);
   const groups = NOTATION_CATEGORIES.filter((item) => item.id !== 'all')
     .map((item) => ({
@@ -93,15 +104,46 @@ export function NotationBoard() {
     }))
     .filter((group) => group.entries.length > 0);
 
-  return (
-    <main data-notation-board className="min-h-screen bg-[#0b1020] px-4 pb-16 pt-24 text-slate-100 sm:px-6 lg:px-8">
-      <BackLink />
+  useModalAccessibility({
+    open,
+    dialogRef,
+    initialFocusRef: searchRef,
+    returnFocusRef,
+    onClose,
+  });
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50" data-notation-board>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <main
+        ref={dialogRef}
+        id="notation-board-dialog"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notation-board-title"
+        className="absolute inset-0 overflow-y-auto bg-[#0b1020] px-4 pb-16 pt-24 text-slate-100 sm:px-6 lg:px-8"
+      >
+      <button
+        type="button"
+        aria-label="Close calc type board"
+        onClick={onClose}
+        className="fixed left-4 top-4 z-30 rounded-xl border border-slate-700 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-slate-200 shadow-lg shadow-black/25 backdrop-blur hover:border-cyan-400 hover:text-white"
+      >
+        ← All topics
+      </button>
       <div className="mx-auto max-w-6xl">
         <header className="relative overflow-hidden rounded-3xl border border-slate-700/80 bg-[#0c1326] px-5 py-7 shadow-2xl shadow-black/20 sm:px-8 sm:py-9">
           <div aria-hidden="true" className="absolute -right-5 -top-12 text-[12rem] font-black leading-none text-cyan-300/[0.035]">∫</div>
           <div className="relative max-w-3xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-300">Calc Type Board</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Learn to read calculus before you calculate it.</h1>
+            <h1 id="notation-board-title" className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Learn to read calculus before you calculate it.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">
               Symbols are a language. Hear how each one is said, see what it means in context, and catch the misunderstanding before it follows you into the math.
             </p>
@@ -112,6 +154,7 @@ export function NotationBoard() {
           <label className="block">
             <span className="sr-only">Search symbols</span>
             <input
+              ref={searchRef}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search ∫, integral, dee ex, stretched S…"
@@ -163,6 +206,8 @@ export function NotationBoard() {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </div>,
+    document.body,
   );
 }

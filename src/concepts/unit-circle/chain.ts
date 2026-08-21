@@ -73,6 +73,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'A point on a circle',
       narration:
         'Start with one point P on a circle of radius 1, measured from the circle’s own origin O = (0, 0) even though the whole diagram is shifted left to make room.',
+      altText: 'A unit circle centered at its labeled origin has radius one and a point P at the rightmost point.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point],
       camera: 'wide',
       params: { theta: 0 },
@@ -94,6 +95,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'θ is the distance walked along the arc',
       narration:
         'Move P counterclockwise and measure the highlighted arc: radians define angle as arc length divided by radius, so with radius 1 the arc length is literally θ.',
+      altText: 'Point P moves counterclockwise while the traveled arc from the rightmost point is highlighted on the unit circle.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point, OBJ.arc],
       camera: 'wide',
       params: { theta: 0 },
@@ -111,6 +113,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'Drop a vertical line',
       narration:
         'Drop P straight down to the horizontal axis, revealing the blue signed y-coordinate that the unit circle names sin θ.',
+      altText: 'A vertical blue segment drops from point P to the horizontal axis, marking the signed height called sine theta.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point, OBJ.arc, OBJ.projection],
       camera: 'wide',
       params: { theta: FIXED_THETA, drop: 0 },
@@ -128,6 +131,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'Carry that height sideways',
       narration:
         'Put a θ-axis to the right and carry P’s blue height unchanged above the matching θ, locking the two points to exactly the same horizontal level.',
+      altText: 'A horizontal connector carries point P’s height from the circle to a matching point above a theta-axis on the right.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point, OBJ.projection, OBJ.timeline, OBJ.carry],
       camera: 'wide',
       params: { theta: FIXED_THETA, drop: 1, carry: 0 },
@@ -145,6 +149,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'Trace the synchronized point',
       narration:
         'Let θ run from 0 to 2π while P circles once and its carried height traces the curve, with the horizontal connector proving both points always have exactly the same height.',
+      altText: 'As P completes one circle, a synchronized point traces a full sine wave from zero to two pi on the right.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point, OBJ.timeline, OBJ.carry, OBJ.sineWave],
       camera: 'wide',
       controls: [THETA_CONTROL],
@@ -162,6 +167,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'The other coordinate makes cosine',
       narration:
         'Trace the same P’s red horizontal coordinate cos θ against the θ-axis and a second wave appears with the sine shape shifted left by π/2.',
+      altText: 'The circle’s horizontal coordinate traces a cosine wave beside the existing sine wave on the theta-axis.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point, OBJ.projection, OBJ.timeline, OBJ.carry, OBJ.sineWave, OBJ.cosineWave],
       camera: 'wide',
       params: { drop: 1 },
@@ -180,6 +186,7 @@ export const UNIT_CIRCLE_CHAIN: Chain = {
       title: 'A second lap draws the same wave',
       narration:
         'Send P around once more and every carried height lands on the first wave because an extra 2π returns P to the same positions in the same order.',
+      altText: 'During a second lap of the circle, the carried point retraces the existing sine wave exactly.',
       show: [OBJ.circle, OBJ.circleAxes, OBJ.radius, OBJ.point, OBJ.timeline, OBJ.carry, OBJ.sineWave, OBJ.secondLap],
       camera: 'wide',
       controls: [{ ...THETA_CONTROL, param: 'lapTheta', label: 'second lap' }],

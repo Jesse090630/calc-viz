@@ -241,6 +241,31 @@ if (!(await typeBoardEntry.isVisible())) errors.push('[notation-board/entry] glo
 await typeBoardEntry.click();
 await page.getByRole('heading', { name: 'Learn to read calculus before you calculate it.' }).waitFor();
 if (!page.url().endsWith('#/notation')) errors.push('[notation-board/route] toolbar did not open #/notation');
+const notationDialog = page.getByRole('dialog', { name: 'Learn to read calculus before you calculate it.' });
+const notationClose = page.getByRole('button', { name: 'Close calc type board' });
+const notationInitialFocus = await page.evaluate(() => document.activeElement?.getAttribute('placeholder'));
+if (notationInitialFocus !== 'Search ∫, integral, dee ex, stretched S…') {
+  errors.push(`[notation-board/focus] search was not initially focused, got ${notationInitialFocus}`);
+}
+if (!(await page.locator('#root').getAttribute('inert') === '')) {
+  errors.push('[notation-board/inert] app background is not inert while the dialog is open');
+}
+await notationClose.press('Shift+Tab');
+const notationWrappedBackward = await notationDialog.evaluate((dialog) => dialog.contains(document.activeElement));
+if (!notationWrappedBackward) errors.push('[notation-board/focus] Shift+Tab escaped the dialog');
+await page.keyboard.press('Tab');
+const notationWrappedForward = await notationDialog.evaluate((dialog) => dialog.contains(document.activeElement));
+if (!notationWrappedForward) errors.push('[notation-board/focus] Tab escaped the dialog');
+await page.keyboard.press('Escape');
+await notationDialog.waitFor({ state: 'hidden', timeout: 1000 });
+await page.waitForTimeout(50);
+if (await notationDialog.isVisible().catch(() => false)) errors.push('[notation-board/escape] Escape did not close the dialog');
+if (await page.locator('#root').getAttribute('inert') !== null) errors.push('[notation-board/inert] background remained inert after close');
+if ((await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) !== 'Open calc type board') {
+  errors.push('[notation-board/focus] close did not return focus to the Type Board trigger');
+}
+await typeBoardEntry.click();
+await notationDialog.waitFor();
 const notationStatus = await page.getByRole('status').innerText();
 if (!notationStatus.toLowerCase().includes('31 symbols')) errors.push(`[notation-board/count] expected 31 symbols, got ${notationStatus}`);
 await page.screenshot({ path: join(OUT, 'notation-board-desktop.png') });
@@ -283,7 +308,34 @@ console.log('  type mobile  → "390×844 · dx pronunciation + misconception ·
 // 全站公式抽屉:桌面打开、搜索与 Why 跳转,再检查手机宽度。
 currentShot = 'formula-deck/desktop';
 await page.getByRole('button', { name: 'Open formula deck' }).click();
-await page.getByRole('dialog', { name: 'Formula deck' }).waitFor();
+const formulaDialog = page.getByRole('dialog', { name: 'Formula deck' });
+await formulaDialog.waitFor();
+const formulaInitialFocus = await page.evaluate(() => document.activeElement?.getAttribute('placeholder'));
+if (formulaInitialFocus !== 'Search sin, product rule, area…') {
+  errors.push(`[formula-deck/focus] search was not initially focused, got ${formulaInitialFocus}`);
+}
+if (!(await page.locator('#root').getAttribute('inert') === '')) {
+  errors.push('[formula-deck/inert] app background is not inert while the dialog is open');
+}
+await page.getByRole('button', { name: 'Close formula deck' }).press('Shift+Tab');
+if (!(await formulaDialog.evaluate((dialog) => dialog.contains(document.activeElement)))) {
+  errors.push('[formula-deck/focus] Shift+Tab escaped the dialog');
+}
+await page.keyboard.press('Tab');
+if (!(await formulaDialog.evaluate((dialog) => dialog.contains(document.activeElement)))) {
+  errors.push('[formula-deck/focus] Tab escaped the dialog');
+}
+await page.keyboard.press('Escape');
+await formulaDialog.waitFor({ state: 'hidden', timeout: 1000 });
+await page.waitForTimeout(50);
+if (await page.locator('#root').getAttribute('inert') !== null) {
+  errors.push('[formula-deck/inert] background remained inert after close');
+}
+if ((await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) !== 'Open formula deck') {
+  errors.push('[formula-deck/focus] close did not return focus to the Formula Deck trigger');
+}
+await page.getByRole('button', { name: 'Open formula deck' }).click();
+await formulaDialog.waitFor();
 await page.screenshot({ path: join(OUT, 'formula-deck-desktop.png') });
 await page.getByPlaceholder('Search sin, product rule, area…').fill('Sine');
 const sineCard = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Sine', exact: true }) }).first();
@@ -322,9 +374,15 @@ for (const { route, stages } of CHAINS) {
   console.log(`\n  ── ${route} ──`);
   currentShot = `${route}/loading`;
   await page.goto(`${URL}#/${route}`, { waitUntil: 'networkidle' });
-  await page.reload({ waitUntil: 'networkidle' }); // 确保从第 1 步开始
+  await page.reload({ waitUntil: 'domcontentloaded' }); // WebGL 帧循环不保证 networkidle;这里只需确保从第 1 步开始
   await page.waitForSelector('canvas', { timeout: 20000 });
   await page.waitForTimeout(1800);
+
+  const sceneDescription = page.getByRole('img').first();
+  const sceneLabel = await sceneDescription.getAttribute('aria-label');
+  if (!sceneLabel || sceneLabel.length < 56) errors.push(`[${route}/alt-text] missing substantive scene description`);
+  const liveAnnouncement = await page.locator('.sr-only[aria-live="polite"]').first().innerText();
+  if (!liveAnnouncement.toLowerCase().includes('step 1 of')) errors.push(`[${route}/aria-live] current step is not announced`);
 
   for (const [index, [id, wait]] of stages.entries()) {
     currentShot = `${route}/${id}`;
@@ -494,6 +552,27 @@ for (const custom of [
   }
   console.log('\n  custom input → "feature flag off · all three UI entries absent"');
 }
+
+// W5:系统要求减弱动态效果时,autoplay 数据直接以终态进入画面,不等待延迟或补间。
+currentShot = 'reduced-motion';
+const reducedPage = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+reducedPage.on('console', (m) => {
+  if (m.type() === 'error') errors.push(`[${currentShot}] ${m.text()}`);
+});
+reducedPage.on('pageerror', (e) => errors.push(`PAGEERROR [${currentShot}]: ${e.stack ?? e.message}`));
+await reducedPage.goto(`${URL}#/unit-circle`, { waitUntil: 'networkidle' });
+await reducedPage.waitForSelector('canvas', { timeout: 20000 });
+if (!(await reducedPage.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches))) {
+  errors.push('[reduced-motion] browser did not expose the reduced-motion media preference');
+}
+await reducedPage.keyboard.press('ArrowRight');
+await reducedPage.waitForTimeout(50);
+const reducedPanel = await reducedPage.locator('aside').innerText();
+if (!reducedPanel.includes('1.047198')) {
+  errors.push('[reduced-motion] autoplay did not land at theta = 1.047198 immediately');
+}
+await reducedPage.close();
+console.log('  reduced motion → "autoplay lands immediately at θ = 1.047198 · no tween delay"');
 
 await browser.close();
 server?.close();

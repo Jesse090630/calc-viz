@@ -65,6 +65,8 @@ export interface Stage {
   readonly title: string;
   /** 一句话:上一步【怎么】变成这一步。写不出来说明这一步该拆。 */
   readonly narration: string;
+  /** WebGL 场景的一句文字等价描述,供屏幕阅读器理解画面。 */
+  readonly altText?: string;
   /** 本步显示哪些场景对象(id 由各概念自行约定) */
   readonly show: readonly string[];
   readonly camera: CameraPreset;

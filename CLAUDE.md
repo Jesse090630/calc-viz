@@ -237,4 +237,19 @@
     sticky 搜索栏会贴住全站工具条。把它锚到工具条下方后重跑完整 7 链截图，console 零错误。
   - 桌面与 390×844 手机截图都人工看过；31 张卡、读法搜索、分类、Why 跳转、焦点环与无横向溢出
     均由浏览器路径覆盖。本工单没有新增数学量，因此不适用双路径计算或数学变异测试。
-- **待办**:ROADMAP v4 W4 已完成；下一项是 W5，按 AGENTS.md 一次一个任务，等待 Jesse 确认。
+- **2026-08-20 · ROADMAP v4 W5 无障碍补齐完成**。323 个测试全绿；55 个内置分镜都新增了
+  一句独立的 WebGL 画面等价描述，当前步号与公式通过 `aria-live="polite"` 播报。
+  `src/engine/` 只改了本工单唯一预先批准的 `Stage.altText` 类型，没有加入概念字段或额外引擎行为。
+  - Formula Deck 与 Calc Type Board 现在都是真正 portaled 到应用根节点之外的 modal dialog：打开后
+    搜索框自动获得焦点，应用背景 `inert`，Tab / Shift+Tab 在弹窗内循环，Esc 或关闭按钮退出后
+    焦点回到各自入口。Type Board 仍保留可分享的 `#/notation` 地址。
+  - `prefers-reduced-motion: reduce` 命中时，由引擎外的 chain adapter 隐去 autoplay 声明并把参数
+    直接初始化到终值；相机也直接就位。真实 Chromium reduce 模式进入 Unit Circle 第 2 步后，
+    50ms 内即显示 `θ = 1.047198`，没有 1200ms 延迟或补间。
+  - ⚠️ 教训一：最直接的实现会改 `engine/useAutoplay.ts`、`ChainPlayer.tsx` 与 `FormulaPanel.tsx`，
+    虽然逻辑通用，仍违反“W5 只有 Stage.altText 获批”的边界。把 autoplay 适配、隐藏播报区和
+    scene 描述都提升到 App 无障碍层后，同样完成需求，同时把引擎差异压回唯一批准的 2 行。
+  - ⚠️ 教训二：弹窗 Escape 的自动验收最初只等 20ms 就读取 React 状态，真实交互正确却被误报；
+    改为等待 dialog 实际消失后再检查 `inert` 与焦点归还，Formula Deck 和 Type Board 两条路径
+    才都成为稳定的回归测试。完整桌面/390×844 截图已人工查看，console 零错误。
+- **待办**:ROADMAP v4 W5 已完成；下一项是 W6，按 AGENTS.md 一次一个任务，等待 Jesse 确认。

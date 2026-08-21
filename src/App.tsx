@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ChainPlayer } from './engine/ChainPlayer';
 import { createChainStore, type ChainStoreHook } from './engine/store';
+import { resolveTex } from './engine/store';
 import type { Chain, SceneProps } from './engine/types';
 import { SHELL_METHOD_CHAIN } from './concepts/shell-method/chain';
 import { ShellScene } from './concepts/shell-method/ShellScene';
@@ -20,6 +21,8 @@ import { NotationBoard } from './ui/NotationBoard';
 import { TRIG_RATES_CHAIN } from './concepts/trig-rates/chain';
 import { TrigRatesScene } from './concepts/trig-rates/TrigRatesScene';
 import { FEATURES } from './config';
+import { createReducedMotionChain } from './accessibility/reducedMotionChain';
+import { usePrefersReducedMotion } from './accessibility/usePrefersReducedMotion';
 
 const CustomRiemannExperience = lazy(() =>
   import('./concepts/riemann-sum/RiemannExperience').then(({ RiemannExperience }) => ({
@@ -32,9 +35,9 @@ const CustomSolidExperience = lazy(() =>
   })),
 );
 
-const RIEMANN_STORE = createChainStore(RIEMANN_SUM_CHAIN);
-const SHELL_STORE = createChainStore(SHELL_METHOD_CHAIN);
-const DISK_STORE = createChainStore(DISK_METHOD_CHAIN);
+const RIEMANN_STORE = createChainStore(createReducedMotionChain(RIEMANN_SUM_CHAIN));
+const SHELL_STORE = createChainStore(createReducedMotionChain(SHELL_METHOD_CHAIN));
+const DISK_STORE = createChainStore(createReducedMotionChain(DISK_METHOD_CHAIN));
 
 interface Recommendation {
   readonly id: string;
@@ -69,12 +72,43 @@ function LessonPage({
   className?: string;
 }) {
   const index = useChain((state) => state.index);
+  const params = useChain((state) => state.params);
+  const resetParams = useChain((state) => state.resetParams);
+  const reducedMotion = usePrefersReducedMotion();
   const recommendation = recommendedAfter(chain.id);
+  const stage = chain.stages[index];
+
+  useEffect(() => {
+    resetParams();
+  }, [reducedMotion, resetParams]);
+
+  const accessibleScene = useCallback(
+    (props: SceneProps) => (
+      <>
+        <span
+          className="sr-only"
+          role="img"
+          aria-label={props.stage.altText ?? `${props.stage.title}. ${props.stage.narration}`}
+        />
+        {renderScene(props)}
+      </>
+    ),
+    [renderScene],
+  );
+
+  const formulaAnnouncement = stage?.formula
+    ?.map((line) => resolveTex(line.tex, params))
+    .join('; ');
 
   return (
     <div className={`relative ${className}`}>
       <BackLink />
-      <ChainPlayer key={chain.id} useChain={useChain} renderScene={renderScene} />
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {stage
+          ? `${chain.subtitle}. Step ${stage.label} of ${chain.stages.length}. ${formulaAnnouncement ? `Current formula: ${formulaAnnouncement}` : 'No formula in this step.'}`
+          : ''}
+      </div>
+      <ChainPlayer key={chain.id} useChain={useChain} renderScene={accessibleScene} />
       {index === chain.stages.length - 1 ? (
         <a
           data-recommended-next
@@ -92,10 +126,10 @@ function LessonPage({
 
 // 每条链一个 store,模块级创建一次。切页面时不重建,所以来回切不会丢进度。
 const CHAINS = [
-  { chain: LIMITS_CHAIN, store: createChainStore(LIMITS_CHAIN), Scene: LimitsScene },
-  { chain: DERIVATIVE_CHAIN, store: createChainStore(DERIVATIVE_CHAIN), Scene: DerivativeScene },
-  { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(UNIT_CIRCLE_CHAIN), Scene: UnitCircleScene },
-  { chain: TRIG_RATES_CHAIN, store: createChainStore(TRIG_RATES_CHAIN), Scene: TrigRatesScene },
+  { chain: LIMITS_CHAIN, store: createChainStore(createReducedMotionChain(LIMITS_CHAIN)), Scene: LimitsScene },
+  { chain: DERIVATIVE_CHAIN, store: createChainStore(createReducedMotionChain(DERIVATIVE_CHAIN)), Scene: DerivativeScene },
+  { chain: UNIT_CIRCLE_CHAIN, store: createChainStore(createReducedMotionChain(UNIT_CIRCLE_CHAIN)), Scene: UnitCircleScene },
+  { chain: TRIG_RATES_CHAIN, store: createChainStore(createReducedMotionChain(TRIG_RATES_CHAIN)), Scene: TrigRatesScene },
 ] as const;
 
 // 顺序 = 依赖顺序,不是完成顺序。Limits 是 derivative 的语言地基,
@@ -173,10 +207,12 @@ function useHashRoute(): string {
 
 export default function App() {
   const route = useHashRoute();
+  const notationTriggerRef = useRef<HTMLAnchorElement>(null);
+  const closeNotation = useCallback(() => {
+    window.location.hash = '#/';
+  }, []);
   let page: React.ReactNode;
-  if (route === 'notation') {
-    page = <NotationBoard />;
-  } else if (route === 'riemann-sum') {
+  if (route === 'riemann-sum') {
     page = FEATURES.customFunctionInput ? (
       <div className="relative">
         <BackLink />
@@ -220,9 +256,12 @@ export default function App() {
       {page}
       <div data-learning-tools className="fixed right-4 top-4 z-30 flex items-center gap-2">
         <a
+          ref={notationTriggerRef}
           href="#/notation"
           aria-label="Open calc type board"
           aria-current={route === 'notation' ? 'page' : undefined}
+          aria-expanded={route === 'notation'}
+          aria-controls="notation-board-dialog"
           className={
             'flex items-center gap-2 rounded-xl border bg-slate-950/90 px-3 py-2 text-xs font-semibold shadow-lg shadow-black/25 backdrop-blur transition hover:bg-slate-900 ' +
             (route === 'notation'
@@ -235,6 +274,11 @@ export default function App() {
         </a>
         <FormulaDeck />
       </div>
+      <NotationBoard
+        open={route === 'notation'}
+        onClose={closeNotation}
+        returnFocusRef={notationTriggerRef}
+      />
     </>
   );
 }

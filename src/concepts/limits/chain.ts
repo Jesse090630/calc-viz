@@ -60,6 +60,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'A graph with a hole in it',
       narration:
         'This function is a straight line everywhere except at x = 1, where the formula turns into 0/0. There is no value there at all — that is what the open circle means.',
+      altText: 'A rising straight-line graph has an open circle at x equals one, y equals two, marking a missing function value.',
       show: [OBJ.axes, OBJ.curveG, OBJ.hole],
       camera: 'front',
       formula: [
@@ -74,6 +75,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'Walk in from the left',
       narration:
         'Never mind x = 1 itself. Come at it from below and watch the height of the graph. Step closer and the readout settles down.',
+      altText: 'A highlighted point moves along the line toward the open circle from x-values less than one.',
       show: [OBJ.axes, OBJ.curveG, OBJ.hole, OBJ.leftProbe],
       camera: 'front',
       params: { di: 0 },
@@ -91,6 +93,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'Now from the right',
       narration:
         'Same thing from above. The x values are different, the heights are different, but they are closing on the same place.',
+      altText: 'A highlighted point moves along the line toward the open circle from x-values greater than one.',
       show: [OBJ.axes, OBJ.curveG, OBJ.hole, OBJ.rightProbe],
       camera: 'front',
       params: { di: 0 },
@@ -108,6 +111,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'Both sides agree',
       narration:
         'Put the two walks side by side. They start far apart and squeeze together. Drag the distance down and the two readouts become the same number to as many digits as you like.',
+      altText: 'Two highlighted points approach the same open circle simultaneously from the left and right sides of the line.',
       show: [OBJ.axes, OBJ.curveG, OBJ.hole, OBJ.leftProbe, OBJ.rightProbe],
       camera: 'front',
       params: { di: 0 },
@@ -125,6 +129,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'The limit is not the value',
       narration:
         'The hole never closed. The function still has no value at x = 1 — and the limit is still 2. A limit describes where the function is heading, which is a different question from where it is.',
+      altText: 'The graph still has an open circle at one comma two, now emphasized as the shared limiting location rather than a filled value.',
       show: [OBJ.axes, OBJ.curveG, OBJ.hole, OBJ.limitMark],
       camera: 'front',
       formula: [
@@ -140,6 +145,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'Change only the right-hand side',
       narration:
         'Here is a different function. Its left half is exactly the one you just studied — same values, same approach to 2. Only the right half has been moved. Walk in from both sides again.',
+      altText: 'The left branch still approaches height two while a raised right branch approaches height three point five, with probes moving on both sides.',
       show: [OBJ.axes, OBJ.curveJ, OBJ.hole, OBJ.leftProbe, OBJ.rightProbe],
       camera: 'front',
       params: { di: 0 },
@@ -157,6 +163,7 @@ export const LIMITS_CHAIN: Chain = {
       title: 'When the sides disagree, there is no limit',
       narration:
         'The left walk still arrives at 2. The right walk arrives at 3.5 and stays there. Getting closer does not help — there is no single number the function is heading for, so the limit simply does not exist.',
+      altText: 'A jump graph has separate open endpoints at heights two and three point five, so the two sides do not meet.',
       show: [OBJ.axes, OBJ.curveJ, OBJ.hole],
       camera: 'front',
       formula: [

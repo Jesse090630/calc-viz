@@ -45,7 +45,7 @@ describe('Disk 链的数据完整性', () => {
 describe('⭐ 引擎通用性验收 —— 第二个概念不许改 engine', () => {
   it('Disk 链只用了 Stage 已有的字段,没有出现新字段', () => {
     const allowed = new Set([
-      'id', 'label', 'title', 'narration', 'show', 'camera', 'params', 'controls', 'formula', 'autoplay',
+      'id', 'label', 'title', 'narration', 'altText', 'show', 'camera', 'params', 'controls', 'formula', 'autoplay',
     ]);
     for (const s of CHAIN.stages) {
       for (const key of Object.keys(s)) {

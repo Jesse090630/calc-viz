@@ -44,6 +44,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'moving-point', label: '1', title: 'Walk around the unit circle',
       narration: 'Let P move counterclockwise one radian per second, so its position is controlled by the single angle θ.',
+      altText: 'A radius from the origin reaches point P on the unit circle at angle theta.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point], camera: 'front',
       formula: [
         { tex: String.raw`P(\theta)=(\cos\theta,\;\sin\theta)` },
@@ -53,6 +54,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'two-positions', label: '2', title: 'Compare two nearby positions',
       narration: 'A second point Q at θ+Δθ turns the motion into one visible chord from P to Q.',
+      altText: 'Nearby points P and Q on the unit circle are joined by a chord representing their displacement.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.nearbyPoint, OBJ.chord], camera: 'front',
       controls: [DELTA_CONTROL],
       formula: [
@@ -63,6 +65,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'divide-by-time', label: '3', title: 'Divide displacement by elapsed angle',
       narration: 'Because θ increases at one radian per second, the chord divided by Δθ is the average velocity vector.',
+      altText: 'The chord from P to Q is rescaled into an average velocity arrow based at P.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.nearbyPoint, OBJ.chord, OBJ.chordVelocity], camera: 'front',
       controls: [DELTA_CONTROL],
       formula: [
@@ -73,6 +76,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'shrink-gap', label: '4', title: 'Shrink the angle gap',
       narration: 'As Δθ shrinks, the chord velocity swings into the unique tangent direction at P.',
+      altText: 'Point Q approaches P and the chord velocity arrow rotates toward the tangent velocity arrow.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.nearbyPoint, OBJ.chord, OBJ.chordVelocity, OBJ.tangentVelocity], camera: 'front',
       params: { deltaTheta: 0.8 }, controls: [DELTA_CONTROL],
       autoplay: { param: 'deltaTheta', from: 0.8, to: 0.05, delayMs: 1200, durationMs: 4200 },
@@ -84,6 +88,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'tangent-vector', label: '5', title: 'Rotate the radius by 90°',
       narration: 'The unit tangent is the radius (cos θ,sin θ) rotated counterclockwise, so its coordinates are (−sin θ,cos θ).',
+      altText: 'At point P, a tangent velocity arrow is shown as the radius arrow rotated counterclockwise by ninety degrees.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.tangentVelocity], camera: 'front',
       params: { deltaTheta: 0.05 },
       formula: [
@@ -94,6 +99,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'sine-rate', label: '6', title: 'Read the vertical component',
       narration: 'The vertical coordinate is sin θ, so the vertical velocity component cos θ is exactly its derivative.',
+      altText: 'The tangent velocity arrow is split to emphasize its vertical component, which equals cosine theta.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.tangentVelocity, OBJ.yComponent], camera: 'front',
       formula: [
         { tex: (p) => String.raw`v_y=\cos\theta=${f6(trigRates(p.theta ?? THETA).dSin)}` },
@@ -103,6 +109,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'cosine-rate', label: '7', title: 'Read the horizontal component',
       narration: 'The horizontal coordinate is cos θ, so its leftward velocity component −sin θ is exactly its derivative.',
+      altText: 'The tangent velocity arrow is split to emphasize its leftward horizontal component, which equals negative sine theta.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.tangentVelocity, OBJ.xComponent], camera: 'front',
       formula: [
         { tex: (p) => String.raw`v_x=-\sin\theta=${f6(trigRates(p.theta ?? THETA).dCos)}` },
@@ -112,6 +119,7 @@ export const TRIG_RATES_CHAIN: Chain = {
     {
       id: 'reverse-arrows', label: '8', title: 'Reverse the derivative arrows',
       narration: 'An indefinite integral reverses differentiation, so the same two arrows immediately give the matching antiderivatives plus C.',
+      altText: 'The unit circle and tangent vector remain visible while paired derivative arrows reverse into integral arrows in the panel.',
       show: [OBJ.axes, OBJ.circle, OBJ.radius, OBJ.point, OBJ.tangentVelocity, OBJ.xComponent, OBJ.yComponent, OBJ.reverse], camera: 'front',
       formula: [
         { tex: String.raw`\frac d{d\theta}\sin\theta=\cos\theta\quad\Longleftrightarrow\quad\int\cos\theta\,d\theta=\sin\theta+C` },

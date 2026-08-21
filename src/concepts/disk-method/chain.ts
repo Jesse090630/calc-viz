@@ -54,6 +54,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'The same region as before',
       narration:
         'This is the exact region the Shell Method used, and we will spin it around the exact same axis. Nothing about the solid changes. The only thing we are going to change is which way we slice it.',
+      altText: 'The same downward parabola and shaded region appear beside the y-axis before any rotation begins.',
       show: [OBJ.axes, OBJ.curve, OBJ.region],
       camera: 'front',
     },
@@ -64,6 +65,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'Slice horizontally instead',
       narration:
         'Last time we cut vertical strips. This time cut a horizontal one, at height y and of thickness Δy. Its length reaches from the y-axis out to the curve — so that length is the radius at this height.',
+      altText: 'One thin horizontal slice reaches from the y-axis to the curve, showing a radius and adjustable thickness.',
       show: [OBJ.axes, OBJ.curve, OBJ.region, OBJ.slab],
       camera: 'front',
       controls: [
@@ -83,6 +85,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'Spin it — you get a disk, not a shell',
       narration:
         'Camera first, then the strip turns. Because this strip touches the axis, it does not sweep out a hollow tube. It sweeps out a solid coin: a disk of radius r and thickness Δy.',
+      altText: 'From an angled view, the horizontal slice rotates around the y-axis and becomes a solid disk with no central hole.',
       show: [OBJ.axes, OBJ.slab, OBJ.disk],
       camera: 'three-quarter',
       controls: [{ param: 'theta', label: 'sweep angle  θ', min: 0, max: Math.PI * 2, step: 0.01 }],
@@ -96,6 +99,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'A coin has an easy volume',
       narration:
         'No unrolling needed this time. A disk is a circle of area πr² given a thickness Δy — and you already knew the area of a circle before you ever met calculus.',
+      altText: 'A single solid disk is labeled with its radius, circular face area, and thickness.',
       show: [OBJ.axes, OBJ.disk, OBJ.dimLabels],
       camera: 'three-quarter',
       formula: [
@@ -115,6 +119,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'Stack them up',
       narration:
         'Slice the whole region into n horizontal strips and spin every one. The disks stack into something that is clearly a staircase, not a smooth bowl. Hold on to that — it matters in a moment.',
+      altText: 'A stack of disks with changing radii forms a visibly stepped approximation of the rotated bowl-shaped solid.',
       show: [OBJ.axes, OBJ.disks],
       camera: 'three-quarter',
       controls: [{ param: 'n', label: 'number of disks  n', min: 1, max: 40, step: 1 }],
@@ -131,6 +136,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'The shape is wrong. The number is not.',
       narration:
         'Drag n down to 2. The staircase looks nothing like the solid — yet the volume is already exact, to every digit, and stays exact for every n. Each disk overshoots below its midpoint by precisely what it undershoots above.',
+      altText: 'A very coarse stack of disks remains visibly stepped even though the displayed total volume is exact.',
       show: [OBJ.axes, OBJ.disks],
       camera: 'three-quarter',
       controls: [{ param: 'n', label: 'number of disks  n', min: 1, max: 40, step: 1 }],
@@ -151,6 +157,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'Why Shell had an error and Disk does not',
       narration:
         'It is not that one method is more accurate. Slicing decides what you end up integrating. Vertical strips gave a cubic; horizontal ones give something linear, and the midpoint rule is exact on straight lines. The method is a consequence of the cut, not a rule to memorise.',
+      altText: 'The disk stack stays visible while the panel contrasts the linear disk integrand with the cubic shell integrand.',
       show: [OBJ.axes, OBJ.disks],
       camera: 'three-quarter',
       formula: [
@@ -172,6 +179,7 @@ export const DISK_METHOD_CHAIN: Chain = {
       title: 'Same solid, same 8π',
       narration:
         'Two completely different integrals, in two different variables, describing the same object — and they agree. That agreement is not a coincidence to be impressed by; it is the check you should run every time you set one of these up.',
+      altText: 'The view returns to the original shaded region as the disk and shell integrals are shown equal to the same volume.',
       show: [OBJ.axes, OBJ.curve, OBJ.region],
       camera: 'front',
       formula: [

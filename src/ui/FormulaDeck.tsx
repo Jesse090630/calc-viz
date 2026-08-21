@@ -1,5 +1,7 @@
 import katex from 'katex';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useModalAccessibility } from '../accessibility/useModalAccessibility';
 import {
   FORMULA_CATEGORIES,
   searchFormulaSections,
@@ -18,31 +20,29 @@ export function FormulaDeck() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<'all' | FormulaCategory>('all');
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const sections = useMemo(() => searchFormulaSections(query, category), [query, category]);
   const resultCount = sections.reduce((total, section) => total + section.entries.length, 0);
+  const close = useCallback(() => setOpen(false), []);
 
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    window.setTimeout(() => searchRef.current?.focus(), 0);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useModalAccessibility({
+    open,
+    dialogRef,
+    initialFocusRef: searchRef,
+    returnFocusRef: triggerRef,
+    onClose: close,
+  });
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         aria-label="Open formula deck"
         aria-expanded={open}
+        aria-controls="formula-deck-dialog"
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-100 shadow-lg shadow-black/25 backdrop-blur transition hover:border-amber-300 hover:bg-slate-900"
       >
@@ -51,15 +51,17 @@ export function FormulaDeck() {
         <span aria-hidden="true" className="text-slate-500">⚙</span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-50" data-formula-deck>
-          <button
-            type="button"
-            aria-label="Close formula deck"
+          <div
+            aria-hidden="true"
             className="absolute inset-0 cursor-default bg-slate-950/75 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+            onClick={close}
           />
           <section
+            ref={dialogRef}
+            id="formula-deck-dialog"
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="formula-deck-title"
@@ -75,7 +77,7 @@ export function FormulaDeck() {
                 <button
                   type="button"
                   aria-label="Close formula deck"
-                  onClick={() => setOpen(false)}
+                  onClick={close}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:text-white"
                 >
                   ✕
@@ -149,7 +151,7 @@ export function FormulaDeck() {
                             {item.deriveRoute && (
                               <a
                                 href={`#/${item.deriveRoute}`}
-                                onClick={() => setOpen(false)}
+                                onClick={close}
                                 className="mt-3 inline-flex rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-300 hover:border-amber-300 hover:bg-amber-400/20"
                               >
                                 Why? · watch the derivation →
@@ -164,7 +166,8 @@ export function FormulaDeck() {
               )}
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
