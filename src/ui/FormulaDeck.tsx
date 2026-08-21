@@ -1,5 +1,14 @@
+/**
+ * Formula Deck 弹窗。
+ *
+ * ⚠️ 它**只是弹窗**,触发按钮在 App 里。以前按钮和弹窗打包在一起,
+ * 于是这个组件在每个页面都被渲染,它 import 的 KaTeX(gzip 75 kB)
+ * 也就在首页被无条件下载 —— 哪怕用户从没点开过参考板。
+ * 现在与 NotationBoard 形态一致:受控的 open/onClose/returnFocusRef,
+ * App 只在 open 为真时才 lazy 挂载它。
+ */
 import katex from 'katex';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalAccessibility } from '../accessibility/useModalAccessibility';
 import {
@@ -16,40 +25,33 @@ function Tex({ src }: { src: string }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export function FormulaDeck() {
-  const [open, setOpen] = useState(false);
+export function FormulaDeck({
+  open,
+  onClose,
+  returnFocusRef,
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly returnFocusRef: RefObject<HTMLElement | null>;
+}) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<'all' | FormulaCategory>('all');
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const sections = useMemo(() => searchFormulaSections(query, category), [query, category]);
   const resultCount = sections.reduce((total, section) => total + section.entries.length, 0);
-  const close = useCallback(() => setOpen(false), []);
+  const close = onClose;
 
   useModalAccessibility({
     open,
     dialogRef,
     initialFocusRef: searchRef,
-    returnFocusRef: triggerRef,
+    returnFocusRef,
     onClose: close,
   });
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Open formula deck"
-        aria-expanded={open}
-        aria-controls="formula-deck-dialog"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-100 shadow-lg shadow-black/25 backdrop-blur transition hover:border-amber-300 hover:bg-slate-900"
-      >
-        <span aria-hidden="true" className="text-base leading-none">∫</span>
-        <span className="hidden sm:inline">Formula deck</span>
-        <span aria-hidden="true" className="text-slate-500">⚙</span>
-      </button>
 
       {open && createPortal(
         <div className="fixed inset-0 z-50" data-formula-deck>

@@ -4,23 +4,107 @@
  * 首页先给一个能拖动的“证据”,再按依赖关系陈列静态分镜。学生先看见网站在做什么,
  * 才需要决定从哪条链开始；缩略图不播放,避免七个场景同时争夺注意力。
  */
-import { useState } from 'react';
-import { RIEMANN_SUM_CHAIN } from '../concepts/riemann-sum/chain';
-import { RiemannScene } from '../concepts/riemann-sum/RiemannScene';
-import { makeVisible } from '../engine/store';
-import { PARABOLA_DOWN } from '../math/curves';
-import { definiteIntegralExact, riemannSum } from '../math/riemann';
+import { lazy, Suspense, useState } from 'react';
 
-export type ConceptTrack = 'Foundations' | 'Integration' | '3D Volume' | 'Trigonometry';
+/**
+ * hero 带 3D。单独成 chunk **而且默认不加载**。
+ *
+ * 只做 lazy 是不够的:组件一渲染,chunk 就会立刻下载,
+ * Three.js(gzip 241 kB)照样落在每个首页访客头上。
+ * 所以默认显示的是这一步的**真实截图**,点一下才把 3D 换进来。
+ * 静态图已经把"这不是计算器"说清楚了,想动手的人多点一下,
+ * 不想动手的人省下 241 kB。
+ */
+const RiemannHero = lazy(() => import('./HomeHero'));
 
-export interface ConceptCard {
-  readonly id: string;
-  readonly title: string;
-  readonly question: string;
-  readonly steps: number;
-  readonly ready: boolean;
-  readonly track: ConceptTrack;
+/**
+ * 封面用的是 Riemann 第 5 步的**真实截图**,但只裁画布区域。
+ * 直接用整张课程截图会把课程侧栏也带进来,在 hero 里形成"面板套面板",
+ * 读起来像截图的截图。裁剪版见 `src/assets/`。
+ */
+const HERO_POSTER = {
+  src: new URL('../assets/hero-riemann-squeeze.png', import.meta.url).href,
+  alt: 'Upper and lower rectangle sets trapping the true area between 4.250000 and 6.250000.',
+};
+
+function HeroSlot() {
+  const [live, setLive] = useState(false);
+
+  if (live) {
+    return (
+      <Suspense
+        fallback={
+          <div
+            aria-hidden="true"
+            className="h-[17rem] rounded-[1.75rem] border border-slate-700 bg-slate-950 lg:h-[27rem]"
+          />
+        }
+      >
+        <RiemannHero />
+      </Suspense>
+    );
+  }
+
+  return (
+    <section
+      data-home-hero
+      aria-labelledby="home-hero-title"
+      className="overflow-hidden rounded-[1.75rem] border border-slate-700 bg-slate-950 shadow-2xl shadow-black/25"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        <span>Live derivation · Riemann step 5 of 8</span>
+        <span className="text-amber-300">One slider · no autoplay</span>
+      </div>
+      <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.55fr)]">
+        <div className="relative h-[17rem] min-w-0 border-b border-slate-700 lg:h-[27rem] lg:border-b-0 lg:border-r">
+          <img
+            src={HERO_POSTER.src}
+            alt={HERO_POSTER.alt}
+            className="h-full w-full object-cover object-left"
+          />
+          <button
+            type="button"
+            onClick={() => setLive(true)}
+            className="absolute inset-0 flex items-center justify-center bg-slate-950/45 transition hover:bg-slate-950/25"
+          >
+            <span className="rounded-full border border-amber-400/60 bg-slate-950/90 px-5 py-2.5 text-xs font-bold text-amber-200 shadow-lg shadow-black/40">
+              ▶ Make it interactive
+            </span>
+          </button>
+        </div>
+        <div className="flex flex-col justify-center px-5 py-6 sm:px-7 lg:py-8">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Try the idea</p>
+          <h1 id="home-hero-title" className="mt-2 text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl">
+            Drag the picture. Watch the formula tighten.
+          </h1>
+          <p className="mt-4 text-sm leading-relaxed text-slate-300">
+            The blue and amber rectangles trap the same curved area. Increase their count and the
+            two estimates close around one unavoidable number.
+          </p>
+          <div className="mt-5 grid gap-1.5 rounded-xl border border-slate-700 bg-slate-900/70 p-3 font-mono text-xs tabular-nums">
+            <div className="flex justify-between gap-4 text-cyan-300"><span>lower R₄</span><strong>4.250000</strong></div>
+            <div className="flex justify-between gap-4 text-green-400"><span>true area</span><strong>5.333333</strong></div>
+            <div className="flex justify-between gap-4 text-amber-300"><span>upper L₄</span><strong>6.250000</strong></div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLive(true)}
+            className="mt-5 inline-flex w-fit items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-4 py-2 text-xs font-bold text-amber-200 hover:border-amber-300 hover:bg-amber-400/20"
+          >
+            Load the interactive version <span aria-hidden="true">→</span>
+          </button>
+          <a href="#/riemann-sum" className="mt-3 inline-flex w-fit items-center gap-2 text-xs font-semibold text-slate-300 underline underline-offset-4 hover:text-white">
+            Or open the full 8-step derivation
+          </a>
+        </div>
+      </div>
+    </section>
+  );
 }
+
+// 类型与数据都来自 registry —— 以前这里重复定义了一份 ConceptCard,
+// 两处各维护一份迟早会漂。registry 是唯一数据源。
+import { CONCEPTS, type ConceptMeta, type ConceptTrack } from '../concepts/registry';
 
 const TRACKS: readonly { id: ConceptTrack; note: string }[] = [
   { id: 'Foundations', note: 'Approach first, then measure change.' },
@@ -60,86 +144,7 @@ const THUMBNAILS: Readonly<Record<string, { src: string; alt: string }>> = {
   },
 };
 
-const HERO_STAGE = (() => {
-  const stage = RIEMANN_SUM_CHAIN.stages[4];
-  if (!stage) throw new Error('Riemann hero stage is missing');
-  return stage;
-})();
-
-const HERO_VISIBLE = makeVisible(HERO_STAGE.show);
-const HERO_INTERVAL = PARABOLA_DOWN.domain;
-const HERO_EXACT = definiteIntegralExact(PARABOLA_DOWN, HERO_INTERVAL);
-
-function RiemannHero() {
-  const [n, setN] = useState(4);
-  const lower = riemannSum(PARABOLA_DOWN.f, HERO_INTERVAL, n, 'right');
-  const upper = riemannSum(PARABOLA_DOWN.f, HERO_INTERVAL, n, 'left');
-
-  return (
-    <section
-      data-home-hero
-      aria-labelledby="home-hero-title"
-      className="overflow-hidden rounded-[1.75rem] border border-slate-700 bg-slate-950 shadow-2xl shadow-black/25"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-        <span>Live derivation · Riemann step 5 of 8</span>
-        <span className="text-amber-300">One slider · no autoplay</span>
-      </div>
-
-      <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.55fr)]">
-        <div className="relative h-[17rem] min-w-0 border-b border-slate-700 lg:h-[27rem] lg:border-b-0 lg:border-r">
-          <RiemannScene
-            stage={HERO_STAGE}
-            params={{ ...RIEMANN_SUM_CHAIN.defaultParams, ...HERO_STAGE.params, n }}
-            visible={HERO_VISIBLE}
-          />
-          <div className="pointer-events-none absolute bottom-3 left-3 rounded-full border border-slate-700 bg-slate-950/85 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-slate-300 backdrop-blur">
-            same curve · thinner rectangles
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-center px-5 py-6 sm:px-7 lg:py-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Try the idea</p>
-          <h1 id="home-hero-title" className="mt-2 text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl">
-            Drag the picture. Watch the formula tighten.
-          </h1>
-          <p className="mt-4 text-sm leading-relaxed text-slate-300">
-            The blue and amber rectangles trap the same curved area. Increase their count and the
-            two estimates close around one unavoidable number.
-          </p>
-
-          <div aria-live="polite" className="mt-5 grid gap-1.5 rounded-xl border border-slate-700 bg-slate-900/70 p-3 font-mono text-xs tabular-nums">
-            <div className="flex justify-between gap-4 text-cyan-300"><span>lower Rₙ</span><strong>{lower.toFixed(6)}</strong></div>
-            <div className="flex justify-between gap-4 text-green-400"><span>true area</span><strong>{HERO_EXACT.toFixed(6)}</strong></div>
-            <div className="flex justify-between gap-4 text-amber-300"><span>upper Lₙ</span><strong>{upper.toFixed(6)}</strong></div>
-          </div>
-
-          <label htmlFor="home-riemann-n" className="mt-5 flex justify-between text-xs text-slate-300">
-            <span>number of rectangles  n</span>
-            <strong className="tabular-nums text-white">{n}</strong>
-          </label>
-          <input
-            id="home-riemann-n"
-            aria-label="Hero number of rectangles n"
-            type="range"
-            min="4"
-            max="32"
-            step="4"
-            value={n}
-            onChange={(event) => setN(Number(event.target.value))}
-            className="mt-2 w-full cursor-pointer accent-amber-500"
-          />
-
-          <a href="#/riemann-sum" className="mt-5 inline-flex w-fit items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-4 py-2 text-xs font-bold text-amber-200 hover:border-amber-300 hover:bg-amber-400/20">
-            Open the full 8-step derivation <span aria-hidden="true">→</span>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ConceptLink({ concept }: { concept: ConceptCard }) {
+function ConceptLink({ concept }: { concept: ConceptMeta }) {
   const thumbnail = THUMBNAILS[concept.id];
   if (!thumbnail) throw new Error(`Missing home thumbnail for ${concept.id}`);
 
@@ -176,10 +181,10 @@ function ConceptLink({ concept }: { concept: ConceptCard }) {
   );
 }
 
-export function Home({ concepts }: { concepts: readonly ConceptCard[] }) {
+export function Home({ concepts = CONCEPTS }: { concepts?: readonly ConceptMeta[] }) {
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8">
-      <RiemannHero />
+      <HeroSlot />
 
       <header className="mb-8 mt-16 max-w-2xl">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Choose a path</p>

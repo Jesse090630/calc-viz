@@ -253,3 +253,25 @@
     改为等待 dialog 实际消失后再检查 `inert` 与焦点归还，Formula Deck 和 Type Board 两条路径
     才都成为稳定的回归测试。完整桌面/390×844 截图已人工查看，console 零错误。
 - **待办**:ROADMAP v4 W5 已完成；下一项是 W6，按 AGENTS.md 一次一个任务，等待 Jesse 确认。
+- **2026-08-20 · W6 路由级懒加载完成**。首页 JS 从 gzip **391 kB → 63.5 kB**,336 测试,
+  55 张分镜与基线逐张比对最大差异 1.22%(软件渲染的抗锯齿噪声),`src/engine/` 自 W5 起零改动。
+  - ⚠️ **最大的教训:`React.lazy` 本身不省流量。** 组件一旦被渲染,它的 chunk 立刻就下载。
+    第一版把七条链、Home hero、两块参考板全改成 lazy,首页仍然是 391 kB ——
+    因为 hero 和 FormulaDeck **在首页就被渲染了**。
+    真正省下来的是这两刀:
+    ① hero 默认显示 Riemann 第 5 步的**真实截图**,点一下才把 3D 换进来(省 241 kB);
+    ② FormulaDeck 拆成"按钮留主 chunk + 弹窗 lazy",且**只在 open 时才挂载**(省 75 kB)。
+    判断有没有做对不能靠读代码,要用真浏览器数实际下载量。
+  - `src/concepts/registry.ts`:首页元数据的唯一来源,**刻意不 import 任何 chain**。
+    以前 `CARDS` 里写 `LIMITS_CHAIN.stages.length`,看着只是取个数字,
+    实际把七条链和 Three.js 一起拖进了首页。代价是 `steps` 成了手写常量 ——
+    由 `registry.test.ts` 对着真链兜底。**它当场就抓到我把 trig-rates 的标题抄错了。**
+  - `FormulaDeck` 与 `NotationBoard` 现在形态一致(受控 open/onClose/returnFocusRef),
+    触发按钮都在 App 里。之前两块板子一个自带按钮、一个不带,是不必要的不对称。
+  - 截图脚本跟着改:hero 现在要验**两个状态** —— 先断言封面在且 canvas 数为 0
+    (证明 3D 没有偷跑),点亮后再断言 canvas 起来。
+  - ⚠️ 环境坑:整套 shots 在这个 3.9 GB 沙箱里跑到第 4 条链会静默退出,
+    单独跑每条链则 14 秒全过、零错误。**不是代码回归**,是残留 chromium 进程累积。
+    诊断时先隔离复现,再改代码 —— 我差点去改一个根本没坏的东西。
+  - ⚠️ 又踩了一次 `pkill -f` 匹配到自己命令行的坑(exit 137)。模式要用 `[c]hrome-linux` 这种写法。
+- **待办**:W7(∫dx/x 为什么是 ln)。完整队列见 `docs/ROADMAP.md`。
