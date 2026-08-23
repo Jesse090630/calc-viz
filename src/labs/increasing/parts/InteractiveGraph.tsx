@@ -6,10 +6,10 @@
  * 否则会出现"图上是绿的、右边写着 false"这种自相矛盾。
  */
 import { useRef } from 'react';
-import { Axes, Curve, GuideLines, IntervalHighlight } from './GraphPieces';
-import { DraggableXPoint } from './DraggableXPoint';
+import { Axes, Curve, GuideLines, IntervalHighlight, V } from './GraphPieces';
+import { DraggableXPoint } from '../../shared/DraggableXPoint';
 import { LAB } from '../theme';
-import { VIEWPORT, toSvgX, toSvgY } from '../viewport';
+import { toSvgX, toSvgY } from '../../shared/viewport';
 import {
   samplePoints,
   showNumber,
@@ -18,7 +18,6 @@ import {
   type Interval,
 } from '../../../math/monotonicity';
 
-const V = VIEWPORT;
 
 export interface InteractiveGraphProps {
   fn: FunctionSpec;
@@ -144,6 +143,7 @@ export function InteractiveGraph({
         <>
           <DraggableXPoint
             svgRef={svgRef}
+            viewport={V}
             value={pair.x1}
             onChange={onChangeX1}
             interval={interval}
@@ -153,6 +153,7 @@ export function InteractiveGraph({
           />
           <DraggableXPoint
             svgRef={svgRef}
+            viewport={V}
             value={pair.x2}
             onChange={onChangeX2}
             interval={interval}

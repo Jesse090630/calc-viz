@@ -465,10 +465,5 @@ export function monotoneBreakpoints(
   return breaks;
 }
 
-/** 显示用。屏幕上的每个数字都从这里出去,组件里不许自己 toFixed。 */
-export function showNumber(value: number, places = 2): string {
-  if (!Number.isFinite(value)) return '—';
-  // 避免 -0.00
-  const fixed = value.toFixed(places);
-  return fixed === `-${(0).toFixed(places)}` ? (0).toFixed(places) : fixed;
-}
+// `showNumber` 已搬到 `./format`(两节课都要用)。这里继续导出,现有引用不必改。
+export { showNumber } from './format';

@@ -1,39 +1,12 @@
 /**
- * LAB — 这一节的配色与文案
+ * LAB — 「Every Pair Must Work」的微文案
  *
- * 配色继承全站语义(`src/scene/theme.ts`):当前主角 = 琥珀,本步新引入 = 青,结果 = 绿。
- * 这里把它们映射到本节的角色上:
- *   x₁ = 青(先出现的那个) · x₂ = 琥珀(主角,用户主要拖的) · 成立 = 绿 · 失败 = 红
- *
- * ⚠️ 无障碍:颜色**不是唯一信道**。每个状态同时带一个符号(✓ / ×)和一句文字。
- * 下面的 `STATE` 把三者绑在一起,组件不许只取颜色不取符号。
+ * 配色与状态词汇是**全站实验台共用**的,在 `../shared/theme.ts`。
+ * 这里只放这一节自己的句子;分散在组件里的话,语气会随着写的先后漂,
+ * 而这一节的说服力全靠这些短句的节奏。
  */
-import { COLOR } from '../../scene/theme';
+export { LAB, STATE, type StateKey } from '../shared/theme';
 
-export const LAB = {
-  x1: COLOR.introduce, // #22d3ee 青
-  x2: COLOR.hero, // #f59e0b 琥珀
-  curve: COLOR.curve,
-  pass: COLOR.result, // #22c55e 绿
-  fail: COLOR.radius, // #ef4444 红
-  axis: COLOR.axis,
-  muted: COLOR.thickness,
-  interval: '#1d4ed8',
-} as const;
-
-/** 判定状态。symbol 与 text 是给不靠颜色的人用的,不许省。 */
-export const STATE = {
-  pass: { color: LAB.pass, symbol: '✓', text: 'true' },
-  fail: { color: LAB.fail, symbol: '×', text: 'false' },
-  idle: { color: LAB.muted, symbol: '·', text: 'waiting' },
-} as const;
-
-export type StateKey = keyof typeof STATE;
-
-/**
- * 全部微文案集中在这里。
- * 分散在组件里的话,语气会随着写的先后漂,而这一节的说服力全靠这些短句的节奏。
- */
 export const COPY = {
   title: 'Every Pair Must Work',
   subtitle: 'What does “increasing” actually mean?',

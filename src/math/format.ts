@@ -19,3 +19,14 @@ export function formatCoordinate(value: number, syntax: 'plain' | 'tex' = 'plain
   if (Number.isInteger(value)) return String(value);
   return String(Number(value.toFixed(6)));
 }
+
+/**
+ * 显示用。屏幕上的每个数字都从这里出去,组件里不许自己 toFixed。
+ * (原本住在 `monotonicity.ts`,第二节课也要用,搬到这里避免两处各写一份。)
+ */
+export function showNumber(value: number, places = 2): string {
+  if (!Number.isFinite(value)) return '—';
+  // 避免 -0.00
+  const fixed = value.toFixed(places);
+  return fixed === `-${(0).toFixed(places)}` ? (0).toFixed(places) : fixed;
+}

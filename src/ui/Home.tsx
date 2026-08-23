@@ -23,15 +23,26 @@ export function Home() {
       <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
         Start with the definition everyone thinks they already understand.
       </p>
-      <a
-        href="#/increasing"
-        className="mt-7 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2.5 text-sm font-bold text-amber-100 transition hover:border-amber-300 hover:bg-amber-400/20"
-      >
-        Every Pair Must Work <span aria-hidden="true">→</span>
-      </a>
-      <p className="mt-3 text-xs text-slate-500">
-        What does <em>increasing</em> actually mean?
-      </p>
+      <div className="mt-7 grid w-full max-w-md gap-3 sm:grid-cols-2">
+        <a
+          href="#/increasing"
+          className="rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900"
+        >
+          <p className="text-sm font-bold text-amber-100">Every Pair Must Work</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            What does <em>increasing</em> actually mean?
+          </p>
+        </a>
+        <a
+          href="#/symmetry"
+          className="rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900"
+        >
+          <p className="text-sm font-bold text-amber-100">The Symmetry Test</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Odd, even, or neither — without memorising shapes.
+          </p>
+        </a>
+      </div>
     </main>
   );
 }

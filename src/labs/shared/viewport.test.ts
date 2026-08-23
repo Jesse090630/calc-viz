@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
-  VIEWPORT,
   fromSvgX,
+  makeViewport,
   polylinePath,
   ticks,
   toSvgX,
   toSvgY,
 } from './viewport';
+
+const VIEWPORT = makeViewport({ xMin: -2.6, xMax: 3.6, yMin: -1.1, yMax: 9.8 });
 
 describe('坐标映射', () => {
   it('fromSvgX 是 toSvgX 的严格逆 —— 否则拖拽会漂', () => {

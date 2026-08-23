@@ -8,7 +8,7 @@
  * **绝不说** “f is increasing”。那一步的跳跃正是这一节要拆掉的东西。
  */
 import { STATE, type StateKey } from '../theme';
-import { Tex } from './Tex';
+import { Tex } from '../../shared/Tex';
 import { showNumber, type EvaluatedPair, type Relation } from '../../../math/monotonicity';
 
 function StateBadge({ state }: { state: StateKey }) {

@@ -6,17 +6,18 @@
  */
 import { LAB } from '../theme';
 import {
-  VIEWPORT,
+  makeViewport,
   plotHeight,
   polylinePath,
   ticks,
   toSvgX,
   toSvgY,
   type Viewport,
-} from '../viewport';
+} from '../../shared/viewport';
 import type { Interval } from '../../../math/monotonicity';
 
-const V: Viewport = VIEWPORT;
+/** 这一节自己的取景:x ∈ [-2.6, 3.6],y 只需要正半边 */
+export const V: Viewport = makeViewport({ xMin: -2.6, xMax: 3.6, yMin: -1.1, yMax: 9.8 });
 
 export function Axes() {
   const y0 = toSvgY(V, 0);

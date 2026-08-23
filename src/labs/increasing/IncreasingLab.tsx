@@ -25,7 +25,7 @@ import {
   PairCounter,
   QuantifierReveal,
 } from './parts/Panels';
-import { Tex } from './parts/Tex';
+import { Tex } from '../shared/Tex';
 import { COPY, LAB } from './theme';
 import { moveX1 as pairMoveX1, moveX2 as pairMoveX2 } from './pairState';
 import {

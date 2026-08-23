@@ -4,7 +4,7 @@
  * 全部是**受控的展示组件**。逻辑与状态在 `IncreasingLab.tsx`,这里只管呈现。
  */
 import { COPY, LAB, STATE } from '../theme';
-import { Tex } from './Tex';
+import { Tex } from '../../shared/Tex';
 import {
   RELATIONS,
   RELATION_ORDER,

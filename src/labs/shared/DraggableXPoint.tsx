@@ -10,15 +10,16 @@
  *    这里只记下最新位置,每帧应用一次。
  */
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
-import { VIEWPORT, fromSvgX, toSvgX, toSvgY } from '../viewport';
-import { clampToInterval, type Interval } from '../../../math/monotonicity';
+import { fromSvgX, toSvgX, toSvgY, type Viewport } from './viewport';
+import { clampToInterval, type Interval } from '../../math/monotonicity';
 
-const V = VIEWPORT;
 const HIT_RADIUS = 20;
 
 export interface DraggableXPointProps {
   /** 外层 <svg>,用来把屏幕坐标换算回画布坐标 */
   svgRef: RefObject<SVGSVGElement | null>;
+  /** 这一节自己的窗口 —— 不同课的 y 范围差很远,不能共用一个常量 */
+  viewport: Viewport;
   value: number;
   onChange: (next: number) => void;
   interval: Interval;
@@ -32,6 +33,7 @@ export interface DraggableXPointProps {
 
 export function DraggableXPoint({
   svgRef,
+  viewport: V,
   value,
   onChange,
   interval,
@@ -57,7 +59,7 @@ export function DraggableXPoint({
       const canvasX = ((clientX - rect.left) / rect.width) * V.width;
       return fromSvgX(V, canvasX);
     },
-    [svgRef],
+    [svgRef, V],
   );
 
   const flush = useCallback(() => {

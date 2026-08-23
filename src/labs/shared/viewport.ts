@@ -24,18 +24,29 @@ export interface Viewport {
   readonly padBottom: number;
 }
 
-export const VIEWPORT: Viewport = {
+const DEFAULTS = {
   width: 640,
   height: 460,
-  xMin: -2.6,
-  xMax: 3.6,
-  yMin: -1.1,
-  yMax: 9.8,
+  xMin: -3,
+  xMax: 3,
+  yMin: -1,
+  yMax: 9,
   padLeft: 46,
   padRight: 22,
   padTop: 20,
   padBottom: 38,
-};
+} as const;
+
+/**
+ * 每一节自己定窗口。
+ *
+ * ⚠️ 这里原本是一个写死的 `VIEWPORT` 常量,`DraggableXPoint` 和图元都直接 import 它。
+ * 第二节课(对称性)需要一个上下对称的窗口(y ∈ [-9.5, 9.5]),常量的写法当场卡住 ——
+ * 要么给共享组件传参,要么复制一份图元。复制迟早两边漂,所以改成工厂 + prop。
+ */
+export function makeViewport(overrides: Partial<Viewport> = {}): Viewport {
+  return { ...DEFAULTS, ...overrides };
+}
 
 export function plotWidth(v: Viewport): number {
   return v.width - v.padLeft - v.padRight;
