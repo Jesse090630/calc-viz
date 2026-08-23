@@ -9,6 +9,7 @@
  *   · Drop to the Integer  —— 点在数轴上滑动,落点向下掉到整数(负半边染成警示色)
  *   · Jump to the Integer  —— 同一条数轴,落点向上跳(正半边才是坑)
  *   · One Input. One Output. —— 一个值穿过机器,只有一个出口
+ *   · Where Is x Allowed?  —— 点沿数轴滑动,进入禁区就熄灭
  *
  * ⚠️ 三条约束,都不是可选项:
  * ① **不 import 任何实验台组件。** 首页只需要几十行 SVG,
@@ -22,6 +23,7 @@ import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
 import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
+import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -263,6 +265,47 @@ export function FunctionPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑧ 定义域:允许的一段发光,点滑进禁区就熄灭 ─────────────────── */
+export function DomainPreview({ phase }: { phase: number }) {
+  const map = makeMap(-2.6, 4.6, -1.2, 1.2);
+  const fn = DOMAIN_FUNCTIONS[0]!; // √x,边界在 0
+  const x = -2 + pingPong(phase) * 6;
+  const y = fn.at(x);
+  const allowed = y !== null;
+  const lineY = map.y(-0.35);
+  return (
+    <Frame label="A point sliding along a number line, lighting up only where the function is defined">
+      {/* 禁区:压暗 */}
+      <line x1={map.x(-2.6)} y1={lineY} x2={map.x(0)} y2={lineY} stroke={COLOR.radius} strokeWidth={7} opacity={0.22} strokeLinecap="round" />
+      {/* 允许区:发光 */}
+      <line x1={map.x(0)} y1={lineY} x2={map.x(4.6)} y2={lineY} stroke={COLOR.result} strokeWidth={7} opacity={0.8} strokeLinecap="round" />
+      {/* 端点实心 —— √0 有值,0 属于定义域 */}
+      <circle cx={map.x(0)} cy={lineY} r={5} fill={COLOR.result} stroke="#0b1020" strokeWidth={1.6} />
+      {/* 曲线只画允许的那一段 */}
+      <path
+        d={path(
+          samples((v) => (fn.at(v) ?? 0), 0, 4.6, 40).map((p) => ({ x: p.x, y: p.y * 0.42 - 0.15 })),
+          map,
+        )}
+        fill="none"
+        stroke={COLOR.curve}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      {/* 当前那个输入:合法时亮,非法时只剩一个空心红圈 */}
+      <line x1={map.x(x)} y1={map.y(0.85)} x2={map.x(x)} y2={lineY - 7} stroke={allowed ? COLOR.hero : COLOR.radius} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.8} />
+      <circle
+        cx={map.x(x)}
+        cy={lineY}
+        r={5.5}
+        fill={allowed ? COLOR.hero : 'none'}
+        stroke={allowed ? '#0b1020' : COLOR.radius}
+        strokeWidth={allowed ? 1.6 : 2.2}
+      />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   increasing: IncreasingPreview,
   symmetry: SymmetryPreview,
@@ -271,4 +314,5 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   floor: FloorPreview,
   ceiling: CeilingPreview,
   functions: FunctionPreview,
+  domain: DomainPreview,
 };

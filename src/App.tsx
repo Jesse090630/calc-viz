@@ -31,6 +31,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   floor: lazy(() => import('./labs/rounding/floorPage')),
   ceiling: lazy(() => import('./labs/rounding/ceilingPage')),
   functions: lazy(() => import('./labs/functionRule/page')),
+  domain: lazy(() => import('./labs/domain/page')),
 };
 
 /* ── 两块参考板:点开工具才加载,它们各自带着 KaTeX 与上百条数据 ────────── */

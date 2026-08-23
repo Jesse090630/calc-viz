@@ -64,6 +64,12 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Why two inputs may share an output, but one input may not split.',
     tag: 'Functions',
   },
+  {
+    id: 'domain',
+    title: 'Where Is x Allowed?',
+    question: 'The domain as a filter \u2014 and why the bracket is sometimes square.',
+    tag: 'Domain',
+  },
 ];
 
 export function Home() {
