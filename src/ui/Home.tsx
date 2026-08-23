@@ -1,8 +1,13 @@
 /**
  * UI — 首页
  *
- * 每张卡顶上是一小段**循环播放的动画预览**,直接演该节课的核心动作。
- * 静态缩略图说不清"这是可以动手的",动起来一秒就说清了。
+ * 一页目录,别的什么都没有:没有大标题、没有导语、没有页脚说明。
+ * Jesse 要的是「干净、清楚、整齐」—— 那些话读第二次就是噪音,
+ * 而卡片本身(动画 + 概念名)已经把这站是干什么的说完了。
+ *
+ * ⚠️ 卡片标题一律用**概念本身的名字**(Increasing Functions / Domain of a Function),
+ * 不用「Every Pair Must Work」这类金句。金句适合当课内的钩子,
+ * 但目录是拿来**找东西**的:找的人心里想的是"定义域",不是那句话。
  *
  * ⚠️ 首页的体积纪律(W6 立的,别破坏):
  * ① **不 import 任何实验台组件。** 预览是几十行独立 SVG,不是把课搬过来。
@@ -16,59 +21,52 @@ import { usePreviewClock } from './previews/clock';
 
 interface LessonCard {
   readonly id: string;
+  /** 概念的名字。这是标题。 */
   readonly title: string;
+  /** 一行说明,尽量控制在七八个词以内 —— 三列排布下超过两行卡片就参差了。 */
   readonly question: string;
-  readonly tag: string;
 }
 
 const LESSONS: readonly LessonCard[] = [
   {
-    id: 'increasing',
-    title: 'Every Pair Must Work',
-    question: 'What does “increasing” actually mean?',
-    tag: 'Definitions',
-  },
-  {
-    id: 'symmetry',
-    title: 'The Symmetry Test',
-    question: 'Odd, even, or neither — without memorising shapes.',
-    tag: 'Symmetry',
-  },
-  {
-    id: 'periodic',
-    title: 'Does It Repeat?',
-    question: 'Slide the graph onto itself and find T.',
-    tag: 'Periodicity',
-  },
-  {
-    id: 'secant',
-    title: 'Connect Two Points',
-    question: 'Average rate of change, built from rise and run.',
-    tag: 'Rates',
-  },
-  {
-    id: 'floor',
-    title: 'Drop to the Integer',
-    question: 'Why does \u22121.3 floor to \u22122, not \u22121?',
-    tag: 'Integers',
-  },
-  {
-    id: 'ceiling',
-    title: 'Jump to the Integer',
-    question: 'Ceiling goes up \u2014 and 4.2 lands on 5.',
-    tag: 'Integers',
-  },
-  {
     id: 'functions',
-    title: 'One Input. One Output.',
-    question: 'Why two inputs may share an output, but one input may not split.',
-    tag: 'Functions',
+    title: 'Definition of a Function',
+    question: 'One input may not have two outputs.',
   },
   {
     id: 'domain',
-    title: 'Where Is x Allowed?',
-    question: 'The domain as a filter \u2014 and why the bracket is sometimes square.',
-    tag: 'Domain',
+    title: 'Domain of a Function',
+    question: 'Which inputs the rule is allowed to take.',
+  },
+  {
+    id: 'increasing',
+    title: 'Increasing Functions',
+    question: 'What “increasing” actually requires.',
+  },
+  {
+    id: 'symmetry',
+    title: 'Even and Odd Functions',
+    question: 'Odd, even, or neither — by test, not by shape.',
+  },
+  {
+    id: 'periodic',
+    title: 'Periodic Functions',
+    question: 'Slide a graph onto itself and find T.',
+  },
+  {
+    id: 'secant',
+    title: 'Average Rate of Change',
+    question: 'The slope of the line through two points.',
+  },
+  {
+    id: 'floor',
+    title: 'The Floor Function',
+    question: 'Why −1.3 drops to −2, not −1.',
+  },
+  {
+    id: 'ceiling',
+    title: 'The Ceiling Function',
+    question: 'Why 4.2 jumps up to 5.',
   },
 ];
 
@@ -76,21 +74,8 @@ export function Home() {
   const { phase, animated } = usePreviewClock();
 
   return (
-    <main className="mx-auto max-w-6xl px-5 pb-24 pt-20 sm:px-6 lg:px-8">
-      <header className="max-w-2xl">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">
-          Precalculus · Interactive
-        </p>
-        <h1 className="mt-3 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
-          Where do these formulas come from?
-        </h1>
-        <p className="mt-4 max-w-lg text-base leading-relaxed text-slate-400">
-          Definitions everyone thinks they already understand. Drag something in each one and
-          watch the definition assemble itself.
-        </p>
-      </header>
-
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <main className="mx-auto max-w-6xl px-5 pb-20 pt-20 sm:px-6 lg:px-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {LESSONS.map((lesson) => {
           const Preview = PREVIEWS[lesson.id]!;
           return (
@@ -98,16 +83,18 @@ export function Home() {
               key={lesson.id}
               data-lesson-card={lesson.id}
               href={`#/${lesson.id}`}
-              className="group overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/50 transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900 hover:shadow-xl hover:shadow-black/25"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/50 transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900 hover:shadow-xl hover:shadow-black/25"
             >
-              <div className="relative h-[7.25rem] border-b border-slate-700 bg-slate-950/70">
+              {/*
+                ⚠️ 用**宽高比**而不是写死的高度。
+                预览 SVG 是 400×116 且 `meet`,盒子比例一旦对不上就上下留黑边,
+                看着像图没加载完 —— 列数一变(手机一列 / 平板两列 / 桌面三列)就会发生。
+              */}
+              <div className="aspect-[400/116] border-b border-slate-700 bg-slate-950/70">
                 <Preview phase={phase} />
-                <span className="absolute left-3 top-2.5 rounded-full border border-slate-700 bg-slate-950/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400 backdrop-blur">
-                  {lesson.tag}
-                </span>
               </div>
-              <div className="p-4 sm:p-5">
-                <h2 className="text-lg font-semibold text-slate-100 group-hover:text-amber-300">
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <h2 className="text-lg font-semibold leading-snug text-slate-100 group-hover:text-amber-300">
                   {lesson.title}
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{lesson.question}</p>
@@ -117,16 +104,10 @@ export function Home() {
         })}
       </div>
 
-      <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-6">
-        <p className="text-xs leading-relaxed text-slate-500">
-          Every number on screen is computed at runtime from unit-tested pure functions, each
-          checked against a second independent derivation. Nothing is hard-coded.
-        </p>
-        {/* 静止时明说一句,免得有人以为预览坏了 */}
-        {!animated && (
-          <p className="text-[11px] text-slate-600">Previews paused — reduced motion is on.</p>
-        )}
-      </footer>
+      {/* 静止时明说一句,免得有人以为预览坏了。会动的时候这里什么都不该有。 */}
+      {!animated && (
+        <p className="mt-8 text-[11px] text-slate-600">Previews paused — reduced motion is on.</p>
+      )}
     </main>
   );
 }

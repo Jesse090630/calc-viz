@@ -40,7 +40,7 @@ const FACE: Readonly<Record<Direction, {
   footer: string;
 }>> = {
   floor: {
-    title: 'Drop to the Integer',
+    title: 'The Floor Function',
     lede: 'Pick a number. Look downward. Find the greatest integer that does not pass it.',
     examples: [
       { x: 4.7, warn: false },
@@ -52,7 +52,7 @@ const FACE: Readonly<Record<Direction, {
     footer: '4.7 drops to 4. But −1.3 drops to −2, not −1.',
   },
   ceiling: {
-    title: 'Jump to the Integer',
+    title: 'The Ceiling Function',
     lede: 'Pick a number. Look upward. Find the smallest integer it does not pass.',
     examples: [
       { x: 4.2, warn: true },

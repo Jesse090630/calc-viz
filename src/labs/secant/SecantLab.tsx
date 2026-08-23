@@ -164,7 +164,7 @@ export function SecantLab() {
           Precalculus · Interactive definition
         </p>
         <h1 className="mt-2 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
-          Connect Two Points
+          Average Rate of Change
         </h1>
         <p className="mt-3 text-base text-slate-400">
           Two points. One straight line. What number describes it?

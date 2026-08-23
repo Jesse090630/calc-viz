@@ -124,7 +124,7 @@ export function PeriodicLab() {
           Precalculus · Interactive definition
         </p>
         <h1 className="mt-2 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
-          Does It Repeat?
+          Periodic Functions
         </h1>
         <p className="mt-3 text-base text-slate-400">
           Copy the graph. Slide it right. See if it lands on itself.

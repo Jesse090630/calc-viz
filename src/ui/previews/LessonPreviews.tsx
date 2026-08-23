@@ -2,14 +2,14 @@
  * 首页每张卡里的**微型动画预览**。
  *
  * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
- *   · Every Pair Must Work —— 两点沿抛物线滑动,弦始终朝上
- *   · The Symmetry Test    —— 一对镜像点同进同出,连线保持水平
- *   · Does It Repeat?      —— 正弦的副本右移一个周期,落回自己身上
- *   · Connect Two Points   —— B 点移动,割线绕着 A 转
- *   · Drop to the Integer  —— 点在数轴上滑动,落点向下掉到整数(负半边染成警示色)
- *   · Jump to the Integer  —— 同一条数轴,落点向上跳(正半边才是坑)
- *   · One Input. One Output. —— 一个值穿过机器,只有一个出口
- *   · Where Is x Allowed?  —— 点沿数轴滑动,进入禁区就熄灭
+ *   · Increasing Functions     —— 两点沿抛物线滑动,弦始终朝上
+ *   · Even and Odd Functions   —— 一对镜像点同进同出,连线保持水平
+ *   · Periodic Functions       —— 正弦的副本右移一个周期,落回自己身上
+ *   · Average Rate of Change   —— B 点移动,割线绕着 A 转
+ *   · The Floor Function       —— 点在数轴上滑动,落点向下掉到整数(负半边染成警示色)
+ *   · The Ceiling Function     —— 同一条数轴,落点向上跳(正半边才是坑)
+ *   · Definition of a Function —— 一个值穿过机器,只有一个出口
+ *   · Domain of a Function     —— 点沿数轴滑动,进入禁区就熄灭
  *
  * ⚠️ 三条约束,都不是可选项:
  * ① **不 import 任何实验台组件。** 首页只需要几十行 SVG,

@@ -70,7 +70,7 @@ export function DomainLab() {
           Precalculus · Interactive definition
         </p>
         <h1 className="mt-2 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
-          Where Is x Allowed?
+          Domain of a Function
         </h1>
         <p className="mt-3 text-base text-slate-400">
           The domain is a filter on inputs. Choose one and see whether the function can accept it.

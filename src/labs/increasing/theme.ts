@@ -8,8 +8,8 @@
 export { LAB, STATE, type StateKey } from '../shared/theme';
 
 export const COPY = {
-  title: 'Every Pair Must Work',
-  subtitle: 'What does “increasing” actually mean?',
+  title: 'Increasing Functions',
+  subtitle: 'What does “increasing” actually mean? Every pair must work.',
   pickTwo: 'Pick two inputs.',
   keepOrder: 'Keep x₁ < x₂.',
   nowCompare: 'Now compare their outputs.',
