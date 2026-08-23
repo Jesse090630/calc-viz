@@ -23,7 +23,7 @@ export function Home() {
       <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
         Start with the definition everyone thinks they already understand.
       </p>
-      <div className="mt-7 grid w-full max-w-md gap-3 sm:grid-cols-2">
+      <div className="mt-7 grid w-full max-w-3xl gap-3 sm:grid-cols-3">
         <a
           href="#/increasing"
           className="rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900"
@@ -40,6 +40,15 @@ export function Home() {
           <p className="text-sm font-bold text-amber-100">The Symmetry Test</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-400">
             Odd, even, or neither — without memorising shapes.
+          </p>
+        </a>
+        <a
+          href="#/periodic"
+          className="rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-4 text-left transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900"
+        >
+          <p className="text-sm font-bold text-amber-100">Does It Repeat?</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Slide the graph onto itself and find <em>T</em>.
           </p>
         </a>
       </div>

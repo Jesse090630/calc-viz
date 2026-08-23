@@ -25,6 +25,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   // 实验台,不是推导链:没有上一步/下一步,不经过 `src/engine/`。
   increasing: lazy(() => import('./labs/increasing/page')),
   symmetry: lazy(() => import('./labs/symmetry/page')),
+  periodic: lazy(() => import('./labs/periodic/page')),
 };
 
 /* ── 两块参考板:点开工具才加载,它们各自带着 KaTeX 与上百条数据 ────────── */
