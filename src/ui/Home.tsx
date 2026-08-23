@@ -21,8 +21,16 @@ export function Home() {
         Where do these formulas come from?
       </h1>
       <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-400">
-        Something new is being built here. In the meantime, the two reference
-        boards are open in the top-right corner.
+        Start with the definition everyone thinks they already understand.
+      </p>
+      <a
+        href="#/increasing"
+        className="mt-7 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2.5 text-sm font-bold text-amber-100 transition hover:border-amber-300 hover:bg-amber-400/20"
+      >
+        Every Pair Must Work <span aria-hidden="true">→</span>
+      </a>
+      <p className="mt-3 text-xs text-slate-500">
+        What does <em>increasing</em> actually mean?
       </p>
     </main>
   );

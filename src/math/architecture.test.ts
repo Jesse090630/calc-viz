@@ -62,6 +62,35 @@ describe('⭐ W7/W8 专属:推导对数的模块不许用 Math.log 抄近路', (
   });
 });
 
+describe('⭐ src/labs/ 是实验台,不是推导链 —— 两条结构性约束', () => {
+  // 这一层是 increasing 那一节引入的。它**故意**不走 `src/engine/`:
+  // 那一节要教的是"任取一对",不存在"第几步",硬套上一步/下一步会把概念讲歪。
+  // 但"故意不用"和"忘了用"在代码里长得一模一样,所以把它钉成规则。
+  const files = filesUnder(join(SRC, 'labs'));
+
+  it('labs 目录下确实有文件(防止规则因为路径写错而空跑)', () => {
+    expect(files.length).toBeGreaterThan(3);
+  });
+
+  for (const file of files) {
+    const shown = file.replace(SRC, 'src');
+
+    it(`${shown} 不 import 推导链引擎`, () => {
+      const bad = importsOf(readFileSync(file, 'utf8')).filter((s) => s.includes('/engine/'));
+      expect(bad, '实验台一旦接上引擎就会长出"上一步/下一步"').toEqual([]);
+    });
+
+    // 这一节全程是二维的。拉进 Three.js 等于让一个只需要 SVG 的页面
+    // 背上 gzip 241 kB —— W6 花了整整一轮才把首页的这笔开销去掉。
+    it(`${shown} 不 import Three.js`, () => {
+      const bad = importsOf(readFileSync(file, 'utf8')).filter(
+        (s) => s === 'three' || s.startsWith('three/') || s.startsWith('@react-three/'),
+      );
+      expect(bad, '二维的一节不该背上 3D 引擎的体积').toEqual([]);
+    });
+  }
+});
+
 describe('禁止 3 — src/engine/ 不得出现任何具体概念的名字', () => {
   // ⚠️ 刻意【不加】词边界 \b。违规在现实中长这样:shellRadius / diskGeometry / RiemannBars,
   //    加了 \b 就全漏掉了(这条规则最初就是这么写的,被变异测试抓出来才改的)。

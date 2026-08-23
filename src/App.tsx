@@ -22,6 +22,8 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'disk-method': lazy(() => import('./concepts/disk-method/page')),
   'unit-circle': lazy(() => import('./concepts/unit-circle/page')),
   'trig-rates': lazy(() => import('./concepts/trig-rates/page')),
+  // 实验台,不是推导链:没有上一步/下一步,不经过 `src/engine/`。
+  increasing: lazy(() => import('./labs/increasing/page')),
 };
 
 /* ── 两块参考板:点开工具才加载,它们各自带着 KaTeX 与上百条数据 ────────── */
