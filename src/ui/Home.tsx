@@ -1,7 +1,7 @@
 /**
  * UI — 首页
  *
- * 四张卡,每张顶上是一小段**循环播放的动画预览**,直接演该节课的核心动作。
+ * 每张卡顶上是一小段**循环播放的动画预览**,直接演该节课的核心动作。
  * 静态缩略图说不清"这是可以动手的",动起来一秒就说清了。
  *
  * ⚠️ 首页的体积纪律(W6 立的,别破坏):
@@ -46,6 +46,12 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Average rate of change, built from rise and run.',
     tag: 'Rates',
   },
+  {
+    id: 'floor',
+    title: 'Drop to the Integer',
+    question: 'Why does \u22121.3 floor to \u22122, not \u22121?',
+    tag: 'Integers',
+  },
 ];
 
 export function Home() {
@@ -61,12 +67,12 @@ export function Home() {
           Where do these formulas come from?
         </h1>
         <p className="mt-4 max-w-lg text-base leading-relaxed text-slate-400">
-          Four definitions everyone thinks they already understand. Drag something in each one and
+          Definitions everyone thinks they already understand. Drag something in each one and
           watch the definition assemble itself.
         </p>
       </header>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {LESSONS.map((lesson) => {
           const Preview = PREVIEWS[lesson.id]!;
           return (

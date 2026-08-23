@@ -1,22 +1,24 @@
 /**
- * 首页四张卡里的**微型动画预览**。
+ * 首页每张卡里的**微型动画预览**。
  *
  * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
  *   · Every Pair Must Work —— 两点沿抛物线滑动,弦始终朝上
  *   · The Symmetry Test    —— 一对镜像点同进同出,连线保持水平
  *   · Does It Repeat?      —— 正弦的副本右移一个周期,落回自己身上
  *   · Connect Two Points   —— B 点移动,割线绕着 A 转
+ *   · Drop to the Integer  —— 点在数轴上滑动,落点向下掉到整数(负半边染成警示色)
  *
  * ⚠️ 三条约束,都不是可选项:
  * ① **不 import 任何实验台组件。** 首页只需要几十行 SVG,
  *    拉进整节课等于把那一节的全部代码塞进首屏(W6 花了一整轮才把首页减下来)。
  * ② 曲线一律来自 `src/math/` 的纯函数 —— 组件里不出现裸算式(禁止 2)。
- * ③ 四张卡共用**一个** rAF 时钟(见 `clock.ts`),不是各开一个。
+ * ③ 所有卡共用**一个** rAF 时钟(见 `clock.ts`),不是各开一个。
  */
 import { holdAtEnds, pingPong } from './clock';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
+import { floorByDefinition } from '../../math/floorFunction';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -162,9 +164,43 @@ export function SecantPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑤ 取整:点在数轴上滑动,落点向下掉到整数 ─────────────────── */
+export function FloorPreview({ phase }: { phase: number }) {
+  const map = makeMap(-2.6, 4.6, -1.15, 1.15);
+  // 从 -2 扫到 4,来回。刻意跨过 0,让负半边也演到。
+  const x = -2 + pingPong(phase) * 6;
+  const n = floorByDefinition(x) ?? 0;
+  const lineY = map.y(-0.45);
+  const dotY = map.y(0.5);
+  // 负的非整数才是这一节的重点 —— 那时把落点染成警示色
+  const tricky = x < 0 && n !== x;
+  return (
+    <Frame label="A point sliding along a number line, dropping down to the integer below it">
+      <line x1={map.x(-2.6)} y1={lineY} x2={map.x(4.6)} y2={lineY} stroke={COLOR.axis} strokeWidth={1.4} />
+      {[-2, -1, 0, 1, 2, 3, 4].map((t) => (
+        <line key={t} x1={map.x(t)} y1={lineY - 5} x2={map.x(t)} y2={lineY + 5} stroke={COLOR.axis} strokeWidth={1.2} />
+      ))}
+      {/* 掉下去的那一步:先竖直落到轴,再横向挪到 n */}
+      <line x1={map.x(x)} y1={dotY + 7} x2={map.x(x)} y2={lineY - 9} stroke={COLOR.hero} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.8} />
+      <line x1={map.x(x)} y1={lineY - 9} x2={map.x(n)} y2={lineY - 9} stroke={tricky ? COLOR.radius : COLOR.result} strokeWidth={1.6} strokeDasharray="4 3" opacity={0.85} />
+      <path
+        d={`M${map.x(n) - 4} ${lineY - 14} L${map.x(n)} ${lineY - 7} L${map.x(n) + 4} ${lineY - 14}`}
+        fill="none"
+        stroke={tricky ? COLOR.radius : COLOR.result}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={map.x(n)} cy={lineY} r={5} fill={tricky ? COLOR.radius : COLOR.result} />
+      <circle cx={map.x(x)} cy={dotY} r={4.5} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   increasing: IncreasingPreview,
   symmetry: SymmetryPreview,
   periodic: PeriodicPreview,
   secant: SecantPreview,
+  floor: FloorPreview,
 };

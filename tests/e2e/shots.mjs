@@ -187,14 +187,16 @@ await page.waitForTimeout(1200);
 // 推导链目录仍然封存,首页列的是四个实验台,每张卡带一小段循环预览。
 const leftoverCards = await page.locator('[data-concept-card]').count();
 if (leftoverCards !== 0) errors.push(`[home] the parked catalogue is showing again: ${leftoverCards} cards`);
+// ⚠️ 这个数字要跟着 `ui/Home.tsx` 的 LESSONS 走。写死成 4 之后加了第五节课,
+//    这里会红 —— 那是**对的**:它在提醒你首页也得跟上(缩略图那次事故就是这么来的)。
 const lessonCards = await page.locator('[data-lesson-card]').count();
-if (lessonCards !== 4) errors.push(`[home] expected 4 lesson cards, got ${lessonCards}`);
+if (lessonCards !== 5) errors.push(`[home] expected 5 lesson cards, got ${lessonCards}`);
 // ⚠️ 预览必须是 SVG。这一页拉起一个 canvas 就说明有人把实验台整个 import 进来了。
 if (await page.locator('canvas').count() !== 0) {
   errors.push('[home] the landing page must not start a 3D canvas');
 }
 const previewSvgs = await page.locator('[data-lesson-card] svg').count();
-if (previewSvgs !== 4) errors.push(`[home] expected 4 preview graphics, got ${previewSvgs}`);
+if (previewSvgs !== lessonCards) errors.push(`[home] ${lessonCards} cards but ${previewSvgs} previews`);
 // 预览确实在动。
 // ⚠️ 取样对象很讲究:每张卡的**第一个** <path> 是那条静止的曲线,
 //    盯着它看永远得出"没动"的结论。要取**最后一个**几何元素 —— 那才是被驱动的那个。
@@ -211,7 +213,7 @@ for (let i = 0; i < 6; i += 1) {
   ));
   await page.waitForTimeout(700);
 }
-for (let card = 0; card < 4; card += 1) {
+for (let card = 0; card < lessonCards; card += 1) {
   const distinct = new Set(previewFrames.map((frame) => frame[card])).size;
   if (distinct < 2) errors.push(`[home] preview ${card + 1} never moves across a full loop`);
 }
@@ -235,7 +237,7 @@ await page.waitForTimeout(600);
 await auditKeyboardFocus('home');
 await page.evaluate(() => scrollTo(0, 0));
 await page.screenshot({ path: join(OUT, '00-home.png') });
-console.log('  00 home      → "4 animated lesson cards · 0 canvas · both boards reachable"');
+console.log(`  00 home      → "${lessonCards} animated lesson cards · 0 canvas · both boards reachable"`);
 
 currentShot = 'home/mobile';
 await page.setViewportSize({ width: 390, height: 844 });
@@ -246,7 +248,7 @@ if (homeMobileOverflow > 1) errors.push(`[home/mobile] horizontal overflow ${hom
 await page.screenshot({ path: join(OUT, 'home-mobile.png') });
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(URL, { waitUntil: 'networkidle' });
-console.log('  home mobile  → "390×844 · 4 cards · no horizontal overflow"');
+console.log('  home mobile  → "390×844 · cards stacked · no horizontal overflow"');
 
 // Calc Type Board:独立路由、符号/名称/读法搜索、分类和 Why 跳转都走真实浏览器路径。
 currentShot = 'notation-board/desktop';

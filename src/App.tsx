@@ -27,6 +27,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   symmetry: lazy(() => import('./labs/symmetry/page')),
   periodic: lazy(() => import('./labs/periodic/page')),
   secant: lazy(() => import('./labs/secant/page')),
+  floor: lazy(() => import('./labs/floor/page')),
 };
 
 /* ── 两块参考板:点开工具才加载,它们各自带着 KaTeX 与上百条数据 ────────── */
