@@ -2,7 +2,8 @@
  * 首页每张卡里的**微型动画预览**。
  *
  * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
- *   · Nondecreasing Functions  —— 一对点沿阶梯滑动,走上平台时两点等高
+ *   · Nondecreasing Functions  —— 一对点沿**上行**阶梯滑动,走上平台时两点等高
+ *   · Nonincreasing Functions  —— 同一段动作,换成**下行**阶梯
  *   · Increasing Functions     —— 两点沿抛物线滑动,弦始终朝上
  *   · Even and Odd Functions   —— 一对镜像点同进同出,连线保持水平
  *   · Periodic Functions       —— 正弦的副本右移一个周期,落回自己身上
@@ -26,12 +27,13 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
-  GRAPHS as ND_GRAPHS,
-  flatSegments as ndFlatSegments,
-  polyline as ndPolyline,
-  shapeByOutputs as ndShape,
-  valueBySegment as ndValue,
-} from '../../math/nondecreasing';
+  GRAPHS as WM_GRAPHS,
+  flatSegments as wmFlatSegments,
+  polyline as wmPolyline,
+  shapeByOutputs as wmShape,
+  valueBySegment as wmValue,
+  type GraphId as WmGraphId,
+} from '../../math/weakMonotonicity';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -314,20 +316,25 @@ export function DomainPreview({ phase }: { phase: number }) {
   );
 }
 
-/* ── ⑨ 非递减:一对点沿阶梯滑动,走到平台上时两点等高 ─────────────── */
-export function NondecreasingPreview({ phase }: { phase: number }) {
+/* ── ⑨⑩ 弱单调:一对点沿阶梯滑动,走到平台上时两点等高 ────────────── */
+/*
+  ⚠️ 两张卡**共用一个函数**,只换一张图。
+  非递减是往上的阶梯,非递增是往下的 —— 动作完全一样,
+  复制一份改坐标只会让两张卡慢慢长得不像同一套东西。
+*/
+function StaircasePreview({ phase, graphId, label }: { phase: number; graphId: WmGraphId; label: string }) {
   const map = makeMap(-0.3, 8.3, 0.35, 5.65);
-  const graph = ND_GRAPHS.steps;
+  const graph = WM_GRAPHS[graphId];
   const gap = 1.4;
   const x1 = 0.15 + pingPong(phase) * (8 - gap - 0.3);
   const x2 = x1 + gap;
-  const y1 = ndValue(graph, x1)!;
-  const y2 = ndValue(graph, x2)!;
-  const level = ndShape(y1, y2) === 'flat';
+  const y1 = wmValue(graph, x1)!;
+  const y2 = wmValue(graph, x2)!;
+  const level = wmShape(y1, y2) === 'flat';
   return (
-    <Frame label="Two points sliding along a staircase graph, level with each other on the flat parts">
+    <Frame label={label}>
       {/* 平台的绿色底光 —— 和课里同一套语言:平也是允许的 */}
-      {ndFlatSegments(graph).map((s) => (
+      {wmFlatSegments(graph).map((s) => (
         <line
           key={s.from}
           x1={map.x(s.from)}
@@ -340,7 +347,7 @@ export function NondecreasingPreview({ phase }: { phase: number }) {
           opacity={0.22}
         />
       ))}
-      <path d={path(ndPolyline(graph), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path(wmPolyline(graph), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       {/* 两个高度之间的比较:等高时是一条水平绿虚线,不等高时是一条竖直的琥珀边 */}
       {level ? (
         <line x1={map.x(x1)} y1={map.y(y1)} x2={map.x(x2)} y2={map.y(y2)} stroke={COLOR.result} strokeWidth={1.8} strokeDasharray="5 4" />
@@ -353,8 +360,29 @@ export function NondecreasingPreview({ phase }: { phase: number }) {
   );
 }
 
+export function NondecreasingPreview({ phase }: { phase: number }) {
+  return (
+    <StaircasePreview
+      phase={phase}
+      graphId="steps"
+      label="Two points sliding along a rising staircase, level with each other on the flat parts"
+    />
+  );
+}
+
+export function NonincreasingPreview({ phase }: { phase: number }) {
+  return (
+    <StaircasePreview
+      phase={phase}
+      graphId="fallingSteps"
+      label="Two points sliding along a descending staircase, level with each other on the flat part"
+    />
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   nondecreasing: NondecreasingPreview,
+  nonincreasing: NonincreasingPreview,
   increasing: IncreasingPreview,
   symmetry: SymmetryPreview,
   periodic: PeriodicPreview,

@@ -49,6 +49,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Up or flat. Never down.',
   },
   {
+    id: 'nonincreasing',
+    title: 'Nonincreasing Functions',
+    question: 'Down or flat. Never up.',
+  },
+  {
     id: 'symmetry',
     title: 'Even and Odd Functions',
     question: 'Odd, even, or neither — by test, not by shape.',

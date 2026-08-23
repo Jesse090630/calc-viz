@@ -1,13 +1,17 @@
 /**
- * LAB — 非递减:折线图 + 两个可拖动的输入
+ * LAB — 弱单调:折线图 + 两个可拖动的输入。**非递减与非递增共用这一个组件。**
  *
  * 画面上要同时说清三件事:
- *   ① 这条折线**哪几段是平的**(绿色底光)、哪一段在**往下走**(红色底光);
+ *   ① 这条折线**哪几段是平的**(绿色底光)、哪一段在**朝被禁止的方向走**(红色底光);
  *   ② 当前这一对 x₁ < x₂ 各自对应的输出**有多高**(引到 y 轴的水平虚线);
  *   ③ 两个高度**谁高谁低**(两条水平线之间的竖直比较条)。
  *
- * ⚠️ 上坡段**不加底光**。三种情况都染色的话,画面变成三色条纹,
- * "值得注意的地方"就没了 —— 底光只留给"平"和"下降"这两件要讲的事。
+ * ⚠️ 组件里**不出现方向判断**。哪种走向犯规、该标红哪一段,
+ * 一律问 `src/math/weakMonotonicity.ts`(`isAllowed` / `offendingSegments`)。
+ * 在这里写一次 `shape === 'down'`,非递增那节就会指着一段上坡说"允许"。
+ *
+ * ⚠️ 合规的那一段**不加底光**。三种情况都染色的话,画面变成三色条纹,
+ * "值得注意的地方"就没了 —— 底光只留给"平"和"犯规"这两件要讲的事。
  *
  * ⚠️ 「same height」这行字**不能写在连线的正中间**:
  * 两端等高时那条连线恰好压在折线的平坦段上,字与线糊在一起。
@@ -20,16 +24,18 @@ import { DraggableXPoint } from '../shared/DraggableXPoint';
 import { LAB } from '../shared/theme';
 import { makeViewport, polylinePath, ticks, toSvgX, toSvgY } from '../shared/viewport';
 import {
+  DIRECTION,
   SHAPE_COPY,
   cornerHeights,
-  fallingSegments,
   flatSegments,
+  isAllowed,
+  offendingSegments,
   polyline,
   showX,
   showY,
   type PairReading,
   type PiecewiseGraph,
-} from '../../math/nondecreasing';
+} from '../../math/weakMonotonicity';
 
 export const V = makeViewport({
   width: 680,
@@ -81,7 +87,7 @@ function ValueChip({
   );
 }
 
-export function NondecreasingGraph({
+export function WeakMonotoneGraph({
   graph,
   reading,
   onChangeX1,
@@ -98,7 +104,11 @@ export function NondecreasingGraph({
   const p1 = { x: toSvgX(V, reading.x1), y: toSvgY(V, reading.y1) };
   const p2 = { x: toSvgX(V, reading.x2), y: toSvgY(V, reading.y2) };
   const shape = SHAPE_COPY[reading.shape];
-  const verdictColor = shape.allowed ? LAB.pass : LAB.fail;
+  // 允不允许来自方向,不来自走向 —— 见文件头。
+  const allowed = isAllowed(graph.direction, reading.shape);
+  const verdictColor = allowed ? LAB.pass : LAB.fail;
+  /** 这节课里犯规的那种走向。犯规的段全是这一种,所以只算一次。 */
+  const offending = DIRECTION[graph.direction].forbidden;
 
   return (
     <svg
@@ -176,8 +186,8 @@ export function NondecreasingGraph({
         />
       ))}
 
-      {/* 下坡段的红色底光 + 一个 ↘。只有 dip 图上有。 */}
-      {fallingSegments(graph).map((segment) => (
+      {/* 犯规那一段的红色底光 + 一个箭头。只有不合格的图上有。 */}
+      {offendingSegments(graph).map((segment) => (
         <g key={`fall-${segment.from}`}>
           <line
             x1={toSvgX(V, segment.from)}
@@ -220,7 +230,7 @@ export function NondecreasingGraph({
             strokeWidth={3.5}
             paintOrder="stroke"
           >
-            {SHAPE_COPY.down.arrow} down
+            {SHAPE_COPY[offending].arrow} {SHAPE_COPY[offending].short}
           </text>
         </g>
       ))}

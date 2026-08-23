@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 9) errors.push(`[${name}] expected 9 cards, got ${cards}`);
+  if (cards !== 10) errors.push(`[${name}] expected 10 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -54,7 +54,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (body.includes(gone)) errors.push(`[${name}] old title "${gone}" is still on the home page`);
   }
   // 概念名都在
-  for (const want of ['Nondecreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
+  for (const want of ['Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
     if (!body.includes(want)) errors.push(`[${name}] concept name "${want}" is missing`);
   }
 
@@ -128,7 +128,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
 const NAMES = {
   functions: 'Definition of a Function', domain: 'Domain of a Function',
   increasing: 'Increasing Functions', symmetry: 'Even and Odd Functions',
-  nondecreasing: 'Nondecreasing Functions',
+  nondecreasing: 'Nondecreasing Functions', nonincreasing: 'Nonincreasing Functions',
   periodic: 'Periodic Functions', secant: 'Average Rate of Change',
   floor: 'The Floor Function', ceiling: 'The Ceiling Function',
 };
@@ -146,4 +146,4 @@ await page.close();
 await browser.close();
 server.close();
 if (errors.length) { console.error('✗\n' + errors.map((e) => '  ' + e).join('\n')); process.exit(1); }
-console.log('✓ home + 8 lesson headers all clean');
+console.log(`✓ home + ${Object.keys(NAMES).length} lesson headers all clean`);
