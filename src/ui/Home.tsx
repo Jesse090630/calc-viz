@@ -58,6 +58,12 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Ceiling goes up \u2014 and 4.2 lands on 5.',
     tag: 'Integers',
   },
+  {
+    id: 'functions',
+    title: 'One Input. One Output.',
+    question: 'Why two inputs may share an output, but one input may not split.',
+    tag: 'Functions',
+  },
 ];
 
 export function Home() {

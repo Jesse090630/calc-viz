@@ -30,6 +30,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   // 上下取整共用同一个实验台组件,只差默认方向。
   floor: lazy(() => import('./labs/rounding/floorPage')),
   ceiling: lazy(() => import('./labs/rounding/ceilingPage')),
+  functions: lazy(() => import('./labs/functionRule/page')),
 };
 
 /* ── 两块参考板:点开工具才加载,它们各自带着 KaTeX 与上百条数据 ────────── */

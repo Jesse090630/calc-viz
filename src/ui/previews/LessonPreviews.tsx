@@ -8,6 +8,7 @@
  *   · Connect Two Points   —— B 点移动,割线绕着 A 转
  *   · Drop to the Integer  —— 点在数轴上滑动,落点向下掉到整数(负半边染成警示色)
  *   · Jump to the Integer  —— 同一条数轴,落点向上跳(正半边才是坑)
+ *   · One Input. One Output. —— 一个值穿过机器,只有一个出口
  *
  * ⚠️ 三条约束,都不是可选项:
  * ① **不 import 任何实验台组件。** 首页只需要几十行 SVG,
@@ -20,6 +21,7 @@ import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
 import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
+import { MACHINE } from '../../math/functionRelation';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -230,6 +232,37 @@ export function CeilingPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑦ 函数机器:一个值进去,一个值出来 ────────────────────────── */
+export function FunctionPreview({ phase }: { phase: number }) {
+  const inX = 60;
+  const boxX = W / 2;
+  const outX = W - 60;
+  const midY = H / 2;
+  // 每一轮换一个输入,让"同一台机器、不同的值"看得出来
+  const round = Math.floor(phase * 3) % 3;
+  const value = 2 + round;
+  const t = (phase * 3) % 1;
+  const inLeg = Math.min(1, t / 0.5);
+  const outLeg = Math.max(0, (t - 0.5) / 0.5);
+  const tokenX = t < 0.5 ? inX + (boxX - inX) * inLeg : boxX + (outX - boxX) * outLeg;
+  const inside = t >= 0.44 && t <= 0.56;
+  return (
+    <Frame label="A value entering a function machine and one value leaving it">
+      <line x1={inX} y1={midY} x2={outX} y2={midY} stroke={COLOR.axis} strokeWidth={1.3} strokeDasharray="5 4" opacity={0.6} />
+      <rect x={boxX - 26} y={midY - 26} width={52} height={52} rx={12} fill="#0b1020"
+        stroke={inside ? COLOR.result : COLOR.axis} strokeWidth={inside ? 2.2 : 1.4} />
+      <text x={boxX} y={midY + 8} fill={COLOR.hero} fontSize={22} fontWeight={800} textAnchor="middle" fontFamily="ui-monospace, monospace">f</text>
+      <circle cx={inX} cy={midY} r={17} fill="none" stroke={COLOR.introduce} strokeWidth={1.5} />
+      <circle cx={outX} cy={midY} r={17} fill="none" stroke={COLOR.result} strokeWidth={1.5} />
+      <text x={inX} y={midY + 5} fill={COLOR.introduce} fontSize={14} fontWeight={800} textAnchor="middle" fontFamily="ui-monospace, monospace">{value}</text>
+      <text x={outX} y={midY + 5} fill={COLOR.result} fontSize={14} fontWeight={800} textAnchor="middle" fontFamily="ui-monospace, monospace">{MACHINE.at(value)}</text>
+      {!inside && (
+        <circle cx={tokenX} cy={midY} r={8} fill={t < 0.5 ? COLOR.introduce : COLOR.result} opacity={0.9} />
+      )}
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   increasing: IncreasingPreview,
   symmetry: SymmetryPreview,
@@ -237,4 +270,5 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   secant: SecantPreview,
   floor: FloorPreview,
   ceiling: CeilingPreview,
+  functions: FunctionPreview,
 };
