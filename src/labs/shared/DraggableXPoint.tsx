@@ -27,6 +27,13 @@ export interface DraggableXPointProps {
   label: string;
   /** 方向键步长 */
   step?: number;
+  /**
+   * 标签相对手柄的水平偏移。
+   * ⚠️ 两个手柄挨到最近时,两个居中的标签会**叠在一起**(x₁ / x₂ 只差一格时读不出来)。
+   * 成对使用的实验台给一个 −dx、一个 +dx,标签就永远分得开。
+   * 默认 0 —— 只有一个手柄的课不受影响。
+   */
+  labelDx?: number;
   /** 无障碍描述,会被读屏念出来 */
   describe: (value: number) => string;
 }
@@ -40,6 +47,7 @@ export function DraggableXPoint({
   color,
   label,
   step = 0.05,
+  labelDx = 0,
   describe,
 }: DraggableXPointProps) {
   const frame = useRef<number | null>(null);
@@ -132,7 +140,7 @@ export function DraggableXPoint({
       <circle cx={px} cy={y0} r={11} fill={color} opacity={0.18} className="lab-handle-halo" />
       <circle cx={px} cy={y0} r={6.5} fill={color} stroke="#0b1020" strokeWidth={2} />
       <text
-        x={px}
+        x={px + labelDx}
         y={y0 + 30}
         fill={color}
         fontSize={12}

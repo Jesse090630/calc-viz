@@ -44,6 +44,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'What “increasing” actually requires.',
   },
   {
+    id: 'nondecreasing',
+    title: 'Nondecreasing Functions',
+    question: 'Up or flat. Never down.',
+  },
+  {
     id: 'symmetry',
     title: 'Even and Odd Functions',
     question: 'Odd, even, or neither — by test, not by shape.',

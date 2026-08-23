@@ -2,6 +2,7 @@
  * 首页每张卡里的**微型动画预览**。
  *
  * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
+ *   · Nondecreasing Functions  —— 一对点沿阶梯滑动,走上平台时两点等高
  *   · Increasing Functions     —— 两点沿抛物线滑动,弦始终朝上
  *   · Even and Odd Functions   —— 一对镜像点同进同出,连线保持水平
  *   · Periodic Functions       —— 正弦的副本右移一个周期,落回自己身上
@@ -24,6 +25,13 @@ import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
 import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
+import {
+  GRAPHS as ND_GRAPHS,
+  flatSegments as ndFlatSegments,
+  polyline as ndPolyline,
+  shapeByOutputs as ndShape,
+  valueBySegment as ndValue,
+} from '../../math/nondecreasing';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -306,7 +314,47 @@ export function DomainPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑨ 非递减:一对点沿阶梯滑动,走到平台上时两点等高 ─────────────── */
+export function NondecreasingPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.3, 8.3, 0.35, 5.65);
+  const graph = ND_GRAPHS.steps;
+  const gap = 1.4;
+  const x1 = 0.15 + pingPong(phase) * (8 - gap - 0.3);
+  const x2 = x1 + gap;
+  const y1 = ndValue(graph, x1)!;
+  const y2 = ndValue(graph, x2)!;
+  const level = ndShape(y1, y2) === 'flat';
+  return (
+    <Frame label="Two points sliding along a staircase graph, level with each other on the flat parts">
+      {/* 平台的绿色底光 —— 和课里同一套语言:平也是允许的 */}
+      {ndFlatSegments(graph).map((s) => (
+        <line
+          key={s.from}
+          x1={map.x(s.from)}
+          y1={map.y(s.yFrom)}
+          x2={map.x(s.to)}
+          y2={map.y(s.yTo)}
+          stroke={COLOR.result}
+          strokeWidth={7}
+          strokeLinecap="round"
+          opacity={0.22}
+        />
+      ))}
+      <path d={path(ndPolyline(graph), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {/* 两个高度之间的比较:等高时是一条水平绿虚线,不等高时是一条竖直的琥珀边 */}
+      {level ? (
+        <line x1={map.x(x1)} y1={map.y(y1)} x2={map.x(x2)} y2={map.y(y2)} stroke={COLOR.result} strokeWidth={1.8} strokeDasharray="5 4" />
+      ) : (
+        <line x1={map.x(x2)} y1={map.y(y1)} x2={map.x(x2)} y2={map.y(y2)} stroke={COLOR.hero} strokeWidth={1.8} />
+      )}
+      <circle cx={map.x(x1)} cy={map.y(y1)} r={4} fill={COLOR.introduce} />
+      <circle cx={map.x(x2)} cy={map.y(y2)} r={4} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  nondecreasing: NondecreasingPreview,
   increasing: IncreasingPreview,
   symmetry: SymmetryPreview,
   periodic: PeriodicPreview,

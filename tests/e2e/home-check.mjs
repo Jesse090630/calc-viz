@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 8) errors.push(`[${name}] expected 8 cards, got ${cards}`);
+  if (cards !== 9) errors.push(`[${name}] expected 9 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -54,7 +54,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (body.includes(gone)) errors.push(`[${name}] old title "${gone}" is still on the home page`);
   }
   // 概念名都在
-  for (const want of ['Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
+  for (const want of ['Nondecreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
     if (!body.includes(want)) errors.push(`[${name}] concept name "${want}" is missing`);
   }
 
@@ -128,6 +128,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
 const NAMES = {
   functions: 'Definition of a Function', domain: 'Domain of a Function',
   increasing: 'Increasing Functions', symmetry: 'Even and Odd Functions',
+  nondecreasing: 'Nondecreasing Functions',
   periodic: 'Periodic Functions', secant: 'Average Rate of Change',
   floor: 'The Floor Function', ceiling: 'The Ceiling Function',
 };
