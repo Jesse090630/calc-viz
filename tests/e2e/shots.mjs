@@ -173,96 +173,55 @@ async function auditKeyboardFocus(label) {
   console.log(`  ${label} focus → "${visibleCount} tab stops · ${new Set(seen).size} identified · 3px rings"`);
 }
 
-/**
- * W6 之后首页 hero 默认是静态封面,3D 要点一下才加载。
- * 任何一次重新载入首页之后想拿到 canvas,都必须先点亮它。
- */
-async function activateHero() {
-  const button = page.getByRole('button', { name: '▶ Make it interactive' });
-  if (await button.count() > 0) await button.click();
-  await page.waitForSelector('[data-home-hero] canvas', { timeout: 20000 });
-}
-
-// 首页
+// 首页 —— 现在是空白板。
+//
+// 目录(hero + 四条轨道 + 八张卡)已封存到 `src/ui/ConceptGrid.tsx`,首页不再挂载它。
+// 因此这一节验的**不是"卡片对不对",而是"清空得干不干净"**:
+//   ① 一张卡都不许剩,一个 canvas 都不许起 —— 空白板还偷偷拉 Three.js 就白清了;
+//   ② 两块参考板必须还在,而且键盘能到 —— 这是 Jesse 唯一要求保留的东西。
+// 目录回归时,把这一节换回卡片断言(git history 里有原文)。
 currentShot = 'home';
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
-// W6:hero 默认是这一步的真实截图,点一下才把 3D 换进来。
-// 这样 Three.js(gzip 241 kB)不会落在每个首页访客头上。
-// 所以这里要验【两个状态】:先确认封面在,再点亮它,再确认 canvas 起来了。
-const posterButton = page.getByRole('button', { name: '▶ Make it interactive' });
-if (!(await posterButton.isVisible())) errors.push('[home/hero] poster state is missing');
-if (await page.locator('[data-home-hero] canvas').count() !== 0) {
-  errors.push('[home/hero] 3D must NOT load before the visitor asks for it');
-}
-await page.screenshot({ path: join(OUT, '00-home-poster.png') });
-await posterButton.click();
-await page.waitForSelector('[data-home-hero] canvas', { timeout: 20000 });
-await page.waitForTimeout(1200);
-const hero = page.locator('[data-home-hero]');
-const heroSliders = hero.locator('input[type="range"]');
-if (await heroSliders.count() !== 1) errors.push(`[home/hero] expected exactly one slider, got ${await heroSliders.count()}`);
-const heroNumbersAt4 = await hero.locator('[aria-live="polite"]').innerText();
-if (!heroNumbersAt4.includes('4.250000') || !heroNumbersAt4.includes('5.333333') || !heroNumbersAt4.includes('6.250000')) {
-  errors.push('[home/hero] n=4 must show 4.250000 ≤ 5.333333 ≤ 6.250000');
-}
-await page.waitForTimeout(1800);
-if (await heroSliders.inputValue() !== '4') errors.push('[home/hero] the static demo must not autoplay');
-await heroSliders.fill('8');
-const heroNumbersAt8 = await hero.locator('[aria-live="polite"]').innerText();
-if (!heroNumbersAt8.includes('4.812500') || !heroNumbersAt8.includes('5.333333') || !heroNumbersAt8.includes('5.812500')) {
-  errors.push('[home/hero] n=8 must show 4.812500 ≤ 5.333333 ≤ 5.812500');
-}
-await heroSliders.fill('4');
 
-const homeTitles = await page.locator('[data-concept-card] h3').allInnerTexts();
-const expectedHomeTitles = [
-  'Left and Right Limits',
-  'Secant → Tangent',
-  'Riemann Sums → the Integral',
-  'The Shell Method',
-  'The Disk Method',
-  'The Unit Circle and sin / cos',
-  'Trig Derivatives ↔ Integrals',
-];
-if (homeTitles.join('|') !== expectedHomeTitles.join('|')) {
-  errors.push(`[home/order] expected ${expectedHomeTitles.join(' → ')}, got ${homeTitles.join(' → ')}`);
+const leftoverCards = await page.locator('[data-concept-card]').count();
+if (leftoverCards !== 0) errors.push(`[home/blank] expected a clear page, found ${leftoverCards} concept cards`);
+if (await page.locator('[data-home-hero]').count() !== 0) errors.push('[home/blank] the hero is still mounted');
+if (await page.locator('canvas').count() !== 0) {
+  errors.push('[home/blank] a blank page must not start a 3D canvas');
 }
-const trackTitles = await page.locator('section[aria-labelledby^="track-"] h2').allInnerTexts();
-if (trackTitles.map((title) => title.toLowerCase()).join('|') !== 'foundations|integration|3d volume|trigonometry') {
-  errors.push(`[home/tracks] unexpected track order: ${trackTitles.join(' → ')}`);
+
+// 保留项:右上角两块板。缺任何一个都算这次改动做坏了。
+const toolbar = page.locator('[data-learning-tools]');
+if (!(await toolbar.getByRole('link', { name: 'Open calc type board' }).isVisible())) {
+  errors.push('[home/blank] Type board trigger went missing');
 }
-const thumbnails = page.locator('[data-concept-card] img');
-if (await thumbnails.count() !== 7) errors.push(`[home/thumbnails] expected 7 static images, got ${await thumbnails.count()}`);
-for (let index = 0; index < await thumbnails.count(); index += 1) {
-  const thumbnail = thumbnails.nth(index);
-  await thumbnail.scrollIntoViewIfNeeded();
-  await thumbnail.evaluate((image) => image.decode());
-  const loaded = await thumbnail.evaluate((image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
-  if (!loaded) errors.push(`[home/thumbnails] image ${index + 1} did not load`);
+if (!(await toolbar.getByRole('button', { name: 'Open formula deck' }).isVisible())) {
+  errors.push('[home/blank] Formula deck trigger went missing');
 }
-await page.screenshot({ path: join(OUT, 'home-tracks.png'), fullPage: true });
-// range.fill() 会把焦点留在滑块；重新载入后从文档第一个停靠点开始审计完整 Tab 顺序。
+
+// 链本身没有下线 —— 直接输网址还得能进去。清空首页最容易连带做错的就是这件事。
+await page.goto(`${URL}#/log-integral`, { waitUntil: 'networkidle' });
+await page.waitForSelector('canvas', { timeout: 20000 });
+if (await page.locator('canvas').count() === 0) errors.push('[home/blank] a parked lesson route stopped working');
 await page.goto(URL, { waitUntil: 'networkidle' });
-await activateHero();
+await page.waitForTimeout(600);
+
 await auditKeyboardFocus('home');
 await page.evaluate(() => scrollTo(0, 0));
 await page.screenshot({ path: join(OUT, '00-home.png') });
-console.log(`  00 home      → "interactive squeeze · 7 static thumbnails · 4 dependency tracks"`);
+console.log('  00 home      → "blank slate · 0 cards · 0 canvas · both boards reachable"');
 
 currentShot = 'home/mobile';
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(URL, { waitUntil: 'networkidle' });
-await activateHero();
+await page.waitForTimeout(600);
 const homeMobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
 if (homeMobileOverflow > 1) errors.push(`[home/mobile] horizontal overflow ${homeMobileOverflow}px`);
-if (!(await page.getByRole('heading', { name: 'Drag the picture. Watch the formula tighten.' }).isVisible())) {
-  errors.push('[home/mobile] hero thesis is not visible');
-}
 await page.screenshot({ path: join(OUT, 'home-mobile.png') });
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(URL, { waitUntil: 'networkidle' });
-console.log('  home mobile  → "390×844 · live scene + thesis · no horizontal overflow"');
+console.log('  home mobile  → "390×844 · blank slate · no horizontal overflow"');
 
 // Calc Type Board:独立路由、符号/名称/读法搜索、分类和 Why 跳转都走真实浏览器路径。
 currentShot = 'notation-board/desktop';

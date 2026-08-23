@@ -75,18 +75,26 @@ describe('推荐顺序自洽', () => {
   });
 });
 
-describe('⚠️ 首页需要的每一项配套资源都要跟上', () => {
+describe('⚠️ 目录需要的每一项配套资源都要跟上', () => {
   // 这条是被线上事故逼出来的:W7 把 log-integral 加进登记表却没配缩略图,
-  // Home 直接抛错、首页一张卡都渲染不出来。
+  // 卡片组件直接抛错、首页一张卡都渲染不出来。
   // 单条链的截图完全看不到这个 —— 只有真的打开首页才会撞上。
-  it('每个概念都在 Home 的 THUMBNAILS 里有一张图', async () => {
+  //
+  // 目录现在被封存在 `ui/ConceptGrid.tsx`(首页清空了,链路由没动)。
+  // **这条测试要继续留着**:等目录回归的那一刻,缺图会立刻让首页整个白掉,
+  // 而那时候没人会想起来这件事。让它现在就红,比到时候再查便宜得多。
+  it('每个概念都在 ConceptGrid 的 THUMBNAILS 里有一张图', async () => {
     const source = await import('node:fs').then((fs) =>
-      fs.readFileSync(new URL('../ui/Home.tsx', import.meta.url), 'utf8'),
+      fs.readFileSync(new URL('../ui/ConceptGrid.tsx', import.meta.url), 'utf8'),
     );
-    const block = source.slice(source.indexOf('const THUMBNAILS'), source.indexOf('function ConceptLink'));
+    const block = source.slice(
+      source.indexOf('export const THUMBNAILS'),
+      source.indexOf('function ConceptLink'),
+    );
+    expect(block.length, 'THUMBNAILS 块没找到 —— 目录文件的结构变了,这条守卫已经失效').toBeGreaterThan(0);
     for (const c of CONCEPTS) {
       const key = /^[a-z]+$/.test(c.id) ? `${c.id}:` : `'${c.id}':`;
-      expect(block.includes(key), `${c.id} 缺首页缩略图`).toBe(true);
+      expect(block.includes(key), `${c.id} 缺目录缩略图`).toBe(true);
     }
   });
 });

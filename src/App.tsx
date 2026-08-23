@@ -10,7 +10,6 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Home, BackLink } from './ui/Home';
-import { CONCEPTS } from './concepts/registry';
 import { FEATURES } from './config';
 
 /* ── 每条课一个 chunk。只有走到那个路由才会发起网络请求。 ───────────────── */
@@ -111,7 +110,8 @@ export default function App() {
       </Suspense>
     );
   } else {
-    page = <Home concepts={CONCEPTS} />;
+    // 首页目前是空白板。目录封存在 `ui/ConceptGrid.tsx`,链路由本身没动。
+    page = <Home />;
   }
 
   return (
