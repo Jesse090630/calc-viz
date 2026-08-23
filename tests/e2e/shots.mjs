@@ -173,22 +173,47 @@ async function auditKeyboardFocus(label) {
   console.log(`  ${label} focus → "${visibleCount} tab stops · ${new Set(seen).size} identified · 3px rings"`);
 }
 
-// 首页 —— 现在是空白板。
+// 首页 —— 四张实验台卡片,每张带一小段循环预览。
 //
-// 目录(hero + 四条轨道 + 八张卡)已封存到 `src/ui/ConceptGrid.tsx`,首页不再挂载它。
-// 因此这一节验的**不是"卡片对不对",而是"清空得干不干净"**:
-//   ① 一张卡都不许剩,一个 canvas 都不许起 —— 空白板还偷偷拉 Three.js 就白清了;
-//   ② 两块参考板必须还在,而且键盘能到 —— 这是 Jesse 唯一要求保留的东西。
-// 目录回归时,把这一节换回卡片断言(git history 里有原文)。
+// 推导链目录(hero + 四条轨道 + 八张卡)仍然封存在 `src/ui/ConceptGrid.tsx`。
+// 这一节要守住三件事:
+//   ① 四张卡都在,预览都是 **SVG** 且真的在动;
+//   ② 一个 canvas 都不许起 —— 起了就说明有人把整个实验台 import 进首页了;
+//   ③ 两块参考板还在,而且键盘能到。
 currentShot = 'home';
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1200);
 
+// 推导链目录仍然封存,首页列的是四个实验台,每张卡带一小段循环预览。
 const leftoverCards = await page.locator('[data-concept-card]').count();
-if (leftoverCards !== 0) errors.push(`[home/blank] expected a clear page, found ${leftoverCards} concept cards`);
-if (await page.locator('[data-home-hero]').count() !== 0) errors.push('[home/blank] the hero is still mounted');
+if (leftoverCards !== 0) errors.push(`[home] the parked catalogue is showing again: ${leftoverCards} cards`);
+const lessonCards = await page.locator('[data-lesson-card]').count();
+if (lessonCards !== 4) errors.push(`[home] expected 4 lesson cards, got ${lessonCards}`);
+// ⚠️ 预览必须是 SVG。这一页拉起一个 canvas 就说明有人把实验台整个 import 进来了。
 if (await page.locator('canvas').count() !== 0) {
-  errors.push('[home/blank] a blank page must not start a 3D canvas');
+  errors.push('[home] the landing page must not start a 3D canvas');
+}
+const previewSvgs = await page.locator('[data-lesson-card] svg').count();
+if (previewSvgs !== 4) errors.push(`[home] expected 4 preview graphics, got ${previewSvgs}`);
+// 预览确实在动。
+// ⚠️ 取样对象很讲究:每张卡的**第一个** <path> 是那条静止的曲线,
+//    盯着它看永远得出"没动"的结论。要取**最后一个**几何元素 —— 那才是被驱动的那个。
+//    (第一版就是这么写错的,四张卡里三张被误判成静止。)
+// 另外要跨越一整个循环采样:周期那张卡在两端各有一段**刻意的停顿**,
+// 只隔 500ms 取两帧,很可能正好落在停顿里。
+const previewFrames = [];
+for (let i = 0; i < 6; i += 1) {
+  previewFrames.push(await page.evaluate(() =>
+    [...document.querySelectorAll('[data-lesson-card] svg')].map((svg) => {
+      const last = [...svg.querySelectorAll('circle,line,path')].pop();
+      return `${last?.getAttribute('cx') ?? last?.getAttribute('x1') ?? last?.getAttribute('d')?.slice(-30) ?? ''}`;
+    }),
+  ));
+  await page.waitForTimeout(700);
+}
+for (let card = 0; card < 4; card += 1) {
+  const distinct = new Set(previewFrames.map((frame) => frame[card])).size;
+  if (distinct < 2) errors.push(`[home] preview ${card + 1} never moves across a full loop`);
 }
 
 // 保留项:右上角两块板。缺任何一个都算这次改动做坏了。
@@ -210,7 +235,7 @@ await page.waitForTimeout(600);
 await auditKeyboardFocus('home');
 await page.evaluate(() => scrollTo(0, 0));
 await page.screenshot({ path: join(OUT, '00-home.png') });
-console.log('  00 home      → "blank slate · 0 cards · 0 canvas · both boards reachable"');
+console.log('  00 home      → "4 animated lesson cards · 0 canvas · both boards reachable"');
 
 currentShot = 'home/mobile';
 await page.setViewportSize({ width: 390, height: 844 });
@@ -221,7 +246,7 @@ if (homeMobileOverflow > 1) errors.push(`[home/mobile] horizontal overflow ${hom
 await page.screenshot({ path: join(OUT, 'home-mobile.png') });
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(URL, { waitUntil: 'networkidle' });
-console.log('  home mobile  → "390×844 · blank slate · no horizontal overflow"');
+console.log('  home mobile  → "390×844 · 4 cards · no horizontal overflow"');
 
 // Calc Type Board:独立路由、符号/名称/读法搜索、分类和 Why 跳转都走真实浏览器路径。
 currentShot = 'notation-board/desktop';

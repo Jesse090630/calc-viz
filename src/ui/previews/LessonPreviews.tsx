@@ -1,0 +1,170 @@
+/**
+ * 首页四张卡里的**微型动画预览**。
+ *
+ * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
+ *   · Every Pair Must Work —— 两点沿抛物线滑动,弦始终朝上
+ *   · The Symmetry Test    —— 一对镜像点同进同出,连线保持水平
+ *   · Does It Repeat?      —— 正弦的副本右移一个周期,落回自己身上
+ *   · Connect Two Points   —— B 点移动,割线绕着 A 转
+ *
+ * ⚠️ 三条约束,都不是可选项:
+ * ① **不 import 任何实验台组件。** 首页只需要几十行 SVG,
+ *    拉进整节课等于把那一节的全部代码塞进首屏(W6 花了一整轮才把首页减下来)。
+ * ② 曲线一律来自 `src/math/` 的纯函数 —— 组件里不出现裸算式(禁止 2)。
+ * ③ 四张卡共用**一个** rAF 时钟(见 `clock.ts`),不是各开一个。
+ */
+import { holdAtEnds, pingPong } from './clock';
+import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
+import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
+import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
+import { COLOR } from '../../scene/theme';
+
+/**
+ * ⚠️ 视口比例要接近卡片本身的比例。
+ * 第一版是 240×116(比 2.07),而卡片在桌面端约 530×116(比 4.6),
+ * `preserveAspectRatio="meet"` 于是按高度缩放,左右各留一大块空 ——
+ * 画面缩在中间一小条,看着像没做完。加宽到 400 之后两边都填得满。
+ */
+const W = 400;
+const H = 116;
+
+/** 预览专用的小视口。和实验台无关,只求在这张卡里好看。 */
+function makeMap(xMin: number, xMax: number, yMin: number, yMax: number) {
+  const padX = 10;
+  const padY = 10;
+  return {
+    x: (x: number) => padX + ((x - xMin) / (xMax - xMin)) * (W - padX * 2),
+    y: (y: number) => padY + (1 - (y - yMin) / (yMax - yMin)) * (H - padY * 2),
+  };
+}
+
+function path(points: readonly { x: number; y: number }[], map: ReturnType<typeof makeMap>): string {
+  return points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${map.x(p.x).toFixed(1)} ${map.y(p.y).toFixed(1)}`)
+    .join(' ');
+}
+
+function samples(at: (x: number) => number, from: number, to: number, n = 60) {
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const x = from + ((to - from) * i) / n;
+    return { x, y: at(x) };
+  });
+}
+
+function Frame({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-full w-full"
+      role="img"
+      aria-label={label}
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/* ── ① 递增:两点滑动,弦始终朝上 ─────────────────────────────── */
+export function IncreasingPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.35, 3.35, -0.7, 10.4);
+  const t = pingPong(phase);
+  const a = 0.35 + t * 0.9;
+  const b = a + 1.35;
+  const fa = SECANT_FN.at(a);
+  const fb = SECANT_FN.at(b);
+  return (
+    <Frame label="Two points sliding along a curve, the line between them always rising">
+      <path d={path(samples(SECANT_FN.at, 0, 3.1), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <line x1={map.x(a)} y1={map.y(fa)} x2={map.x(b)} y2={map.y(fb)} stroke={COLOR.result} strokeWidth={2} />
+      <circle cx={map.x(a)} cy={map.y(fa)} r={4} fill={COLOR.introduce} />
+      <circle cx={map.x(b)} cy={map.y(fb)} r={4} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
+/* ── ② 对称:一对镜像点同进同出 ──────────────────────────────── */
+export function SymmetryPreview({ phase }: { phase: number }) {
+  const map = makeMap(-2.4, 2.4, -0.6, 6);
+  const fn = SYMMETRY_FUNCTIONS.square!;
+  const x = 0.55 + pingPong(phase) * 1.5;
+  const y = fn.at(x)!;
+  return (
+    <Frame label="A parabola with two mirrored points at the same height">
+      <line x1={map.x(0)} y1={6} x2={map.x(0)} y2={H - 6} stroke={COLOR.result} strokeWidth={1.5} opacity={0.5} />
+      <path d={path(samples((v) => fn.at(v)!, -2.3, 2.3), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <line x1={map.x(-x)} y1={map.y(y)} x2={map.x(x)} y2={map.y(y)} stroke={COLOR.result} strokeWidth={1.8} strokeDasharray="5 4" />
+      <circle cx={map.x(-x)} cy={map.y(y)} r={4} fill={COLOR.introduce} />
+      <circle cx={map.x(x)} cy={map.y(y)} r={4} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
+/* ── ③ 周期:副本右移一个周期,落回自己身上 ────────────────────── */
+export function PeriodicPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.4, 4 * Math.PI + 0.4, -1.35, 1.35);
+  const fn = PERIODIC_FUNCTIONS.sin!;
+  const shift = holdAtEnds(phase) * 2 * Math.PI;
+  const landed = shift > 2 * Math.PI - 0.05;
+  const base = samples(fn.at, 0, 4 * Math.PI, 90);
+  const copy = samples(fn.at, -shift, 4 * Math.PI - shift, 90).map((p) => ({ x: p.x + shift, y: p.y }));
+  return (
+    <Frame label="A sine wave and a copy of it sliding right by one full period">
+      <line x1={map.x(-0.4)} y1={map.y(0)} x2={map.x(4 * Math.PI + 0.4)} y2={map.y(0)} stroke={COLOR.axis} strokeWidth={1} />
+      {/*
+        ⚠️ 底下这条画粗一点(3.2 vs 2)。副本落位之后两条完全重合,
+        等宽的话绿色会把蓝色整个盖住,卡片看起来就只有**一条**曲线,
+        "副本滑过来盖住原图"这件事反而消失了。粗一圈,蓝色就成了绿线的描边。
+      */}
+      <path d={path(base, map)} fill="none" stroke={COLOR.curve} strokeWidth={3.2} strokeLinecap="round" />
+      <path
+        d={path(copy, map)}
+        fill="none"
+        stroke={landed ? COLOR.result : COLOR.hero}
+        strokeWidth={2}
+        strokeDasharray={landed ? undefined : '6 4'}
+        strokeLinecap="round"
+        opacity={0.95}
+      />
+    </Frame>
+  );
+}
+
+/* ── ④ 割线:B 移动,直线绕 A 转 ─────────────────────────────── */
+export function SecantPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.35, 3.35, -1.6, 10.4);
+  const a = 1;
+  const b = 1.5 + pingPong(phase) * 1.6;
+  const reading = readSecant(a, b);
+  const line = reading ? secantLine(reading) : null;
+  return (
+    <Frame label="A line through two points on a curve, pivoting as one point moves">
+      <path d={path(samples(SECANT_FN.at, 0, 3.1), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      {line && (
+        <line
+          x1={map.x(-0.3)}
+          y1={map.y(line.at(-0.3))}
+          x2={map.x(3.3)}
+          y2={map.y(line.at(3.3))}
+          stroke={COLOR.result}
+          strokeWidth={2}
+        />
+      )}
+      {reading && (
+        <>
+          <line x1={map.x(reading.a)} y1={map.y(reading.fa)} x2={map.x(reading.b)} y2={map.y(reading.fa)} stroke={COLOR.introduce} strokeWidth={1.6} />
+          <line x1={map.x(reading.b)} y1={map.y(reading.fa)} x2={map.x(reading.b)} y2={map.y(reading.fb)} stroke={COLOR.hero} strokeWidth={1.6} />
+          <circle cx={map.x(reading.a)} cy={map.y(reading.fa)} r={4} fill={COLOR.introduce} />
+          <circle cx={map.x(reading.b)} cy={map.y(reading.fb)} r={4} fill={COLOR.hero} />
+        </>
+      )}
+    </Frame>
+  );
+}
+
+export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  increasing: IncreasingPreview,
+  symmetry: SymmetryPreview,
+  periodic: PeriodicPreview,
+  secant: SecantPreview,
+};
