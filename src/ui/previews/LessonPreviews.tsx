@@ -7,6 +7,7 @@
  *   · Does It Repeat?      —— 正弦的副本右移一个周期,落回自己身上
  *   · Connect Two Points   —— B 点移动,割线绕着 A 转
  *   · Drop to the Integer  —— 点在数轴上滑动,落点向下掉到整数(负半边染成警示色)
+ *   · Jump to the Integer  —— 同一条数轴,落点向上跳(正半边才是坑)
  *
  * ⚠️ 三条约束,都不是可选项:
  * ① **不 import 任何实验台组件。** 首页只需要几十行 SVG,
@@ -18,7 +19,7 @@ import { holdAtEnds, pingPong } from './clock';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
-import { floorByDefinition } from '../../math/floorFunction';
+import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -197,10 +198,43 @@ export function FloorPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑥ 上取整:同一条数轴,落点向上跳 ─────────────────────────── */
+export function CeilingPreview({ phase }: { phase: number }) {
+  const map = makeMap(-2.6, 4.6, -1.15, 1.15);
+  const x = -2 + pingPong(phase) * 6;
+  const n = ceilByDefinition(x) ?? 0;
+  const lineY = map.y(-0.45);
+  const dotY = map.y(0.5);
+  // 上取整的坑在**正**半边:朝零截断在那里会给小一格
+  const tricky = x > 0 && n !== x;
+  return (
+    <Frame label="A point sliding along a number line, jumping up to the integer above it">
+      <line x1={map.x(-2.6)} y1={lineY} x2={map.x(4.6)} y2={lineY} stroke={COLOR.axis} strokeWidth={1.4} />
+      {[-2, -1, 0, 1, 2, 3, 4].map((t) => (
+        <line key={t} x1={map.x(t)} y1={lineY - 5} x2={map.x(t)} y2={lineY + 5} stroke={COLOR.axis} strokeWidth={1.2} />
+      ))}
+      <line x1={map.x(x)} y1={dotY + 7} x2={map.x(x)} y2={lineY - 9} stroke={COLOR.hero} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.8} />
+      <line x1={map.x(x)} y1={lineY - 9} x2={map.x(n)} y2={lineY - 9} stroke={tricky ? COLOR.radius : COLOR.introduce} strokeWidth={1.6} strokeDasharray="4 3" opacity={0.85} />
+      {/* 箭头朝**上** —— 和取整那张卡唯一的视觉差别就在这里 */}
+      <path
+        d={`M${map.x(n) - 4} ${lineY - 4} L${map.x(n)} ${lineY - 11} L${map.x(n) + 4} ${lineY - 4}`}
+        fill="none"
+        stroke={tricky ? COLOR.radius : COLOR.introduce}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={map.x(n)} cy={lineY} r={5} fill={tricky ? COLOR.radius : COLOR.introduce} />
+      <circle cx={map.x(x)} cy={dotY} r={4.5} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   increasing: IncreasingPreview,
   symmetry: SymmetryPreview,
   periodic: PeriodicPreview,
   secant: SecantPreview,
   floor: FloorPreview,
+  ceiling: CeilingPreview,
 };

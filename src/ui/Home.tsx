@@ -52,6 +52,12 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Why does \u22121.3 floor to \u22122, not \u22121?',
     tag: 'Integers',
   },
+  {
+    id: 'ceiling',
+    title: 'Jump to the Integer',
+    question: 'Ceiling goes up \u2014 and 4.2 lands on 5.',
+    tag: 'Integers',
+  },
 ];
 
 export function Home() {
