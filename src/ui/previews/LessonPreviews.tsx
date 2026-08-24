@@ -2,6 +2,7 @@
  * 首页每张卡里的**微型动画预览**。
  *
  * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
+ *   · Increasing/Decreasing Intervals —— 扫描窗沿曲线滑过,亮的那段跟着换颜色
  *   · Nondecreasing Functions  —— 一对点沿**上行**阶梯滑动,走上平台时两点等高
  *   · Nonincreasing Functions  —— 同一段动作,换成**下行**阶梯
  *   · Increasing Functions     —— 两点沿抛物线滑动,弦始终朝上
@@ -26,6 +27,12 @@ import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
 import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
+import {
+  CURVES as SCAN_CURVES,
+  behaviourByStretches as scanBehaviour,
+  sampleCurve as scanSamples,
+  valueAt as scanValue,
+} from '../../math/scanning';
 import {
   GRAPHS as WM_GRAPHS,
   flatSegments as wmFlatSegments,
@@ -380,7 +387,33 @@ export function NonincreasingPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑪ 扫描区间:窗口沿曲线扫过去,亮的那一段跟着换颜色 ─────────────── */
+export function ScanPreview({ phase }: { phase: number }) {
+  const curve = SCAN_CURVES.wave;
+  const map = makeMap(0, 10, 1.2, 5.4);
+  const width = 2.2;
+  const from = pingPong(phase) * (10 - width);
+  const to = from + width;
+  const behaviour = scanBehaviour(curve, from, to);
+  // ⚠️ 颜色的含义与课里一致:递减不是错误,红色只留给"给不出单一答案"的 mixed。
+  const lit =
+    behaviour === 'up' ? COLOR.result : behaviour === 'down' ? COLOR.hero : behaviour === 'mixed' ? COLOR.radius : COLOR.introduce;
+  const dotX = from + width * 0.5;
+  return (
+    <Frame label="A scanning window sliding along a curve, colouring the part inside it">
+      {/* 整条压暗 */}
+      <path d={path(scanSamples(curve, 0, 10, 80), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" opacity={0.25} />
+      {/* 窗口 */}
+      <rect x={map.x(from)} y={6} width={map.x(to) - map.x(from)} height={H - 12} fill={lit} opacity={0.12} rx={3} />
+      {/* 窗口里的那一段 */}
+      <path d={path(scanSamples(curve, from, to, 40), map)} fill="none" stroke={lit} strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={map.x(dotX)} cy={map.y(scanValue(curve, dotX))} r={4} fill={lit} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  intervals: ScanPreview,
   nondecreasing: NondecreasingPreview,
   nonincreasing: NonincreasingPreview,
   increasing: IncreasingPreview,

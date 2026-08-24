@@ -44,6 +44,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'What “increasing” actually requires.',
   },
   {
+    id: 'intervals',
+    title: 'Increasing and Decreasing Intervals',
+    question: 'Scan the curve and read it left to right.',
+  },
+  {
     id: 'nondecreasing',
     title: 'Nondecreasing Functions',
     question: 'Up or flat. Never down.',

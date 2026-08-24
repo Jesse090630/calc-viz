@@ -24,6 +24,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'trig-rates': lazy(() => import('./concepts/trig-rates/page')),
   // 实验台,不是推导链:没有上一步/下一步,不经过 `src/engine/`。
   increasing: lazy(() => import('./labs/increasing/page')),
+  intervals: lazy(() => import('./labs/scanning/page')),
   // 非递减与非递增共用同一个实验台组件,只差一个 direction。
   nondecreasing: lazy(() => import('./labs/weakMonotone/nondecreasingPage')),
   nonincreasing: lazy(() => import('./labs/weakMonotone/nonincreasingPage')),
