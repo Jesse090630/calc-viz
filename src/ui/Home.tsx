@@ -64,6 +64,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Approach the wall. It never touches.',
   },
   {
+    id: 'squeeze',
+    title: 'The Squeeze Theorem',
+    question: 'Trapped from both sides.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',

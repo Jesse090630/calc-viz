@@ -29,6 +29,13 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
+  L as SQ_L,
+  lower as sqLower,
+  middle as sqMiddle,
+  upper as sqUpper,
+  clampScan as sqClamp,
+} from '../../math/squeeze';
+import {
   MAX_DECADE as IL_MAX,
   decadeX as ilDecadeX,
   valueAt as ilAt,
@@ -538,8 +545,34 @@ export function InfinitePreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑯ 夹逼:上下两条抛物线合拢,中间那条被挤住 ───────────────────── */
+export function SqueezePreview({ phase }: { phase: number }) {
+  const map = makeMap(-1, 1, SQ_L - 1.15, SQ_L + 1.15);
+  const scan = sqClamp(0.95 - pingPong(phase) * 0.92);
+  const bound = (at: (x: number) => number) =>
+    Array.from({ length: 60 }, (_, i) => { const x = -1 + (2 * i) / 59; return { x, y: at(x) }; });
+  const mid = Array.from({ length: 260 }, (_, i) => {
+    const t = i / 259 - 0.5;
+    const x = Math.sign(t || 1) * (Math.abs(t) * 2) ** 3;
+    return { x, y: sqMiddle(x) ?? SQ_L };
+  });
+  return (
+    <Frame label="Two parabolas closing in with a wiggling curve trapped between them">
+      <line x1={map.x(-1)} y1={map.y(SQ_L)} x2={map.x(1)} y2={map.y(SQ_L)} stroke={COLOR.result} strokeWidth={1} strokeDasharray="4 4" opacity={0.5} />
+      <path d={path(bound(sqUpper), map)} fill="none" stroke={COLOR.hero} strokeWidth={2} strokeLinecap="round" />
+      <path d={path(bound(sqLower), map)} fill="none" stroke={COLOR.introduce} strokeWidth={2} strokeLinecap="round" />
+      <path d={path(mid, map)} fill="none" stroke={COLOR.curve} strokeWidth={1.4} strokeLinecap="round" />
+      <line x1={map.x(scan)} y1={6} x2={map.x(scan)} y2={H - 6} stroke={COLOR.axis} strokeWidth={1.2} strokeDasharray="4 4" />
+      <circle cx={map.x(scan)} cy={map.y(sqUpper(scan))} r={3.2} fill={COLOR.hero} />
+      <circle cx={map.x(scan)} cy={map.y(sqLower(scan))} r={3.2} fill={COLOR.introduce} />
+      <circle cx={map.x(scan)} cy={map.y(sqMiddle(scan) ?? SQ_L)} r={3.2} fill={COLOR.curve} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'one-sided': OneSidedPreview,
+  squeeze: SqueezePreview,
   'infinite-limits': InfinitePreview,
   'epsilon-delta': EpsilonDeltaPreview,
   'limit-vs-value': LimitPointPreview,

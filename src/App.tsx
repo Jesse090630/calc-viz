@@ -29,6 +29,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'limit-vs-value': lazy(() => import('./labs/limitPoint/page')),
   'epsilon-delta': lazy(() => import('./labs/epsilonDelta/page')),
   'infinite-limits': lazy(() => import('./labs/infinite/page')),
+  squeeze: lazy(() => import('./labs/squeeze/page')),
   // 非递减与非递增共用同一个实验台组件,只差一个 direction。
   nondecreasing: lazy(() => import('./labs/weakMonotone/nondecreasingPage')),
   nonincreasing: lazy(() => import('./labs/weakMonotone/nonincreasingPage')),
