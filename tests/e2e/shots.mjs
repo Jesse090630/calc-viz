@@ -190,7 +190,7 @@ if (leftoverCards !== 0) errors.push(`[home] the parked catalogue is showing aga
 // ⚠️ 这个数字要跟着 `ui/Home.tsx` 的 LESSONS 走。写死成 4 之后加了第五节课,
 //    这里会红 —— 那是**对的**:它在提醒你首页也得跟上(缩略图那次事故就是这么来的)。
 const lessonCards = await page.locator('[data-lesson-card]').count();
-if (lessonCards !== 16) errors.push(`[home] expected 16 lesson cards, got ${lessonCards}`);
+if (lessonCards !== 17) errors.push(`[home] expected 17 lesson cards, got ${lessonCards}`);
 // ⚠️ 预览必须是 SVG。这一页拉起一个 canvas 就说明有人把实验台整个 import 进来了。
 if (await page.locator('canvas').count() !== 0) {
   errors.push('[home] the landing page must not start a 3D canvas');

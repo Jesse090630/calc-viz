@@ -29,6 +29,10 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
+  sampleCos as slCos,
+  sampleRatio as slRatioSamples,
+} from '../../math/specialLimit';
+import {
   L as SQ_L,
   lower as sqLower,
   middle as sqMiddle,
@@ -570,8 +574,23 @@ export function SqueezePreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑰ sin x / x:三条线在 0 处收成一点 ────────────────────────────── */
+export function SpecialLimitPreview({ phase }: { phase: number }) {
+  const span = 0.35 + pingPong(phase) * 1.5;
+  const map = makeMap(-span, span, 1 - span * span * 0.62 - 0.02, 1.03);
+  return (
+    <Frame label="cos x, sin x over x and the constant one closing together at zero">
+      <line x1={map.x(-span)} y1={map.y(1)} x2={map.x(span)} y2={map.y(1)} stroke={COLOR.hero} strokeWidth={1.6} />
+      <path d={path(slCos(-span, span, 70), map)} fill="none" stroke={COLOR.introduce} strokeWidth={1.6} />
+      <path d={path(slRatioSamples(-span, span, 70).map((p) => ({ x: p.x, y: p.y ?? 1 })), map)} fill="none" stroke={COLOR.result} strokeWidth={2.4} />
+      <circle cx={map.x(0)} cy={map.y(1)} r={4} fill={COLOR.result} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'one-sided': OneSidedPreview,
+  'sin-over-x': SpecialLimitPreview,
   squeeze: SqueezePreview,
   'infinite-limits': InfinitePreview,
   'epsilon-delta': EpsilonDeltaPreview,

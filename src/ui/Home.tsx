@@ -69,6 +69,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Trapped from both sides.',
   },
   {
+    id: 'sin-over-x',
+    title: 'Why sin x / x \u2192 1',
+    question: 'Geometry, then squeeze. In radians.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',
