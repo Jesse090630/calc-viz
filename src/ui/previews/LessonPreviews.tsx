@@ -29,6 +29,13 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
+  MAX_DECADE as IL_MAX,
+  decadeX as ilDecadeX,
+  valueAt as ilAt,
+  viewHalfHeight as ilHalfY,
+  viewHalfWidth as ilHalfX,
+} from '../../math/infiniteLimits';
+import {
   A as ED_A,
   L as ED_L,
   f as edF,
@@ -505,8 +512,35 @@ export function EpsilonDeltaPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑮ 无穷极限:两个点顺着 1/x 冲向渐近线 ─────────────────────────── */
+export function InfinitePreview({ phase }: { phase: number }) {
+  const k = pingPong(phase) * IL_MAX * 0.8;
+  const halfX = ilHalfX(k);
+  const halfY = ilHalfY(k);
+  const map = makeMap(-halfX, halfX, -halfY, halfY);
+  const near = halfX / 300;
+  const branch = (sign: number) =>
+    Array.from({ length: 60 }, (_, i) => {
+      const x = sign * (near + (i / 59) * (halfX - near));
+      return { x, y: ilAt(x) ?? 0 };
+    });
+  const rx = ilDecadeX('right', k);
+  const lx = ilDecadeX('left', k);
+  return (
+    <Frame label="One over x with two points racing away along a vertical asymptote">
+      <line x1={map.x(-halfX)} y1={map.y(0)} x2={map.x(halfX)} y2={map.y(0)} stroke={COLOR.axis} strokeWidth={1} />
+      <line x1={map.x(0)} y1={6} x2={map.x(0)} y2={H - 6} stroke={COLOR.radius} strokeWidth={1.4} strokeDasharray="4 4" opacity={0.8} />
+      <path d={path(branch(1), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <path d={path(branch(-1), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <circle cx={map.x(rx)} cy={map.y(ilAt(rx) ?? 0)} r={4} fill={COLOR.hero} />
+      <circle cx={map.x(lx)} cy={map.y(ilAt(lx) ?? 0)} r={4} fill={COLOR.introduce} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'one-sided': OneSidedPreview,
+  'infinite-limits': InfinitePreview,
   'epsilon-delta': EpsilonDeltaPreview,
   'limit-vs-value': LimitPointPreview,
   intervals: ScanPreview,

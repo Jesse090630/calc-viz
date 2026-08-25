@@ -59,6 +59,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Give me any \u03b5. I can find a \u03b4.',
   },
   {
+    id: 'infinite-limits',
+    title: 'Infinite Limits',
+    question: 'Approach the wall. It never touches.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',
