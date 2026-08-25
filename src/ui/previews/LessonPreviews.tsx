@@ -29,6 +29,13 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
+  A as LVV_A,
+  HOLE_Y as LVV_HOLE,
+  clampToSide as lvvClamp,
+  sampleBranch as lvvSamples,
+  simplifiedAt as lvvAt,
+} from '../../math/limitVsValue';
+import {
   FUNCTIONS as OSL_FUNCTIONS,
   clampToSide as oslClamp,
   sampleBranch as oslSamples,
@@ -449,8 +456,33 @@ export function OneSidedPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑬ 极限 vs 函数值:孤立点上下跑,洞和虚线纹丝不动 ─────────────── */
+export function LimitPointPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.4, 2.6, 0.2, 5.2);
+  const t = pingPong(phase);
+  const pointY = 1.2 + t * 3.4;          // 孤立点上下走
+  const lx = lvvClamp('left', LVV_A - 0.5 + t * 0.45);
+  const rx = lvvClamp('right', LVV_A + 0.5 - t * 0.45);
+  return (
+    <Frame label="A line with a hole, and a separate point sliding up and down while the limit stays put">
+      {/* 极限那条线 —— 全程不动 */}
+      <line x1={map.x(-0.4)} y1={map.y(LVV_HOLE)} x2={map.x(2.6)} y2={map.y(LVV_HOLE)} stroke={COLOR.result} strokeWidth={1.2} strokeDasharray="5 4" opacity={0.55} />
+      <path d={path(lvvSamples('left', 30), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <path d={path(lvvSamples('right', 30), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      {/* 洞:永远空心 */}
+      <circle cx={map.x(LVV_A)} cy={map.y(LVV_HOLE)} r={5} fill="#0b1020" stroke={COLOR.curve} strokeWidth={2.2} />
+      {/* 孤立点:唯一在动的东西 */}
+      <line x1={map.x(LVV_A)} y1={map.y(LVV_HOLE)} x2={map.x(LVV_A)} y2={map.y(pointY)} stroke={COLOR.result} strokeWidth={1.2} strokeDasharray="3 3" opacity={0.5} />
+      <circle cx={map.x(LVV_A)} cy={map.y(pointY)} r={4.5} fill={COLOR.result} />
+      <circle cx={map.x(lx)} cy={map.y(lvvAt(lx))} r={3.5} fill={COLOR.introduce} />
+      <circle cx={map.x(rx)} cy={map.y(lvvAt(rx))} r={3.5} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'one-sided': OneSidedPreview,
+  'limit-vs-value': LimitPointPreview,
   intervals: ScanPreview,
   nondecreasing: NondecreasingPreview,
   nonincreasing: NonincreasingPreview,

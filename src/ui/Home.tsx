@@ -49,6 +49,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Two sides. One destination — or two.',
   },
   {
+    id: 'limit-vs-value',
+    title: 'Limit vs Function Value',
+    question: 'The point doesn\u2019t decide the limit.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',
