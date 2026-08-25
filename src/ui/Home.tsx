@@ -74,6 +74,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Geometry, then squeeze. In radians.',
   },
   {
+    id: 'secant-to-tangent',
+    title: 'From Secant to Tangent',
+    question: 'Let h shrink. Why derivatives need limits.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',

@@ -85,6 +85,14 @@ describe('⭐⭐ 无界:给任意界都能超过它', () => {
     expect(MIN_GAP).toBe(1e-5);
     // 十进位必须**精确**:10 ** -5 会给 0.0000099999999…
     for (let k = 0; k <= 8; k += 1) expect(decade(k)).toBe(Number('1e-' + k));
+    // ⚠️ 非整数的 k 也必须给出有限值 —— 首页预览用连续的 k 做动画。
+    for (const k of [0.5, 1.3, 2.75, 4.99]) {
+      expect(Number.isFinite(decade(k)), `decade(${k})`).toBe(true);
+      expect(decade(k)).toBeGreaterThan(0);
+    }
+    for (const side of ['left', 'right'] as const) {
+      for (const k of [0.5, 2.75]) expect(Number.isFinite(valueAt(decadeX(side, k))!)).toBe(true);
+    }
     expect(beats('right', 1e50)).toBeGreaterThan(MAX_DECADE);
   });
 

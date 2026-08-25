@@ -32,7 +32,11 @@ export const MAX_DECADE = 5;
  * 而这一节的整个语言就是十进位阶梯,差一点点就不再是"十倍十倍"。
  */
 export function decade(k: number): number {
-  return Number(`1e-${k}`);
+  // ⚠️ 非整数的 k 必须单独处理。`Number('1e-2.35')` 是 **NaN** ——
+  //    首页那张预览用连续的 k 做动画,于是一路把 NaN 传进了 SVG 的 cx,
+  //    浏览器每帧报一次 "Expected length, NaN"。(首页检查抓到的。)
+  //    整数档仍走字符串解析以保证精确;动画只需要连续,不需要精确。
+  return Number.isInteger(k) ? Number(`1e-${k}`) : 10 ** -k;
 }
 
 export function decadeX(side: Side, k: number): number {

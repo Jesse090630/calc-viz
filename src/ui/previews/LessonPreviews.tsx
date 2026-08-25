@@ -29,6 +29,12 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
+  f as lhF,
+  sampleCurve as lhCurve,
+  secantLine as lhSecant,
+  tangentLine as lhTangent,
+} from '../../math/letHShrink';
+import {
   sampleCos as slCos,
   sampleRatio as slRatioSamples,
 } from '../../math/specialLimit';
@@ -517,8 +523,10 @@ export function EpsilonDeltaPreview({ phase }: { phase: number }) {
       <rect x={map.x(ED_A - 1.3)} y={map.y(ED_L + eps)} width={map.x(ED_A + 1.3) - map.x(ED_A - 1.3)} height={Math.max(1, map.y(ED_L - eps) - map.y(ED_L + eps))} fill={COLOR.hero} opacity={0.16} />
       <rect x={map.x(ED_A - delta)} y={6} width={Math.max(1, map.x(ED_A + delta) - map.x(ED_A - delta))} height={H - 12} fill={COLOR.introduce} opacity={0.14} />
       <line x1={map.x(ED_A - 1.3)} y1={map.y(edF(ED_A - 1.3))} x2={map.x(ED_A + 1.3)} y2={map.y(edF(ED_A + 1.3))} stroke={COLOR.curve} strokeWidth={2} opacity={0.5} />
-      <line x1={map.x(ED_A - delta)} y1={map.y(edF(ED_A - delta))} x2={map.x(ED_A + delta)} y2={map.y(edF(ED_A + delta))} stroke={ok ? COLOR.result : COLOR.radius} strokeWidth={3.6} strokeLinecap="round" />
+      {/* ⚠️ 固定的目标点画在**动的东西之前**。首页那条"预览有没有在动"的检查
+          取的是最后一个几何元素;把静止的圆点放在最后会让整张卡被判成静止。 */}
       <circle cx={map.x(ED_A)} cy={map.y(ED_L)} r={4} fill={COLOR.hero} />
+      <line x1={map.x(ED_A - delta)} y1={map.y(edF(ED_A - delta))} x2={map.x(ED_A + delta)} y2={map.y(edF(ED_A + delta))} stroke={ok ? COLOR.result : COLOR.radius} strokeWidth={3.6} strokeLinecap="round" />
     </Frame>
   );
 }
@@ -582,14 +590,35 @@ export function SpecialLimitPreview({ phase }: { phase: number }) {
     <Frame label="cos x, sin x over x and the constant one closing together at zero">
       <line x1={map.x(-span)} y1={map.y(1)} x2={map.x(span)} y2={map.y(1)} stroke={COLOR.hero} strokeWidth={1.6} />
       <path d={path(slCos(-span, span, 70), map)} fill="none" stroke={COLOR.introduce} strokeWidth={1.6} />
-      <path d={path(slRatioSamples(-span, span, 70).map((p) => ({ x: p.x, y: p.y ?? 1 })), map)} fill="none" stroke={COLOR.result} strokeWidth={2.4} />
+      {/* ⚠️ 同上:固定的点先画,会动的比值曲线放最后。 */}
       <circle cx={map.x(0)} cy={map.y(1)} r={4} fill={COLOR.result} />
+      <path d={path(slRatioSamples(-span, span, 70).map((p) => ({ x: p.x, y: p.y ?? 1 })), map)} fill="none" stroke={COLOR.result} strokeWidth={2.4} />
+    </Frame>
+  );
+}
+
+/* ── ⑱ 割线→切线:Q 滑向 P,割线转成切线 ──────────────────────────── */
+export function ShrinkPreview({ phase }: { phase: number }) {
+  const map = makeMap(-1.6, 2.6, -1, 7);
+  const a = 1;
+  const h = 0.06 + holdAtEnds(1 - phase) * 1.7;
+  const sec = lhSecant(a, h);
+  const tan = lhTangent(a);
+  const near = h < 0.25;
+  return (
+    <Frame label="A moving point sliding toward a fixed one while the line through them settles">
+      <path d={path(lhCurve(-1.6, 2.6, 60), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <line x1={map.x(-1.6)} y1={map.y(tan.at(-1.6))} x2={map.x(2.6)} y2={map.y(tan.at(2.6))} stroke={COLOR.result} strokeWidth={1.2} strokeDasharray="5 4" opacity={0.55} />
+      {sec && <line x1={map.x(-1.6)} y1={map.y(sec.at(-1.6))} x2={map.x(2.6)} y2={map.y(sec.at(2.6))} stroke={near ? COLOR.result : COLOR.hero} strokeWidth={2.2} />}
+      <circle cx={map.x(a)} cy={map.y(lhF(a))} r={4.5} fill={COLOR.introduce} />
+      <circle cx={map.x(a + h)} cy={map.y(lhF(a + h))} r={4} fill={COLOR.hero} />
     </Frame>
   );
 }
 
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'one-sided': OneSidedPreview,
+  'secant-to-tangent': ShrinkPreview,
   'sin-over-x': SpecialLimitPreview,
   squeeze: SqueezePreview,
   'infinite-limits': InfinitePreview,

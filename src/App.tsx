@@ -31,6 +31,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'infinite-limits': lazy(() => import('./labs/infinite/page')),
   squeeze: lazy(() => import('./labs/squeeze/page')),
   'sin-over-x': lazy(() => import('./labs/specialLimit/page')),
+  'secant-to-tangent': lazy(() => import('./labs/letHShrink/page')),
   // 非递减与非递增共用同一个实验台组件,只差一个 direction。
   nondecreasing: lazy(() => import('./labs/weakMonotone/nondecreasingPage')),
   nonincreasing: lazy(() => import('./labs/weakMonotone/nonincreasingPage')),

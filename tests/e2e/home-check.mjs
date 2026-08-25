@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 17) errors.push(`[${name}] expected 17 cards, got ${cards}`);
+  if (cards !== 18) errors.push(`[${name}] expected 18 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -54,7 +54,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (body.includes(gone)) errors.push(`[${name}] old title "${gone}" is still on the home page`);
   }
   // 概念名都在
-  for (const want of ['Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
+  for (const want of ['From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
     if (!body.includes(want)) errors.push(`[${name}] concept name "${want}" is missing`);
   }
 
@@ -129,7 +129,7 @@ const NAMES = {
   functions: 'Definition of a Function', domain: 'Domain of a Function',
   increasing: 'Increasing Functions', symmetry: 'Even and Odd Functions',
   nondecreasing: 'Nondecreasing Functions', nonincreasing: 'Nonincreasing Functions',
-  intervals: 'Increasing and Decreasing Intervals', 'one-sided': 'One-Sided Limits', 'limit-vs-value': 'Limit vs Function Value', 'epsilon-delta': 'The Epsilon-Delta Definition', 'infinite-limits': 'Infinite Limits', squeeze: 'The Squeeze Theorem', 'sin-over-x': 'Why sin x / x \u2192 1',
+  intervals: 'Increasing and Decreasing Intervals', 'one-sided': 'One-Sided Limits', 'limit-vs-value': 'Limit vs Function Value', 'epsilon-delta': 'The Epsilon-Delta Definition', 'infinite-limits': 'Infinite Limits', squeeze: 'The Squeeze Theorem', 'sin-over-x': 'Why sin x / x \u2192 1', 'secant-to-tangent': 'From Secant to Tangent',
   periodic: 'Periodic Functions', secant: 'Average Rate of Change',
   floor: 'The Floor Function', ceiling: 'The Ceiling Function',
 };
