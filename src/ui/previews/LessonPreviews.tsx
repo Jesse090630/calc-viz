@@ -29,6 +29,13 @@ import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
 import {
+  A as ED_A,
+  L as ED_L,
+  f as edF,
+  isTrapped as edTrapped,
+  requiredDelta as edNeed,
+} from '../../math/epsilonDelta';
+import {
   A as LVV_A,
   HOLE_Y as LVV_HOLE,
   clampToSide as lvvClamp,
@@ -480,8 +487,27 @@ export function LimitPointPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑭ ε–δ:横带收紧,竖带跟着收 ─────────────────────────────────── */
+export function EpsilonDeltaPreview({ phase }: { phase: number }) {
+  const map = makeMap(ED_A - 1.3, ED_A + 1.3, ED_L - 3.2, ED_L + 3.2);
+  const t = pingPong(phase);
+  const eps = 0.35 + t * 2.2;           // ε 一张一合
+  const delta = edNeed(eps) * 0.92;     // δ 跟着,始终刚好够
+  const ok = edTrapped(eps, delta);
+  return (
+    <Frame label="A horizontal tolerance band tightening while a vertical band narrows to match">
+      <rect x={map.x(ED_A - 1.3)} y={map.y(ED_L + eps)} width={map.x(ED_A + 1.3) - map.x(ED_A - 1.3)} height={Math.max(1, map.y(ED_L - eps) - map.y(ED_L + eps))} fill={COLOR.hero} opacity={0.16} />
+      <rect x={map.x(ED_A - delta)} y={6} width={Math.max(1, map.x(ED_A + delta) - map.x(ED_A - delta))} height={H - 12} fill={COLOR.introduce} opacity={0.14} />
+      <line x1={map.x(ED_A - 1.3)} y1={map.y(edF(ED_A - 1.3))} x2={map.x(ED_A + 1.3)} y2={map.y(edF(ED_A + 1.3))} stroke={COLOR.curve} strokeWidth={2} opacity={0.5} />
+      <line x1={map.x(ED_A - delta)} y1={map.y(edF(ED_A - delta))} x2={map.x(ED_A + delta)} y2={map.y(edF(ED_A + delta))} stroke={ok ? COLOR.result : COLOR.radius} strokeWidth={3.6} strokeLinecap="round" />
+      <circle cx={map.x(ED_A)} cy={map.y(ED_L)} r={4} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'one-sided': OneSidedPreview,
+  'epsilon-delta': EpsilonDeltaPreview,
   'limit-vs-value': LimitPointPreview,
   intervals: ScanPreview,
   nondecreasing: NondecreasingPreview,

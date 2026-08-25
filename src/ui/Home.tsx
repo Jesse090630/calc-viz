@@ -54,6 +54,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'The point doesn\u2019t decide the limit.',
   },
   {
+    id: 'epsilon-delta',
+    title: 'The Epsilon-Delta Definition',
+    question: 'Give me any \u03b5. I can find a \u03b4.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',
