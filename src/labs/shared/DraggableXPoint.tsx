@@ -127,7 +127,13 @@ export function DraggableXPoint({
       aria-label={label}
       aria-valuemin={interval.a}
       aria-valuemax={interval.b}
-      aria-valuenow={Number(value.toFixed(2))}
+      /*
+        ⚠️ 精度要跟着**步长**走,不能写死两位。
+        步长 0.001 的课(单侧极限)里,`toFixed(2)` 会把 1.999 播报成 2.00 ——
+        读屏用户听到的是"我到 2 了",而那一节整节都在讲**到不了**。
+        (浏览器检查也是从这里读 x 的,写死两位会让它和屏幕上的读数对不上。)
+      */
+      aria-valuenow={Number(value.toFixed(Math.max(0, Math.ceil(-Math.log10(step)))))}
       aria-valuetext={describe(value)}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

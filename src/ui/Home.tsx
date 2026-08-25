@@ -44,6 +44,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'What “increasing” actually requires.',
   },
   {
+    id: 'one-sided',
+    title: 'One-Sided Limits',
+    question: 'Two sides. One destination — or two.',
+  },
+  {
     id: 'intervals',
     title: 'Increasing and Decreasing Intervals',
     question: 'Scan the curve and read it left to right.',

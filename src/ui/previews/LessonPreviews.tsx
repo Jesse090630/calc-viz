@@ -2,6 +2,7 @@
  * 首页每张卡里的**微型动画预览**。
  *
  * 每个都是一小张 SVG,循环播放该节课最核心的那个动作:
+ *   · One-Sided Limits         —— 两个点从两侧挤向目标线,停在两个不同高度
  *   · Increasing/Decreasing Intervals —— 扫描窗沿曲线滑过,亮的那段跟着换颜色
  *   · Nondecreasing Functions  —— 一对点沿**上行**阶梯滑动,走上平台时两点等高
  *   · Nonincreasing Functions  —— 同一段动作,换成**下行**阶梯
@@ -27,6 +28,13 @@ import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
 import { ceilByDefinition, floorByDefinition } from '../../math/rounding';
 import { MACHINE } from '../../math/functionRelation';
 import { FUNCTIONS as DOMAIN_FUNCTIONS } from '../../math/domain';
+import {
+  FUNCTIONS as OSL_FUNCTIONS,
+  clampToSide as oslClamp,
+  sampleBranch as oslSamples,
+  sidesAgree as oslAgree,
+  oneSidedLimit as oslLimit,
+} from '../../math/oneSidedLimits';
 import {
   CURVES as SCAN_CURVES,
   behaviourByStretches as scanBehaviour,
@@ -412,7 +420,37 @@ export function ScanPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑫ 单侧极限:两个点从两边挤向目标线 ───────────────────────────── */
+export function OneSidedPreview({ phase }: { phase: number }) {
+  // ⚠️ 用**不一致**的那条(分段)当预览:两条不同高度的虚线一眼就说明了这节课在讲什么。
+  //    一致的那条画出来只是一条普通抛物线,和别的卡片区分不开。
+  const fn = OSL_FUNCTIONS.jump;
+  const map = makeMap(0.3, 3.3, -0.4, 7);
+  const t = 1 - pingPong(phase); // 1 → 0 → 1:先靠近再退开
+  const lx = oslClamp(fn, 'left', fn.a - 0.05 - t * 1.4);
+  const rx = oslClamp(fn, 'right', fn.a + 0.05 + t * 1.2);
+  const ly = oslLimit(fn, 'left');
+  const ry = oslLimit(fn, 'right');
+  const agree = oslAgree(fn);
+  return (
+    <Frame label="Two points closing in on a target line from either side, landing at different heights">
+      {/* 两个目的地的高度 */}
+      {[[ly, COLOR.introduce], [ry, COLOR.hero]].map(([y, c], i) => (
+        <line key={i} x1={map.x(0.3)} y1={map.y(y as number)} x2={map.x(3.3)} y2={map.y(y as number)} stroke={c as string} strokeWidth={1} strokeDasharray="4 4" opacity={0.5} />
+      ))}
+      {/* 目标竖线 */}
+      <line x1={map.x(fn.a)} y1={6} x2={map.x(fn.a)} y2={H - 6} stroke={agree ? COLOR.result : COLOR.radius} strokeWidth={1.4} strokeDasharray="4 4" opacity={0.8} />
+      {/* 两支各画各的 —— 断点处的那道缝就是重点 */}
+      <path d={path(oslSamples(fn, 'left', 40), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <path d={path(oslSamples(fn, 'right', 40), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <circle cx={map.x(lx)} cy={map.y(fn.left.at(lx))} r={4} fill={COLOR.introduce} />
+      <circle cx={map.x(rx)} cy={map.y(fn.right.at(rx))} r={4} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  'one-sided': OneSidedPreview,
   intervals: ScanPreview,
   nondecreasing: NondecreasingPreview,
   nonincreasing: NonincreasingPreview,
