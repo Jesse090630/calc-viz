@@ -688,7 +688,11 @@ export function IndeterminatePreview({ phase }: { phase: number }) {
 /** 六条特殊极限共用的预览:主曲线与它的局部替身,随缩放合到一起。 */
 function ZoomPreview({ id, phase, label }: { id: Parameters<typeof sfForm>[0]; phase: number; label: string }) {
   const form = sfForm(id);
-  const level = holdAtEnds(phase) * 4.2;
+  // ⚠️ 用 pingPong 而不是 holdAtEnds:后者在两端各停留 30%,
+  //    而静止相位(reduced-motion 时固定的那个)恰好落在"停在最深处"那一段 ——
+  //    于是不动的用户看到的是**已经完全重合**的一条直线,那张卡什么也没说。
+  //    pingPong 让静止相位落在半路上,两条线还分得开。
+  const level = pingPong(phase) * 4.2;
   const span = sfSpan(id, level);
   const series = form.curves.map((c) => ({ c, pts: sfCurve(c.at, -span, span, 90) }));
   let lo = Infinity;

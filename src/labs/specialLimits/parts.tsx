@@ -492,7 +492,11 @@ export function ResultPanel({ id, children }: { id: FormId; children?: React.Rea
       className="rounded-2xl border p-4"
       style={{ borderColor: `${LAB.pass}59`, background: `${LAB.pass}0f` }}
     >
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">⑥ The answer</p>
+      {/* ⚠️ 没有因子面板的那两课(sin、exp)不该跳号:④ 之后直接是 ⑤,不是 ⑥。
+          截图上看见 exp 那一课写着 "④ THE ALGEBRA" 然后 "⑥ THE ANSWER"。 */}
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+        {form.factors.length > 0 ? '⑥' : '⑤'} The answer
+      </p>
       <p className="mt-2 text-base text-slate-100">
         <Tex src={form.limitTex} display />
       </p>

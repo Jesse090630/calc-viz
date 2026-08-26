@@ -120,7 +120,8 @@ export function SpecialLimitLab() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 pt-16 sm:px-6 lg:px-8">
       <header className="max-w-2xl">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Calculus · Interactive derivation</p>
+        {/* ⚠️ 和同一节的另外六课统一。这一课比它们早写,眉标一直是旧的那句。 */}
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Calculus · Special limits</p>
         <h1 className="mt-2 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">Why sin x / x → 1</h1>
         <p className="mt-3 text-base text-slate-400">
           0/0 → a numerical mystery → geometry → an inequality → the squeeze → 1.
