@@ -18,6 +18,11 @@
  */
 import { PREVIEWS } from './previews/LessonPreviews';
 import { usePreviewClock } from './previews/clock';
+// ⚠️ 六条特殊极限的**标题从目录里取**,不在这里再抄一遍。
+//    抄一遍的代价是:课页顶上写一个名字、目录卡上写另一个 —— 那是最招人烦的一种不一致,
+//    而且 `home-check.mjs` 正是在查这个。这里 import 的是纯数学模块,不是实验台组件,
+//    首页的体积纪律不受影响。
+import { formOf } from '../math/specialForms';
 
 interface LessonCard {
   readonly id: string;
@@ -69,9 +74,44 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Trapped from both sides.',
   },
   {
+    id: 'indeterminate',
+    title: 'Indeterminate Forms',
+    question: '0/0 tells you nothing yet.',
+  },
+  {
     id: 'sin-over-x',
-    title: 'Why sin x / x \u2192 1',
+    title: formOf('sin-over-x').title,
     question: 'Geometry, then squeeze. In radians.',
+  },
+  {
+    id: 'tan-over-x',
+    title: formOf('tan-over-x').title,
+    question: 'Sin and tan become indistinguishable.',
+  },
+  {
+    id: 'cos-over-x',
+    title: formOf('cos-over-x').title,
+    question: 'Cosine changes much more slowly.',
+  },
+  {
+    id: 'cos-over-x2',
+    title: formOf('cos-over-x2').title,
+    question: 'How fast does cosine flatten?',
+  },
+  {
+    id: 'exp-over-x',
+    title: formOf('exp-over-x').title,
+    question: 'The quotient is a secant slope.',
+  },
+  {
+    id: 'log-over-x',
+    title: formOf('log-over-x').title,
+    question: 'The exponential limit, reflected.',
+  },
+  {
+    id: 'special-limits',
+    title: 'Special Limit Explorer',
+    question: 'Can you turn it into one you know?',
   },
   {
     id: 'secant-to-tangent',

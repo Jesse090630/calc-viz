@@ -112,7 +112,33 @@ await page.screenshot({ path: join(OUT, 'sl-2-tight.png') });
   await page.screenshot({ path: join(OUT, 'sl-4-radians.png') });
 }
 
-/* 文字不出框、不重叠(两张图都查) */
+/*
+ * 文字不出框、不重叠。
+ * ⚠️ 必须**在好几个 θ 上**查,不能只查一个。
+ * 原来这一段跑在 reload 之后,θ 回到默认的 1 —— 于是一直没看见:
+ * θ 拖到 0.02 时 sin θ、θ、tan θ 三段全缩到 (1, 0) 附近,三个标签叠成一团。
+ * 那是一个**只在滑块另一端出现**的 bug,而滑块的另一端正是这一课要人去的地方。
+ * (是新写的 ratio-check 在 θ = 0.02 上抓到的。)
+ */
+for (const theta of [1.2, 0.6, 0.2, 0.05, 0.02]) {
+  await setTheta(theta);
+  await page.waitForTimeout(60);
+  const bad = await page.evaluate(() => {
+    const out = [];
+    for (const svg of document.querySelectorAll('main svg')) {
+      const boxes = [...svg.querySelectorAll('text')].map((t) => ({ t: t.textContent.trim(), b: t.getBBox() }));
+      for (let a = 0; a < boxes.length; a += 1) for (let c = a + 1; c < boxes.length; c += 1) {
+        const A = boxes[a].b, B = boxes[c].b;
+        const w = Math.min(A.x + A.width, B.x + B.width) - Math.max(A.x, B.x);
+        const h = Math.min(A.y + A.height, B.y + B.height) - Math.max(A.y, B.y);
+        if (w > 0 && h > 0 && w * h > Math.min(A.width * A.height, B.width * B.height) * 0.2) out.push(`collide at θ=${document.querySelector('[data-readout="theta"]')?.textContent?.trim()}: "${boxes[a].t}" × "${boxes[c].t}"`);
+      }
+    }
+    return out;
+  });
+  for (const b of [...new Set(bad)]) note(b);
+}
+
 {
   const bad = await page.evaluate(() => {
     const out = [];

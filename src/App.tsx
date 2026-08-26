@@ -32,6 +32,16 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   squeeze: lazy(() => import('./labs/squeeze/page')),
   'sin-over-x': lazy(() => import('./labs/specialLimit/page')),
   'secant-to-tangent': lazy(() => import('./labs/letHShrink/page')),
+  // 特殊极限一节。0/0 打头,六条极限,最后是变形练习 + 参考卡。
+  indeterminate: lazy(() => import('./labs/indeterminate/page')),
+  // ⚠️ 这五条共用**同一个** `RatioLab`,只差一个 form id ——
+  //    和非递减/非递增那两课是同一条路子。版式漂就五条一起漂,修一次全修。
+  'tan-over-x': lazy(() => import('./labs/specialLimits/tanPage')),
+  'cos-over-x': lazy(() => import('./labs/specialLimits/cosPage')),
+  'cos-over-x2': lazy(() => import('./labs/specialLimits/cos2Page')),
+  'exp-over-x': lazy(() => import('./labs/specialLimits/expPage')),
+  'log-over-x': lazy(() => import('./labs/specialLimits/logPage')),
+  'special-limits': lazy(() => import('./labs/explorer/page')),
   // 非递减与非递增共用同一个实验台组件,只差一个 direction。
   nondecreasing: lazy(() => import('./labs/weakMonotone/nondecreasingPage')),
   nonincreasing: lazy(() => import('./labs/weakMonotone/nonincreasingPage')),

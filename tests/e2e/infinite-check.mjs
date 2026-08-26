@@ -3,6 +3,7 @@
  * ⭐⭐ 最要紧的一条:页面上**任何地方都不许把 ∞ 当成一个值**。
  */
 import { chromium } from 'playwright-core';
+import { parseShown } from './parse-shown.mjs';
 import { mkdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
@@ -51,14 +52,13 @@ const magnitudes = [];
 for (let k = 0; k <= 5; k += 1) {
   const s = await read();
   samples += 1;
-  const parse = (t) => {
-    const m = /^(−?)(\d+(?:\.\d+)?)(?:×10(⁻?)(\d+))?$/.exec(t.replace(/−/g, '−'));
-    if (!m) return Number(t);
-    const base = Number(m[2]) * (m[1] ? -1 : 1);
-    return m[4] ? base * 10 ** (Number(m[4]) * (m[3] ? -1 : 1)) : base;
-  };
-  const ry = parse(s.ry);
-  const ly = parse(s.ly);
+  // ⚠️ 原来这里自带一个解析器,指数部分写的是 `(\d+)` —— 只认 **ASCII** 数字。
+  //    那是因为当时的显示层写出来就是半截的 `1×10⁻4`(负号是上标、数字不是)。
+  //    显示层改成真上标之后它整个失配,`Number()` 兜底返回 NaN,
+  //    而 NaN 让下面每一条比较**恒假** —— 检查会静静地永远通过。
+  //    现在统一走 `parse-shown.mjs`,它和 `showScientific` 互为逆。
+  const ry = parseShown(s.ry);
+  const ly = parseShown(s.ly);
   magnitudes.push(Math.abs(ry));
   if (!(ry > 0)) note(`k=${k}: right output is not positive (${s.ry})`);
   if (!(ly < 0)) note(`k=${k}: left output is not negative (${s.ly})`);

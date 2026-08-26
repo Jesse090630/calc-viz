@@ -87,6 +87,18 @@ import {
   valueBySegment as wmValue,
   type GraphId as WmGraphId,
 } from '../../math/weakMonotonicity';
+import {
+  CASES as IND_CASES,
+  sampleQuotient as indSamples,
+  sideValue as indSide,
+} from '../../math/indeterminate';
+import {
+  formOf as sfForm,
+  ratio as sfRatio,
+  sampleCurve as sfCurve,
+  spanAt as sfSpan,
+} from '../../math/specialForms';
+import { problemOf as pmProblem } from '../../math/patternMatch';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -112,6 +124,27 @@ function path(points: readonly { x: number; y: number }[], map: ReturnType<typeo
   return points
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${map.x(p.x).toFixed(1)} ${map.y(p.y).toFixed(1)}`)
     .join(' ');
+}
+
+/**
+ * 会**断笔**的折线:`y === null` 处抬笔。
+ * ⚠️ 洞不能连过去 —— 连过去就等于说那里有值,而这一节整节都在讲那里没有。
+ */
+function brokenPath(
+  points: readonly { x: number; y: number | null }[],
+  map: ReturnType<typeof makeMap>,
+): string {
+  let out = '';
+  let down = false;
+  for (const p of points) {
+    if (p.y === null || !Number.isFinite(p.y)) { down = false; continue; }
+    const py = map.y(p.y);
+    // 画到框外很远会让浏览器算超长路径;裁掉但保持断点语义
+    if (py < -H || py > H * 2) { down = false; continue; }
+    out += `${down ? 'L' : 'M'}${map.x(p.x).toFixed(1)} ${py.toFixed(1)} `;
+    down = true;
+  }
+  return out.trim();
 }
 
 function samples(at: (x: number) => number, from: number, to: number, n = 60) {
@@ -616,7 +649,137 @@ export function ShrinkPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ⑲ 不定式:四条曲线,四个不同的去处,同一个 0/0 ──────────────── */
+export function IndeterminatePreview({ phase }: { phase: number }) {
+  // 四格并排。每格一条曲线 + 一个正在滑向洞的点。
+  const t = pingPong(phase);
+  const cell = W / 4;
+  const spans: Readonly<Record<string, readonly [number, number]>> = {
+    same: [-0.5, 2.0], 'faster-top': [-1.9, 1.9],
+    'faster-bottom': [-5.5, 5.5], 'sign-jump': [-1.9, 1.9],
+  };
+  return (
+    <Frame label="Four quotients that all substitute to zero over zero and end up in four different places">
+      {IND_CASES.map((id, i) => {
+        const [lo, hi] = spans[id]!;
+        const map = {
+          x: (x: number) => i * cell + 8 + ((x + 2.2) / 4.4) * (cell - 16),
+          y: (y: number) => 10 + (1 - (y - lo) / (hi - lo)) * (H - 20),
+        };
+        const left = indSide(id, 'left');
+        const right = indSide(id, 'right');
+        // 点从 x = ±1.9 滑向洞,但**到不了** 0
+        const at = 1.9 * (1 - t) + 0.06 * t;
+        return (
+          <g key={id}>
+            {i > 0 && <line x1={i * cell} y1={6} x2={i * cell} y2={H - 6} stroke={COLOR.axis} strokeWidth={0.8} opacity={0.5} />}
+            <path d={brokenPath(indSamples(id, -2.2, 2.2, 120), map)} fill="none" stroke={COLOR.curve} strokeWidth={1.6} strokeLinecap="round" />
+            {left !== null && <circle cx={map.x(0)} cy={map.y(left)} r={3} fill="#0b1020" stroke={COLOR.hero} strokeWidth={1.6} />}
+            {right !== null && right !== left && <circle cx={map.x(0)} cy={map.y(right)} r={3} fill="#0b1020" stroke={COLOR.hero} strokeWidth={1.6} />}
+            <circle cx={map.x(-at)} cy={map.y(indSamples(id, -at, -at, 2)[0]!.y ?? 0)} r={2.6} fill={COLOR.introduce} />
+            <circle cx={map.x(at)} cy={map.y(indSamples(id, at, at, 2)[0]!.y ?? 0)} r={2.6} fill={COLOR.result} />
+          </g>
+        );
+      })}
+    </Frame>
+  );
+}
+
+/** 六条特殊极限共用的预览:主曲线与它的局部替身,随缩放合到一起。 */
+function ZoomPreview({ id, phase, label }: { id: Parameters<typeof sfForm>[0]; phase: number; label: string }) {
+  const form = sfForm(id);
+  const level = holdAtEnds(phase) * 4.2;
+  const span = sfSpan(id, level);
+  const series = form.curves.map((c) => ({ c, pts: sfCurve(c.at, -span, span, 90) }));
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const { pts } of series) {
+    for (const p of pts) {
+      if (p.y === null || !Number.isFinite(p.y)) continue;
+      lo = Math.min(lo, p.y); hi = Math.max(hi, p.y);
+    }
+  }
+  if (!Number.isFinite(lo) || hi - lo < 1e-12) { lo = -1; hi = 1; }
+  const pad = (hi - lo) * 0.16;
+  const map = makeMap(-span, span, lo - pad, hi + pad);
+  const ROLE: Record<string, string> = { subject: COLOR.result, companion: COLOR.hero, aside: COLOR.introduce };
+  return (
+    <Frame label={label}>
+      {series.filter(({ c }) => c.role !== 'subject').map(({ c, pts }) => (
+        <path key={c.key} d={brokenPath(pts, map)} fill="none" stroke={ROLE[c.role]}
+          strokeWidth={1.5} strokeDasharray={c.role === 'companion' ? '5 4' : undefined} strokeLinecap="round" opacity={0.85} />
+      ))}
+      {/* ⚠️ 会动的主曲线放**最后** —— 首页检查取每张图的最后一个几何元素判断"有没有动"。 */}
+      {series.filter(({ c }) => c.role === 'subject').map(({ c, pts }) => (
+        <path key={c.key} d={brokenPath(pts, map)} fill="none" stroke={ROLE[c.role]} strokeWidth={2.4} strokeLinecap="round" />
+      ))}
+    </Frame>
+  );
+}
+
+/* ── ⑳ tan x / x ─────────────────────────────────────────────────── */
+export function TanOverXPreview({ phase }: { phase: number }) {
+  return <ZoomPreview id="tan-over-x" phase={phase} label="Sine, the line y equals x, and tangent merging as the view narrows" />;
+}
+
+/* ── ㉑ (1 − cos x)/x ─────────────────────────────────────────────── */
+export function CosOverXPreview({ phase }: { phase: number }) {
+  return <ZoomPreview id="cos-over-x" phase={phase} label="A straight line beside the much flatter one minus cosine" />;
+}
+
+/* ── ㉒ (1 − cos x)/x² ────────────────────────────────────────────── */
+export function CosOverX2Preview({ phase }: { phase: number }) {
+  return <ZoomPreview id="cos-over-x2" phase={phase} label="One minus cosine settling onto the parabola x squared over two" />;
+}
+
+/* ── ㉓ (eˣ − 1)/x:割线转到斜率 1 ────────────────────────────────── */
+export function ExpOverXPreview({ phase }: { phase: number }) {
+  const map = makeMap(-1.4, 1.4, -0.1, 3.6);
+  const x = 1.25 * (1 - holdAtEnds(phase)) + 0.05;
+  const slope = sfRatio('exp-over-x', x) ?? 1;
+  return (
+    <Frame label="A secant line on the exponential curve settling as the second point slides to the first">
+      <path d={brokenPath(sfCurve((t) => Math.exp(t), -1.4, 1.4, 90), map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <circle cx={map.x(0)} cy={map.y(1)} r={4} fill={COLOR.introduce} />
+      <line x1={map.x(-1.4)} y1={map.y(1 + slope * -1.4)} x2={map.x(1.4)} y2={map.y(1 + slope * 1.4)} stroke={COLOR.hero} strokeWidth={2} />
+      <circle cx={map.x(x)} cy={map.y(Math.exp(x))} r={3.6} fill={COLOR.result} />
+    </Frame>
+  );
+}
+
+/* ── ㉔ ln(1+x)/x:沿 y = x 的镜像 ────────────────────────────────── */
+export function LogOverXPreview({ phase }: { phase: number }) {
+  return <ZoomPreview id="log-over-x" phase={phase} label="The logarithm curve and the line y equals x becoming one line near the origin" />;
+}
+
+/* ── ㉕ 变形练习:系数被提到外面,峰高跟着长 ─────────────────────── */
+export function ExplorerPreview({ phase }: { phase: number }) {
+  // sin(kx)/x 的峰高就是 k。k 从 1 长到 5 —— 那正是"系数提出来"这件事的图像。
+  const k = 1 + pingPong(phase) * 4;
+  const map = makeMap(-2.6, 2.6, -1.6, 5.6);
+  const pts = Array.from({ length: 160 }, (_, i) => {
+    const x = -2.6 + (5.2 * i) / 159;
+    return { x, y: Math.abs(x) < 1e-9 ? null : Math.sin(k * x) / x };
+  });
+  const target = pmProblem('sin-5x');
+  return (
+    <Frame label="A sine quotient whose peak height grows as its inner coefficient does">
+      <line x1={map.x(-2.6)} y1={map.y(0)} x2={map.x(2.6)} y2={map.y(0)} stroke={COLOR.axis} strokeWidth={1} />
+      <line x1={map.x(-2.6)} y1={map.y(5)} x2={map.x(2.6)} y2={map.y(5)} stroke={COLOR.hero} strokeWidth={1} strokeDasharray="5 4" opacity={0.6} />
+      <circle cx={map.x(0)} cy={map.y(target.at(1e-6) ?? 5)} r={3.4} fill="#0b1020" stroke={COLOR.hero} strokeWidth={1.6} />
+      <path d={brokenPath(pts, map)} fill="none" stroke={COLOR.result} strokeWidth={2.2} strokeLinecap="round" />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  indeterminate: IndeterminatePreview,
+  'tan-over-x': TanOverXPreview,
+  'cos-over-x': CosOverXPreview,
+  'cos-over-x2': CosOverX2Preview,
+  'exp-over-x': ExpOverXPreview,
+  'log-over-x': LogOverXPreview,
+  'special-limits': ExplorerPreview,
   'one-sided': OneSidedPreview,
   'secant-to-tangent': ShrinkPreview,
   'sin-over-x': SpecialLimitPreview,

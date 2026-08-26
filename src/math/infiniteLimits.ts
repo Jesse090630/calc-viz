@@ -13,7 +13,7 @@
  *
  * 禁止 1:这个文件不 import react / three / katex / zustand。
  */
-import { showNumber } from './format';
+import { showNumber, showScientific } from './format';
 
 /** 只用于比较,不用于"算不算 0"—— 见 `valueAt` 的注释。 */
 export const EPS = 1e-12;
@@ -153,14 +153,14 @@ export function viewHalfWidth(decade: number): number {
 export function showX(x: number): string {
   const abs = Math.abs(x);
   if (abs >= 0.01) return showNumber(x, 3);
-  return x.toExponential(0).replace('e-', '×10⁻').replace('e+', '×10');
+  return showScientific(x, 0);
 }
 
 export function showY(y: number | null): string {
   if (y === null) return 'undefined';
   const abs = Math.abs(y);
   if (abs < 1000) return showNumber(y, abs < 10 ? 2 : 0);
-  return (y < 0 ? '−' : '') + abs.toExponential(0).replace('e+', '×10');
+  return (y < 0 ? '−' : '') + showScientific(abs, 0);
 }
 
 /**

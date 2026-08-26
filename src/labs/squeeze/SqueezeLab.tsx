@@ -10,6 +10,7 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import { Tex } from '../shared/Tex';
+import { showScientific } from '../../math/format';
 import { LAB } from '../shared/theme';
 import { makeViewport, polylinePath, toSvgX, toSvgY } from '../shared/viewport';
 import {
@@ -99,7 +100,7 @@ export function SqueezeLab() {
               {toSvgY(V, r.g) - toSvgY(V, r.h) < 26 ? (
                 <text x={sx + (r.x > 0 ? -12 : 12)} y={toSvgY(V, L) - 12} fill={LAB.pass} fontSize={11} fontWeight={700}
                   textAnchor={r.x > 0 ? 'end' : 'start'} fontFamily="ui-monospace, monospace" stroke="#0b1020" strokeWidth={3.5} paintOrder="stroke">
-                  g = f = h to {r.gap.toExponential(0)}
+                  g = f = h to {showScientific(r.gap, 0)}
                 </text>
               ) : (
                 ([['h', r.h, LAB.x2], ['f', r.f, LAB.curve], ['g', r.g, LAB.x1]] as const).map(([name, value, color]) =>
@@ -135,7 +136,7 @@ export function SqueezeLab() {
               </div>
               <p className="mt-3 text-sm text-slate-200"><Tex src={CHAIN_TEX} /></p>
               <p className="mt-2 font-mono text-xs" style={{ color: LAB.pass }}>
-                room left: <span data-readout="gap">{r.gap.toExponential(2)}</span>
+                room left: <span data-readout="gap">{showScientific(r.gap, 2)}</span>
               </p>
             </section>
 

@@ -4,6 +4,7 @@
  *     而且空隙一路收窄。期望值在本文件里另写。
  */
 import { chromium } from 'playwright-core';
+import { parseShown } from './parse-shown.mjs';
 import { mkdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
@@ -42,17 +43,31 @@ page.on('pageerror', (e) => note(`pageerror: ${e.message}`));
 await page.goto(URL, { waitUntil: 'networkidle' });
 await page.waitForSelector('[data-panel="scan"]');
 
-const read = () => page.evaluate(() => {
-  const p = document.querySelector('[data-panel="scan"]');
-  const r = (w) => p?.querySelector(`[data-readout="${w}"]`)?.textContent?.trim();
+/**
+ * ⚠️ 解析在 **node 侧**做,不在 `page.evaluate` 里 ——
+ * evaluate 的函数体是序列化后丢进浏览器执行的,那里没有 `parseShown`。
+ * 所以 evaluate 只负责**取字符串**,读数转成数字这一步在外面完成。
+ */
+const read = async () => {
+  const raw = await page.evaluate(() => {
+    const p = document.querySelector('[data-panel="scan"]');
+    const r = (w) => p?.querySelector(`[data-readout="${w}"]`)?.textContent?.trim();
+    return {
+      x: r('x'), g: r('g'), f: r('f'), h: r('h'), gap: r('gap'),
+      ordered: p?.getAttribute('data-ordered'),
+      limit: document.querySelector('[data-panel="verdict"]')?.getAttribute('data-limit'),
+      trapped: document.querySelector('[data-panel="verdict"]')?.getAttribute('data-trapped'),
+      text: document.body.innerText,
+    };
+  });
   return {
-    x: Number(r('x')), g: Number(r('g')), f: Number(r('f')), h: Number(r('h')),
-    gap: Number(r('gap')), ordered: p?.getAttribute('data-ordered'),
-    limit: document.querySelector('[data-panel="verdict"]')?.getAttribute('data-limit'),
-    trapped: document.querySelector('[data-panel="verdict"]')?.getAttribute('data-trapped'),
-    text: document.body.innerText,
+    // ⚠️ 这些是**屏幕上的字符串**,里面可能带真上标(1.62×10⁻⁵)。
+    //    直接 Number() 会得到 NaN,而 NaN 参与的比较恒假 —— 断言会静静地永远通过。
+    ...raw,
+    x: parseShown(raw.x), g: parseShown(raw.g), f: parseShown(raw.f), h: parseShown(raw.h),
+    gap: parseShown(raw.gap),
   };
-});
+};
 
 let samples = 0;
 const gaps = [];
