@@ -244,30 +244,14 @@ const SECTIONS: readonly LessonSection[] = [
 ] as const;
 
 const LESSON_BY_ID = new Map(LESSONS.map((lesson) => [lesson.id, lesson]));
-const RECENT_LESSONS_KEY = 'calc-viz:recent-lessons';
-
-function readRecentLessons(): string[] {
-  try {
-    const stored = JSON.parse(window.localStorage.getItem(RECENT_LESSONS_KEY) ?? '[]');
-    if (!Array.isArray(stored)) return [];
-    return stored
-      .filter((id): id is string => typeof id === 'string' && LESSON_BY_ID.has(id))
-      .slice(0, 3);
-  } catch {
-    return [];
-  }
-}
-
 function LessonCardLink({
   lesson,
   active,
   onPreview,
-  onVisit,
 }: {
   readonly lesson: LessonCard;
   readonly active: boolean;
   readonly onPreview: (id: string) => void;
-  readonly onVisit: (id: string) => void;
 }) {
   return (
     <a
@@ -276,13 +260,11 @@ function LessonCardLink({
       href={`#/${lesson.id}`}
       onPointerEnter={() => onPreview(lesson.id)}
       onFocus={() => onPreview(lesson.id)}
-      onClick={() => onVisit(lesson.id)}
       className="lesson-index__link"
     >
       <span className="lesson-index__mark" aria-hidden="true" />
       <span className="lesson-index__copy">
         <strong>{lesson.title}</strong>
-        <small>{lesson.question}</small>
       </span>
       <span aria-hidden="true" className="lesson-index__arrow">→</span>
     </a>
@@ -295,7 +277,6 @@ export function Home() {
   const [query, setQuery] = useState('');
   const [activeSection, setActiveSection] = useState<SectionFilter>('all');
   const [previewLessonId, setPreviewLessonId] = useState(LESSONS[0]!.id);
-  const [recentLessonIds, setRecentLessonIds] = useState<string[]>(readRecentLessons);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -328,20 +309,6 @@ export function Home() {
     ?? visibleLessons[0]
     ?? LESSONS[0]!;
   const Preview = PREVIEWS[previewLesson.id]!;
-  const previewSection = SECTIONS.find((section) => section.lessonIds.includes(previewLesson.id));
-  const recentLessons = recentLessonIds
-    .map((id) => LESSON_BY_ID.get(id))
-    .filter((lesson): lesson is LessonCard => Boolean(lesson));
-
-  const recordVisit = (id: string) => {
-    const next = [id, ...recentLessonIds.filter((recentId) => recentId !== id)].slice(0, 3);
-    setRecentLessonIds(next);
-    try {
-      window.localStorage.setItem(RECENT_LESSONS_KEY, JSON.stringify(next));
-    } catch {
-      // Browsing in a locked-down context should never block navigation.
-    }
-  };
 
   return (
     <main data-home-shell className="home-shell">
@@ -349,7 +316,6 @@ export function Home() {
         <a href="#/" className="studio-wordmark" aria-label="Calc Viz home">
           <span>CALC</span><i>↘</i><span>VIZ</span>
         </a>
-        <p>Visual derivations for calculus</p>
         <label className="home-search">
           <span className="sr-only">Search lessons</span>
           <input
@@ -367,12 +333,7 @@ export function Home() {
       </header>
 
       <section className="home-thesis" aria-labelledby="home-title">
-        <p>Don’t memorize the last line.</p>
-        <h1 id="home-title">See where the{' '}<br /><em>formula comes from.</em></h1>
-        <div>
-          <span aria-hidden="true">↓</span>
-          <p>Point at a lesson. Its picture keeps the explanation moving before you open it.</p>
-        </div>
+        <h1 id="home-title">See where{' '}<br /><em>formulas come from.</em></h1>
       </section>
 
       <a
@@ -382,13 +343,10 @@ export function Home() {
         rel="noreferrer"
         aria-label="Open Jesse's Secret Formula PDF in a new tab"
       >
-        <span className="formula-download__index" aria-hidden="true">PDF / 01</span>
         <span className="formula-download__title">
-          <small>Keep the full reference sheet nearby</small>
           <strong>Jesse&apos;s Secret Formula</strong>
         </span>
-        <span className="formula-download__meta">8 pages · 636 KB</span>
-        <span className="formula-download__action">Open + download <b aria-hidden="true">↗</b></span>
+        <span className="formula-download__action">Open PDF <b aria-hidden="true">↗</b></span>
       </a>
 
       <nav className="home-filters" aria-label="Lesson categories">
@@ -397,7 +355,7 @@ export function Home() {
           aria-pressed={activeSection === 'all'}
           onClick={() => setActiveSection('all')}
         >
-          All <span>{LESSONS.length}</span>
+          All
         </button>
         {SECTIONS.map((section) => (
           <button
@@ -406,33 +364,18 @@ export function Home() {
             aria-pressed={activeSection === section.id}
             onClick={() => setActiveSection(section.id)}
           >
-            {section.label} <span>{section.lessonIds.length}</span>
+            {section.label}
           </button>
         ))}
-        <p aria-live="polite">{resultCount} {resultCount === 1 ? 'lesson' : 'lessons'}</p>
       </nav>
 
       {resultCount > 0 ? (
         <div className="home-workbench">
           <div className="lesson-index">
-            {recentLessons.length > 0 && activeSection === 'all' && !normalizedQuery ? (
-              <p className="home-recent" aria-label="Recently opened lessons">
-                Last opened
-                {recentLessons.map((lesson, index) => (
-                  <span key={lesson.id}>
-                    {index > 0 ? ' / ' : ' '}
-                    <a href={`#/${lesson.id}`} onClick={() => recordVisit(lesson.id)}>{lesson.title}</a>
-                  </span>
-                ))}
-              </p>
-            ) : null}
-
             {visibleSections.map((section) => (
               <section key={section.id} className="home-section" aria-labelledby={`section-${section.id}`}>
                 <div className="home-section__heading">
                   <h2 id={`section-${section.id}`}>{section.label}</h2>
-                  <p>{section.description}</p>
-                  <span>{section.lessons.length}</span>
                 </div>
                 <div className="home-list">
                   {section.lessons.map((lesson) => (
@@ -441,7 +384,6 @@ export function Home() {
                       lesson={lesson}
                       active={previewLesson.id === lesson.id}
                       onPreview={setPreviewLessonId}
-                      onVisit={recordVisit}
                     />
                   ))}
                 </div>
@@ -451,8 +393,7 @@ export function Home() {
 
           <div className="live-preview" aria-live="polite">
             <div className="live-preview__label">
-              <span>Live preview</span>
-              <span>{previewSection?.label}</span>
+              <span>Preview</span>
             </div>
             <div
               data-active-preview
@@ -463,28 +404,24 @@ export function Home() {
               <span className="live-preview__crosshair" aria-hidden="true" />
             </div>
             <div className="live-preview__copy">
-              <p>{previewLesson.question}</p>
               <h2>{previewLesson.title}</h2>
-              <a href={`#/${previewLesson.id}`} onClick={() => recordVisit(previewLesson.id)}>
-                Open this explanation <span aria-hidden="true">↗</span>
+              <a href={`#/${previewLesson.id}`}>
+                Open <span aria-hidden="true">↗</span>
               </a>
             </div>
           </div>
         </div>
       ) : (
         <div className="home-empty" role="status">
-          <span aria-hidden="true">∅</span>
-          <h2>No matching lesson</h2>
-          <p>Try a concept such as “limit,” “function,” or “series.”</p>
+          <h2>No results</h2>
           <button type="button" onClick={() => { setQuery(''); setActiveSection('all'); }}>
-            Clear search
+            Clear
           </button>
         </div>
       )}
 
       <footer className="studio-footer">
-        <p>Built to explain the step between the picture and the formula.</p>
-        <a href="#/notation">Notation guide ↗</a>
+        <a href="#/notation">Notation ↗</a>
       </footer>
 
       {/* 静止时明说一句,免得有人以为预览坏了。会动的时候这里什么都不该有。 */}

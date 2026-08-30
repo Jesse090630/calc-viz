@@ -116,7 +116,8 @@ body {
 
 .studio-header {
   display: grid;
-  grid-template-columns: auto 1fr minmax(16rem, 22rem);
+  grid-template-columns: auto minmax(16rem, 22rem);
+  justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
   min-height: 3.8rem;
@@ -142,13 +143,6 @@ body {
   font-size: 1.2rem;
   font-style: normal;
   letter-spacing: 0;
-}
-
-.studio-header > p {
-  margin: 0;
-  color: #53635f;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.67rem;
 }
 
 .home-search {
@@ -188,22 +182,7 @@ body {
 }
 
 .home-thesis {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.32fr);
-  gap: 3rem;
-  align-items: end;
-  padding: clamp(5.5rem, 10vw, 9rem) 0 clamp(4rem, 8vw, 7rem);
-}
-
-.home-thesis > p {
-  grid-column: 1 / -1;
-  margin: 0 0 -1.3rem;
-  color: var(--studio-cobalt);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.68rem;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: clamp(5rem, 9vw, 8rem) 0 clamp(3.5rem, 7vw, 6rem);
 }
 
 .home-thesis h1 {
@@ -224,9 +203,9 @@ body {
 
 .formula-download {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: clamp(1rem, 3vw, 3rem);
+  gap: 1.5rem;
   margin-bottom: 3rem;
   padding: 1rem 1.2rem;
   border: 2px solid var(--studio-ink);
@@ -242,37 +221,19 @@ body {
   transform: translate(4px, 4px);
 }
 
-.formula-download__index,
-.formula-download__meta,
 .formula-download__action {
   font: 750 0.68rem/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.formula-download__index {
-  padding-right: 1.2rem;
-  border-right: 1.5px solid var(--studio-ink);
-  color: var(--studio-cobalt);
-}
-
 .formula-download__title {
-  display: grid;
-  gap: 0.15rem;
   min-width: 0;
-}
-
-.formula-download__title small {
-  font: 650 0.68rem/1.3 'Avenir Next', 'Segoe UI', sans-serif;
 }
 
 .formula-download__title strong {
   font: 900 clamp(1.35rem, 2.4vw, 2.25rem)/0.95 'DIN Alternate', 'Arial Narrow', sans-serif;
   letter-spacing: -0.035em;
-}
-
-.formula-download__meta {
-  color: #52625e;
 }
 
 .formula-download__action {
@@ -285,28 +246,6 @@ body {
 .formula-download__action b {
   color: var(--studio-orange);
   font-size: 1rem;
-}
-
-.home-thesis > div {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.9rem;
-  align-items: start;
-  padding-bottom: 0.3rem;
-  border-top: 1px solid var(--studio-ink);
-}
-
-.home-thesis > div > span {
-  color: var(--studio-cobalt);
-  font-size: 2.2rem;
-  line-height: 1;
-}
-
-.home-thesis > div > p {
-  margin: 0.8rem 0 0;
-  color: #40534f;
-  font-size: 0.85rem;
-  line-height: 1.55;
 }
 
 .home-filters {
@@ -334,13 +273,6 @@ body {
   cursor: pointer;
 }
 
-.home-filters button span {
-  margin-left: 0.35rem;
-  color: #65746f;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.61rem;
-}
-
 .home-filters button:hover {
   background: #dfe7e3;
 }
@@ -348,17 +280,6 @@ body {
 .home-filters button[aria-pressed='true'] {
   background: var(--studio-ink);
   color: white;
-}
-
-.home-filters button[aria-pressed='true'] span {
-  color: var(--studio-yellow);
-}
-
-.home-filters > p {
-  margin: auto 0.8rem auto auto;
-  color: #61716c;
-  font: 0.62rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  white-space: nowrap;
 }
 
 .home-workbench {
@@ -369,30 +290,11 @@ body {
   padding-top: 4rem;
 }
 
-.home-recent {
-  margin: 0 0 3.5rem;
-  padding: 0 0 0.8rem;
-  border-bottom: 1px solid var(--studio-line);
-  color: #60706b;
-  font: 0.64rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
-  text-transform: uppercase;
-}
-
-.home-recent a {
-  color: var(--studio-ink);
-  text-decoration-color: var(--studio-orange);
-  text-underline-offset: 3px;
-}
-
 .home-section + .home-section {
   margin-top: 4.5rem;
 }
 
 .home-section__heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.4rem 1rem;
-  align-items: end;
   margin-bottom: 0.6rem;
   padding-bottom: 0.7rem;
   border-bottom: 2px solid var(--studio-ink);
@@ -404,22 +306,6 @@ body {
   font-size: 1.45rem;
   font-weight: 900;
   letter-spacing: -0.035em;
-}
-
-.home-section__heading p {
-  grid-row: 2;
-  margin: 0;
-  color: #5e6f6a;
-  font-size: 0.72rem;
-  line-height: 1.45;
-}
-
-.home-section__heading > span {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  align-self: center;
-  color: var(--studio-cobalt);
-  font: 800 2rem/1 'DIN Alternate', 'Arial Narrow', sans-serif;
 }
 
 .home-list {
@@ -456,19 +342,8 @@ body {
   display: block;
   overflow: hidden;
   color: var(--studio-ink);
-  font: 700 0.96rem/1.25 'Avenir Next', 'Segoe UI', sans-serif;
+  font: 700 1rem/1.25 'Avenir Next', 'Segoe UI', sans-serif;
   letter-spacing: -0.025em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lesson-index__copy small {
-  display: block;
-  overflow: hidden;
-  margin-top: 0.25rem;
-  color: #63736e;
-  font-size: 0.69rem;
-  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -505,8 +380,6 @@ body {
 }
 
 .live-preview__label {
-  display: flex;
-  justify-content: space-between;
   padding-bottom: 0.55rem;
   border-bottom: 1px solid var(--studio-ink);
   color: #5d6c68;
@@ -515,7 +388,7 @@ body {
   text-transform: uppercase;
 }
 
-.live-preview__label span:first-child {
+.live-preview__label span {
   color: var(--studio-orange);
   font-weight: 800;
 }
@@ -572,14 +445,6 @@ body {
   padding: 2.1rem 0 0;
 }
 
-.live-preview__copy > p {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--studio-orange);
-  font: 700 0.65rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-  text-transform: uppercase;
-}
-
 .live-preview__copy h2 {
   margin: 0;
   font-family: 'DIN Alternate', 'Arial Narrow', sans-serif;
@@ -617,18 +482,9 @@ body {
   box-shadow: 8px 8px 0 var(--studio-cobalt);
 }
 
-.home-empty > span {
-  font: 3rem/1 Georgia, serif;
-}
-
 .home-empty h2 {
-  margin: 0.8rem 0 0;
+  margin: 0;
   font: 900 2rem/1 'DIN Alternate', 'Arial Narrow', sans-serif;
-}
-
-.home-empty p {
-  margin: 0.7rem 0 0;
-  color: #435550;
 }
 
 .home-empty button {
@@ -644,17 +500,13 @@ body {
 
 .studio-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 2rem;
   margin-top: 7rem;
   padding-top: 1rem;
   border-top: 2px solid var(--studio-ink);
   color: #53645f;
   font: 0.7rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.studio-footer p {
-  margin: 0;
 }
 
 .studio-footer a {
@@ -721,10 +573,6 @@ body {
     padding-bottom: 0.8rem;
   }
 
-  .studio-header > p {
-    margin-bottom: 0.7rem;
-  }
-
   .studio-header .home-search {
     grid-column: auto;
     max-width: none;
@@ -735,42 +583,21 @@ body {
     padding: 5rem 0 3.5rem;
   }
 
-  .home-thesis > p {
-    margin-bottom: 1.2rem;
-  }
-
   .home-thesis h1 {
     font-size: clamp(3.35rem, 17vw, 5.2rem);
     line-height: 0.82;
   }
 
-  .home-thesis > div {
-    margin-top: 2.8rem;
-  }
-
   .formula-download {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.8rem 1rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.8rem;
     margin-bottom: 2.5rem;
     padding: 0.9rem;
     box-shadow: 5px 5px 0 var(--studio-ink);
   }
 
-  .formula-download__index {
-    grid-row: 1 / 3;
-    align-self: stretch;
-    display: flex;
-    align-items: center;
-    padding-right: 0.9rem;
-    writing-mode: vertical-rl;
-  }
-
   .formula-download__title strong {
     font-size: 1.8rem;
-  }
-
-  .formula-download__meta {
-    display: none;
   }
 
   .formula-download__action {
@@ -789,10 +616,6 @@ body {
 
   .home-filters button {
     padding: 0.75rem 0.8rem;
-  }
-
-  .home-filters > p {
-    display: none;
   }
 
   .home-workbench {
@@ -824,19 +647,13 @@ body {
     margin-top: 3.4rem;
   }
 
-  .lesson-index__copy strong,
-  .lesson-index__copy small {
+  .lesson-index__copy strong {
     white-space: normal;
   }
 
   .studio-footer {
     display: block;
     margin-top: 5rem;
-  }
-
-  .studio-footer a {
-    display: inline-block;
-    margin-top: 0.6rem;
   }
 
   aside {
