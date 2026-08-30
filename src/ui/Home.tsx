@@ -1,9 +1,8 @@
 /**
  * UI — 首页
  *
- * 一页目录,别的什么都没有:没有大标题、没有导语、没有页脚说明。
- * Jesse 要的是「干净、清楚、整齐」—— 那些话读第二次就是噪音,
- * 而卡片本身(动画 + 概念名)已经把这站是干什么的说完了。
+ * Concept Atlas:保留干净、清楚、整齐的目录原则,但给三十节课加上搜索、
+ * 分类与最近访问。顶部只写功能性信息,不放第二次访问就变成噪音的营销文案。
  *
  * ⚠️ 卡片标题一律用**概念本身的名字**(Increasing Functions / Domain of a Function),
  * 不用「Every Pair Must Work」这类金句。金句适合当课内的钩子,
@@ -408,14 +407,14 @@ export function Home() {
       </nav>
 
       {recentLessons.length > 0 && activeSection === 'all' && !normalizedQuery ? (
-        <aside className="home-recent" aria-label="Recently opened lessons">
+        <div className="home-recent" aria-label="Recently opened lessons">
           <span>Continue</span>
           {recentLessons.map((lesson) => (
             <a key={lesson.id} href={`#/${lesson.id}`} onClick={() => recordVisit(lesson.id)}>
               {lesson.title}<span aria-hidden="true">→</span>
             </a>
           ))}
-        </aside>
+        </div>
       ) : null}
 
       <div className="home-sections">

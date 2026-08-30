@@ -910,3 +910,24 @@ Jesse 的八页手写公式表进站,两个视图共用 `math/formulaCatalog.ts`
 - `public/` 里的资源必须走 `import.meta.env.BASE_URL` ——
   写死 `/xxx.pdf` 在本地正常、在 GitHub Pages 的 `/calc-viz/` 子路径下 404,
   是那种只在部署之后才暴露的错。
+
+## 2026-08-29 · Concept Atlas 视觉外壳
+
+首页从三十张同权重卡片改成四组可浏览的 Concept Atlas,新增课程搜索、分类筛选、
+`/` 搜索快捷键和浏览器本地的最近访问记录。数学、场景、公式数据与预览 SVG 均未改动。
+
+- 视觉语言沿用现有语义色:青色表示输入/探索,金色表示关键动作,绿色表示结果。
+- 标志性元素只放在首页顶部的 concept → motion → understanding 轨迹;
+  卡片其余动效保持克制,并完整遵守 `prefers-reduced-motion`。
+- 全站 Type board、Formula deck 与返回入口统一成同一套半透明胶囊外壳;
+  手机端保留可读文字,不再只显示两个含义不明的符号。
+- 没有引入字体、动画或 UI 依赖;首页仍不加载 Three.js,预览仍是原来的轻量 SVG。
+
+验证:美化前后均为 59 个测试文件、1421 项测试全绿;生产构建通过;
+`home-check.mjs` 验证 30 张卡、30 个入口、桌面/手机排版、预览动画与 console 零错误;
+另用真实浏览器点击验证搜索 `series` 只剩 Geometric Series、Limits 筛选为 14 项、
+返回首页后 Continue 正确记录最近课程。
+
+⚠️ 这一轮与公式表工作并行时,公式表提交 `4854e96` 把当时已经在工作树里的
+`Home.tsx` 功能结构一并纳入了提交。没有重写该提交;视觉 CSS、移动端修正与本日志
+在后续独立提交中收口。
