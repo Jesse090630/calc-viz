@@ -375,6 +375,22 @@ export function Home() {
         </div>
       </section>
 
+      <a
+        className="formula-download"
+        href="./Jesse'sSecretFormula.pdf"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Open Jesse's Secret Formula PDF in a new tab"
+      >
+        <span className="formula-download__index" aria-hidden="true">PDF / 01</span>
+        <span className="formula-download__title">
+          <small>Keep the full reference sheet nearby</small>
+          <strong>Jesse&apos;s Secret Formula</strong>
+        </span>
+        <span className="formula-download__meta">8 pages · 636 KB</span>
+        <span className="formula-download__action">Open + download <b aria-hidden="true">↗</b></span>
+      </a>
+
       <nav className="home-filters" aria-label="Lesson categories">
         <button
           type="button"

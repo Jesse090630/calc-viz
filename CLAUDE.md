@@ -871,3 +871,14 @@ live preview。鼠标或键盘指到哪一课,动画窗口就切到哪一课;数
 
 验证:58 个测试文件、1413 项测试全绿;生产构建通过;`home-check.mjs` 改为验证
 共享 live preview 的贴合、切换与动画,并继续覆盖 29 个入口、桌面/手机和 console。
+
+## 2026-08-29 · Jesse's Secret Formula PDF 下载入口
+
+将 Jesse 提供的八页 PDF 原封不动放进 `public/Jesse'sSecretFormula.pdf`,首页加入醒目的
+黄色下载横条。链接在新标签页直接打开浏览器 PDF 阅读器,阅读器自带下载按钮;没有新增
+公式页面、解析 PDF 内容,也没有修改 `src/math/`、课程或动画场景。
+
+源文件、仓库文件与生产构建文件的 SHA-256 都是
+`b7e5c77310dd3fcc30aa5b613b1538db1bb202065bcab4de6a3c23803957d0d6`。
+验证:58 个测试文件、1413 项测试全绿;生产构建通过;桌面与 390px 手机视口无横向溢出,
+入口可见,PDF 直链返回 `200 application/pdf` 和 651109 bytes,console 零错误。
