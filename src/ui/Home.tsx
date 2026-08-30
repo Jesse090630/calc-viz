@@ -260,32 +260,31 @@ function readRecentLessons(): string[] {
 
 function LessonCardLink({
   lesson,
-  phase,
+  active,
+  onPreview,
   onVisit,
 }: {
   readonly lesson: LessonCard;
-  readonly phase: number;
+  readonly active: boolean;
+  readonly onPreview: (id: string) => void;
   readonly onVisit: (id: string) => void;
 }) {
-  const Preview = PREVIEWS[lesson.id]!;
   return (
     <a
       data-lesson-card={lesson.id}
+      data-active={active || undefined}
       href={`#/${lesson.id}`}
+      onPointerEnter={() => onPreview(lesson.id)}
+      onFocus={() => onPreview(lesson.id)}
       onClick={() => onVisit(lesson.id)}
-      className="lesson-card"
+      className="lesson-index__link"
     >
-      <div className="lesson-card__visual">
-        <Preview phase={phase} />
-        <span aria-hidden="true" className="lesson-card__scan" />
-      </div>
-      <div className="lesson-card__body">
-        <div className="lesson-card__title-row">
-          <h2>{lesson.title}</h2>
-          <span aria-hidden="true" className="lesson-card__arrow">↗</span>
-        </div>
-        <p>{lesson.question}</p>
-      </div>
+      <span className="lesson-index__mark" aria-hidden="true" />
+      <span className="lesson-index__copy">
+        <strong>{lesson.title}</strong>
+        <small>{lesson.question}</small>
+      </span>
+      <span aria-hidden="true" className="lesson-index__arrow">→</span>
     </a>
   );
 }
@@ -295,6 +294,7 @@ export function Home() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [activeSection, setActiveSection] = useState<SectionFilter>('all');
+  const [previewLessonId, setPreviewLessonId] = useState(LESSONS[0]!.id);
   const [recentLessonIds, setRecentLessonIds] = useState<string[]>(readRecentLessons);
 
   useEffect(() => {
@@ -323,6 +323,12 @@ export function Home() {
   })).filter((section) => section.lessons.length > 0);
 
   const resultCount = visibleSections.reduce((total, section) => total + section.lessons.length, 0);
+  const visibleLessons = visibleSections.flatMap((section) => section.lessons);
+  const previewLesson = visibleLessons.find((lesson) => lesson.id === previewLessonId)
+    ?? visibleLessons[0]
+    ?? LESSONS[0]!;
+  const Preview = PREVIEWS[previewLesson.id]!;
+  const previewSection = SECTIONS.find((section) => section.lessonIds.includes(previewLesson.id));
   const recentLessons = recentLessonIds
     .map((id) => LESSON_BY_ID.get(id))
     .filter((lesson): lesson is LessonCard => Boolean(lesson));
@@ -339,27 +345,13 @@ export function Home() {
 
   return (
     <main data-home-shell className="home-shell">
-      <header className="home-masthead">
-        <div className="home-masthead__identity">
-          <div className="home-wordmark" aria-label="Calc Viz">
-            <span>CALC</span><i aria-hidden="true">/</i><span>VIZ</span>
-          </div>
-          <p>Interactive calculus</p>
-        </div>
-
-        <div className="home-masthead__title">
-          <p className="home-eyebrow">Explore the collection</p>
-          <h1>Concept atlas</h1>
-          <p>{LESSONS.length} visual lessons, organized by the idea you want to understand.</p>
-        </div>
-
-        <div className="home-proof-path" aria-hidden="true">
-          <span>concept</span><i /><span>motion</span><i /><span>understanding</span>
-        </div>
-
+      <header className="studio-header">
+        <a href="#/" className="studio-wordmark" aria-label="Calc Viz home">
+          <span>CALC</span><i>↘</i><span>VIZ</span>
+        </a>
+        <p>Visual derivations for calculus</p>
         <label className="home-search">
           <span className="sr-only">Search lessons</span>
-          <span aria-hidden="true" className="home-search__icon">⌕</span>
           <input
             ref={searchRef}
             type="search"
@@ -368,11 +360,20 @@ export function Home() {
             onKeyDown={(event) => {
               if (event.key === 'Escape') setQuery('');
             }}
-            placeholder="Find a concept or question…"
+            placeholder="Find a concept…"
           />
           <kbd aria-label="Press slash to search">/</kbd>
         </label>
       </header>
+
+      <section className="home-thesis" aria-labelledby="home-title">
+        <p>Don’t memorize the last line.</p>
+        <h1 id="home-title">See where the{' '}<br /><em>formula comes from.</em></h1>
+        <div>
+          <span aria-hidden="true">↓</span>
+          <p>Point at a lesson. Its picture keeps the explanation moving before you open it.</p>
+        </div>
+      </section>
 
       <nav className="home-filters" aria-label="Lesson categories">
         <button
@@ -395,42 +396,66 @@ export function Home() {
         <p aria-live="polite">{resultCount} {resultCount === 1 ? 'lesson' : 'lessons'}</p>
       </nav>
 
-      {recentLessons.length > 0 && activeSection === 'all' && !normalizedQuery ? (
-        <div className="home-recent" aria-label="Recently opened lessons">
-          <span>Continue</span>
-          {recentLessons.map((lesson) => (
-            <a key={lesson.id} href={`#/${lesson.id}`} onClick={() => recordVisit(lesson.id)}>
-              {lesson.title}<span aria-hidden="true">→</span>
-            </a>
-          ))}
+      {resultCount > 0 ? (
+        <div className="home-workbench">
+          <div className="lesson-index">
+            {recentLessons.length > 0 && activeSection === 'all' && !normalizedQuery ? (
+              <p className="home-recent" aria-label="Recently opened lessons">
+                Last opened
+                {recentLessons.map((lesson, index) => (
+                  <span key={lesson.id}>
+                    {index > 0 ? ' / ' : ' '}
+                    <a href={`#/${lesson.id}`} onClick={() => recordVisit(lesson.id)}>{lesson.title}</a>
+                  </span>
+                ))}
+              </p>
+            ) : null}
+
+            {visibleSections.map((section) => (
+              <section key={section.id} className="home-section" aria-labelledby={`section-${section.id}`}>
+                <div className="home-section__heading">
+                  <h2 id={`section-${section.id}`}>{section.label}</h2>
+                  <p>{section.description}</p>
+                  <span>{section.lessons.length}</span>
+                </div>
+                <div className="home-list">
+                  {section.lessons.map((lesson) => (
+                    <LessonCardLink
+                      key={lesson.id}
+                      lesson={lesson}
+                      active={previewLesson.id === lesson.id}
+                      onPreview={setPreviewLessonId}
+                      onVisit={recordVisit}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <div className="live-preview" aria-live="polite">
+            <div className="live-preview__label">
+              <span>Live preview</span>
+              <span>{previewSection?.label}</span>
+            </div>
+            <div
+              data-active-preview
+              data-preview-for={previewLesson.id}
+              className="live-preview__frame"
+            >
+              <Preview phase={phase} />
+              <span className="live-preview__crosshair" aria-hidden="true" />
+            </div>
+            <div className="live-preview__copy">
+              <p>{previewLesson.question}</p>
+              <h2>{previewLesson.title}</h2>
+              <a href={`#/${previewLesson.id}`} onClick={() => recordVisit(previewLesson.id)}>
+                Open this explanation <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
         </div>
-      ) : null}
-
-      <div className="home-sections">
-        {visibleSections.map((section) => (
-          <section key={section.id} className="home-section" aria-labelledby={`section-${section.id}`}>
-            <div className="home-section__heading">
-              <div>
-                <p>{section.lessons.length} {section.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
-                <h2 id={`section-${section.id}`}>{section.label}</h2>
-              </div>
-              <p>{section.description}</p>
-            </div>
-            <div className="home-grid">
-              {section.lessons.map((lesson) => (
-                <LessonCardLink
-                  key={lesson.id}
-                  lesson={lesson}
-                  phase={phase}
-                  onVisit={recordVisit}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      {resultCount === 0 ? (
+      ) : (
         <div className="home-empty" role="status">
           <span aria-hidden="true">∅</span>
           <h2>No matching lesson</h2>
@@ -439,7 +464,12 @@ export function Home() {
             Clear search
           </button>
         </div>
-      ) : null}
+      )}
+
+      <footer className="studio-footer">
+        <p>Built to explain the step between the picture and the formula.</p>
+        <a href="#/notation">Notation guide ↗</a>
+      </footer>
 
       {/* 静止时明说一句,免得有人以为预览坏了。会动的时候这里什么都不该有。 */}
       {!animated && (

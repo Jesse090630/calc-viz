@@ -64,18 +64,30 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (hit > 0) errors.push(`[${name}] the corner tag "${chip}" is still rendered`);
   }
 
-  // ⚠️ 预览盒子与 SVG 的实际绘制区必须**严丝合缝**。
-  //    比例对不上时 `meet` 会让 SVG 缩在盒子中间,上下或左右露出黑边 —— 看着像图没加载完。
+  // 目录是文字索引,当前指到的那一课在右侧共用一块 live preview。
+  // 预览盒子与 SVG 的实际绘制区必须严丝合缝,不能露出 letterbox。
   const fit = await page.evaluate(() => {
-    return [...document.querySelectorAll('[data-lesson-card] svg')].map((svg) => {
+    return [...document.querySelectorAll('[data-active-preview] svg')].map((svg) => {
       const box = svg.parentElement.getBoundingClientRect();
       const drawn = svg.getBoundingClientRect();
-      return { dw: Math.abs(box.width - drawn.width), dh: Math.abs(box.height - drawn.height), w: box.width, h: box.height };
+      const style = getComputedStyle(svg.parentElement);
+      const innerWidth = box.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+      const innerHeight = box.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth);
+      return { dw: Math.abs(innerWidth - drawn.width), dh: Math.abs(innerHeight - drawn.height), w: innerWidth, h: innerHeight };
     });
   });
   fit.forEach((f, i) => {
     if (f.dw > 1.5 || f.dh > 1.5) errors.push(`[${name}] preview ${i + 1} letterboxes: box ${f.w.toFixed(0)}×${f.h.toFixed(0)}, drawn off by ${f.dw.toFixed(1)}×${f.dh.toFixed(1)}`);
   });
+  if (fit.length !== 1) errors.push(`[${name}] expected one shared live preview, got ${fit.length}`);
+
+  // 鼠标或键盘指到哪一课,共享预览就必须跟到哪一课。
+  for (const id of ['domain', 'epsilon-delta', 'geometric-series']) {
+    await page.locator(`[data-lesson-card="${id}"]`).hover();
+    const shown = await page.locator('[data-active-preview]').getAttribute('data-preview-for');
+    if (shown !== id) errors.push(`[${name}] pointing at ${id} left the live preview on ${shown}`);
+  }
+  await page.evaluate(() => scrollTo(0, 0));
 
   // 卡片同排等高 —— "整齐"这件事要量,不能靠感觉
   const rows = await page.evaluate(() => {
@@ -123,15 +135,11 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     .join(';')`;
   const frames = [];
   for (let i = 0; i < 6; i += 1) {
-    frames.push(await page.evaluate(`[...document.querySelectorAll('[data-lesson-card] svg')].map((svg) => ${SIGNATURE})`));
+    frames.push(await page.evaluate(`(() => { const svg = document.querySelector('[data-active-preview] svg'); return svg ? ${SIGNATURE} : ''; })()`));
     await page.waitForTimeout(700);
   }
-  // ⚠️ 防空跑:签名不能全是空的,否则"每张卡都在动"是在比较空字符串
-  const empty = frames[0].filter((sig) => sig.length < 10).length;
-  if (empty > 0) errors.push(`[${name}] ${empty} previews produced an empty signature — the movement check would be vacuous`);
-  for (let c = 0; c < cards; c += 1) {
-    if (new Set(frames.map((f) => f[c])).size < 2) errors.push(`[${name}] preview ${c + 1} never moves across a full loop`);
-  }
+  if (frames[0].length < 10) errors.push(`[${name}] live preview produced an empty signature — the movement check would be vacuous`);
+  if (new Set(frames).size < 2) errors.push(`[${name}] live preview never moves across a full loop`);
 
   await page.evaluate(() => scrollTo(0, 0));
   await page.screenshot({ path: join(OUT, `00-home-${name}.png`), fullPage: true });
