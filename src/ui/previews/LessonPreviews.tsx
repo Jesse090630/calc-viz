@@ -931,7 +931,40 @@ export function SeriesPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㉚ 公式表:一叠卡片轮流亮起来 ─────────────────────────────────── */
+export function FormulaSheetPreview({ phase }: { phase: number }) {
+  const ROWS = 4;
+  const COLS = 5;
+  const lit = Math.floor(pingPong(phase) * ROWS * COLS);
+  const map = makeMap(0, COLS, 0, ROWS);
+  const cells = [];
+  for (let r = 0; r < ROWS; r += 1) {
+    for (let c = 0; c < COLS; c += 1) {
+      const i = r * COLS + c;
+      const on = i === lit;
+      cells.push(
+        <rect
+          key={i}
+          x={map.x(c) + 2} y={map.y(ROWS - r) + 2}
+          width={map.x(1) - map.x(0) - 4} height={map.y(0) - map.y(1) - 4}
+          rx={2}
+          fill={on ? COLOR.hero : COLOR.axis}
+          fillOpacity={on ? 0.55 : 0.16}
+          stroke={on ? COLOR.hero : COLOR.axis}
+          strokeWidth={on ? 1.2 : 0.6}
+        />,
+      );
+    }
+  }
+  return (
+    <Frame label="A grid of formula cards with one lighting up at a time">
+      {cells}
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  formulas: FormulaSheetPreview,
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
   'binomial-theorem': BinomialPreview,

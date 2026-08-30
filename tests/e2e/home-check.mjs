@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 29) errors.push(`[${name}] expected 29 cards, got ${cards}`);
+  if (cards !== 30) errors.push(`[${name}] expected 30 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -54,7 +54,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (body.includes(gone)) errors.push(`[${name}] old title "${gone}" is still on the home page`);
   }
   // 概念名都在
-  for (const want of ['Difference of Squares', 'Difference of Cubes', 'The Binomial Theorem', 'Geometric Series', 'Indeterminate Forms', 'Special Limit Explorer', 'Why tan x / x \u2192 1', 'Why (1 \u2212 cos x) / x \u2192 0', 'Why (1 \u2212 cos x) / x\u00b2 \u2192 \u00bd', 'Why (e\u02e3 \u2212 1) / x \u2192 1', 'Why ln(1 + x) / x \u2192 1', 'From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
+  for (const want of ['Formula Sheet', 'Difference of Squares', 'Difference of Cubes', 'The Binomial Theorem', 'Geometric Series', 'Indeterminate Forms', 'Special Limit Explorer', 'Why tan x / x \u2192 1', 'Why (1 \u2212 cos x) / x \u2192 0', 'Why (1 \u2212 cos x) / x\u00b2 \u2192 \u00bd', 'Why (e\u02e3 \u2212 1) / x \u2192 1', 'Why ln(1 + x) / x \u2192 1', 'From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
     if (!body.includes(want)) errors.push(`[${name}] concept name "${want}" is missing`);
   }
 
@@ -143,6 +143,7 @@ const NAMES = {
   functions: 'Definition of a Function', domain: 'Domain of a Function',
   increasing: 'Increasing Functions', symmetry: 'Even and Odd Functions',
   nondecreasing: 'Nondecreasing Functions', nonincreasing: 'Nonincreasing Functions',
+  formulas: 'Formula Sheet',
   'difference-of-squares': 'Difference of Squares',
   'difference-of-cubes': 'Difference of Cubes',
   'binomial-theorem': 'The Binomial Theorem',

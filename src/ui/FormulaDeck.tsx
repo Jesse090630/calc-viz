@@ -7,22 +7,28 @@
  * 现在与 NotationBoard 形态一致:受控的 open/onClose/returnFocusRef,
  * App 只在 open 为真时才 lazy 挂载它。
  */
-import katex from 'katex';
 import { useMemo, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalAccessibility } from '../accessibility/useModalAccessibility';
 import {
   FORMULA_CATEGORIES,
+  FORMULA_SECTIONS,
   searchFormulaSections,
   type FormulaCategory,
 } from '../math/formulaCatalog';
+import { texHtml, warmTexCache } from './texCache';
+
+/**
+ * ⚠️⚠️ 这一行必须留在**模块顶层**。
+ * 弹窗第一次渲染要跑两百多条 KaTeX,接近一秒;在有动画的页面上,这次低优先级渲染
+ * 会被 rAF 的高优先级更新反复重启,于是**永远开不出来**(实测:首页 8 秒无果,
+ * 静态页 749 ms 就开)。把渲染搬到 chunk 求值时,它就不在 React 的渲染路径上了。
+ * 细节见 `texCache.ts` 开头。
+ */
+warmTexCache(FORMULA_SECTIONS.flatMap((section) => section.entries.flatMap((entry) => entry.tex)));
 
 function Tex({ src }: { src: string }) {
-  const html = useMemo(
-    () => katex.renderToString(src, { throwOnError: false, displayMode: false }),
-    [src],
-  );
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  return <span dangerouslySetInnerHTML={{ __html: texHtml(src) }} />;
 }
 
 export function FormulaDeck({
@@ -74,7 +80,12 @@ export function FormulaDeck({
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-400">Jesse’s AP Calculus cards</p>
                   <h1 id="formula-deck-title" className="mt-1 text-2xl font-bold tracking-tight">Formula deck</h1>
-                  <p className="mt-1 text-xs text-slate-400">All five pages, searchable · amber tags open the “why”.</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    All eight pages, searchable · amber tags open the “why”.{' '}
+                    <a href="#/formulas" onClick={close} className="text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 hover:text-cyan-200">
+                      Read the whole sheet →
+                    </a>
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -141,7 +152,7 @@ export function FormulaDeck({
                       </div>
                       <div className="grid gap-2 sm:grid-cols-2">
                         {section.entries.map((item) => (
-                          <article key={item.id} className="group relative overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70 p-3.5">
+                          <article key={item.id} className="group relative min-w-0 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70 p-3.5">
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="text-xs font-semibold text-slate-300">{item.title}</h3>
                               <span className="shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[9px] text-slate-500">p.{item.sourcePage}</span>

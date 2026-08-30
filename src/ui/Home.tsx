@@ -16,6 +16,7 @@
  *
  * 推导链目录仍然封存在 `ConceptGrid.tsx`(八条链的路由都还在,只是首页不列)。
  */
+import { useEffect, useRef, useState } from 'react';
 import { PREVIEWS } from './previews/LessonPreviews';
 import { usePreviewClock } from './previews/clock';
 // ⚠️ 六条特殊极限的**标题从目录里取**,不在这里再抄一遍。
@@ -114,6 +115,11 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Can you turn it into one you know?',
   },
   {
+    id: 'formulas',
+    title: 'Formula Sheet',
+    question: 'All of it, page by page. Printable.',
+  },
+  {
     id: 'difference-of-squares',
     title: 'Difference of Squares',
     question: 'Cut the square and slide the pieces.',
@@ -180,43 +186,276 @@ const LESSONS: readonly LessonCard[] = [
   },
 ];
 
+type SectionId = 'foundations' | 'limits' | 'algebra' | 'reference';
+type SectionFilter = 'all' | SectionId;
+
+interface LessonSection {
+  readonly id: SectionId;
+  readonly label: string;
+  readonly description: string;
+  readonly lessonIds: readonly string[];
+}
+
+const SECTIONS: readonly LessonSection[] = [
+  {
+    id: 'foundations',
+    label: 'Functions & behavior',
+    description: 'Read a function before you calculate with it.',
+    lessonIds: [
+      'functions',
+      'domain',
+      'increasing',
+      'intervals',
+      'nondecreasing',
+      'nonincreasing',
+      'symmetry',
+      'periodic',
+      'secant',
+      'floor',
+      'ceiling',
+    ],
+  },
+  {
+    id: 'limits',
+    label: 'Limits & change',
+    description: 'Approach, compare, and make the destination unavoidable.',
+    lessonIds: [
+      'one-sided',
+      'limit-vs-value',
+      'epsilon-delta',
+      'infinite-limits',
+      'squeeze',
+      'indeterminate',
+      'sin-over-x',
+      'tan-over-x',
+      'cos-over-x',
+      'cos-over-x2',
+      'exp-over-x',
+      'log-over-x',
+      'special-limits',
+      'secant-to-tangent',
+    ],
+  },
+  {
+    id: 'algebra',
+    label: 'Algebra patterns',
+    description: 'Cut, rearrange, and watch an identity explain itself.',
+    lessonIds: [
+      'difference-of-squares',
+      'difference-of-cubes',
+      'binomial-theorem',
+      'geometric-series',
+    ],
+  },
+  {
+    id: 'reference',
+    label: 'Reference',
+    description: 'Keep the full language of calculus within reach.',
+    lessonIds: ['formulas'],
+  },
+] as const;
+
+const LESSON_BY_ID = new Map(LESSONS.map((lesson) => [lesson.id, lesson]));
+const RECENT_LESSONS_KEY = 'calc-viz:recent-lessons';
+
+function readRecentLessons(): string[] {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(RECENT_LESSONS_KEY) ?? '[]');
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .filter((id): id is string => typeof id === 'string' && LESSON_BY_ID.has(id))
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
+function LessonCardLink({
+  lesson,
+  phase,
+  onVisit,
+}: {
+  readonly lesson: LessonCard;
+  readonly phase: number;
+  readonly onVisit: (id: string) => void;
+}) {
+  const Preview = PREVIEWS[lesson.id]!;
+  return (
+    <a
+      data-lesson-card={lesson.id}
+      href={`#/${lesson.id}`}
+      onClick={() => onVisit(lesson.id)}
+      className="lesson-card"
+    >
+      <div className="lesson-card__visual">
+        <Preview phase={phase} />
+        <span aria-hidden="true" className="lesson-card__scan" />
+      </div>
+      <div className="lesson-card__body">
+        <div className="lesson-card__title-row">
+          <h2>{lesson.title}</h2>
+          <span aria-hidden="true" className="lesson-card__arrow">↗</span>
+        </div>
+        <p>{lesson.question}</p>
+      </div>
+    </a>
+  );
+}
+
 export function Home() {
   const { phase, animated } = usePreviewClock();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('');
+  const [activeSection, setActiveSection] = useState<SectionFilter>('all');
+  const [recentLessonIds, setRecentLessonIds] = useState<string[]>(readRecentLessons);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, textarea, select, [contenteditable="true"]')) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleSections = SECTIONS.map((section) => ({
+    ...section,
+    lessons: section.lessonIds
+      .map((id) => LESSON_BY_ID.get(id))
+      .filter((lesson): lesson is LessonCard => Boolean(lesson))
+      .filter((lesson) => {
+        if (activeSection !== 'all' && section.id !== activeSection) return false;
+        if (!normalizedQuery) return true;
+        return `${lesson.title} ${lesson.question}`.toLocaleLowerCase().includes(normalizedQuery);
+      }),
+  })).filter((section) => section.lessons.length > 0);
+
+  const resultCount = visibleSections.reduce((total, section) => total + section.lessons.length, 0);
+  const recentLessons = recentLessonIds
+    .map((id) => LESSON_BY_ID.get(id))
+    .filter((lesson): lesson is LessonCard => Boolean(lesson));
+
+  const recordVisit = (id: string) => {
+    const next = [id, ...recentLessonIds.filter((recentId) => recentId !== id)].slice(0, 3);
+    setRecentLessonIds(next);
+    try {
+      window.localStorage.setItem(RECENT_LESSONS_KEY, JSON.stringify(next));
+    } catch {
+      // Browsing in a locked-down context should never block navigation.
+    }
+  };
 
   return (
-    <main className="mx-auto max-w-6xl px-5 pb-20 pt-20 sm:px-6 lg:px-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {LESSONS.map((lesson) => {
-          const Preview = PREVIEWS[lesson.id]!;
-          return (
-            <a
-              key={lesson.id}
-              data-lesson-card={lesson.id}
-              href={`#/${lesson.id}`}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/50 transition hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-slate-900 hover:shadow-xl hover:shadow-black/25"
-            >
-              {/*
-                ⚠️ 用**宽高比**而不是写死的高度。
-                预览 SVG 是 400×116 且 `meet`,盒子比例一旦对不上就上下留黑边,
-                看着像图没加载完 —— 列数一变(手机一列 / 平板两列 / 桌面三列)就会发生。
-              */}
-              <div className="aspect-[400/116] border-b border-slate-700 bg-slate-950/70">
-                <Preview phase={phase} />
-              </div>
-              <div className="flex flex-1 flex-col p-4 sm:p-5">
-                <h2 className="text-lg font-semibold leading-snug text-slate-100 group-hover:text-amber-300">
-                  {lesson.title}
-                </h2>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{lesson.question}</p>
-              </div>
+    <main data-home-shell className="home-shell">
+      <header className="home-masthead">
+        <div className="home-masthead__identity">
+          <div className="home-wordmark" aria-label="Calc Viz">
+            <span>CALC</span><i aria-hidden="true">/</i><span>VIZ</span>
+          </div>
+          <p>Interactive calculus</p>
+        </div>
+
+        <div className="home-masthead__title">
+          <p className="home-eyebrow">Explore the collection</p>
+          <h1>Concept atlas</h1>
+          <p>Thirty visual lessons, organized by the idea you want to understand.</p>
+        </div>
+
+        <div className="home-proof-path" aria-hidden="true">
+          <span>concept</span><i /><span>motion</span><i /><span>understanding</span>
+        </div>
+
+        <label className="home-search">
+          <span className="sr-only">Search lessons</span>
+          <span aria-hidden="true" className="home-search__icon">⌕</span>
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setQuery('');
+            }}
+            placeholder="Find a concept or question…"
+          />
+          <kbd aria-label="Press slash to search">/</kbd>
+        </label>
+      </header>
+
+      <nav className="home-filters" aria-label="Lesson categories">
+        <button
+          type="button"
+          aria-pressed={activeSection === 'all'}
+          onClick={() => setActiveSection('all')}
+        >
+          All <span>{LESSONS.length}</span>
+        </button>
+        {SECTIONS.map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            aria-pressed={activeSection === section.id}
+            onClick={() => setActiveSection(section.id)}
+          >
+            {section.label} <span>{section.lessonIds.length}</span>
+          </button>
+        ))}
+        <p aria-live="polite">{resultCount} {resultCount === 1 ? 'lesson' : 'lessons'}</p>
+      </nav>
+
+      {recentLessons.length > 0 && activeSection === 'all' && !normalizedQuery ? (
+        <aside className="home-recent" aria-label="Recently opened lessons">
+          <span>Continue</span>
+          {recentLessons.map((lesson) => (
+            <a key={lesson.id} href={`#/${lesson.id}`} onClick={() => recordVisit(lesson.id)}>
+              {lesson.title}<span aria-hidden="true">→</span>
             </a>
-          );
-        })}
+          ))}
+        </aside>
+      ) : null}
+
+      <div className="home-sections">
+        {visibleSections.map((section) => (
+          <section key={section.id} className="home-section" aria-labelledby={`section-${section.id}`}>
+            <div className="home-section__heading">
+              <div>
+                <p>{section.lessons.length} {section.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
+                <h2 id={`section-${section.id}`}>{section.label}</h2>
+              </div>
+              <p>{section.description}</p>
+            </div>
+            <div className="home-grid">
+              {section.lessons.map((lesson) => (
+                <LessonCardLink
+                  key={lesson.id}
+                  lesson={lesson}
+                  phase={phase}
+                  onVisit={recordVisit}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
+
+      {resultCount === 0 ? (
+        <div className="home-empty" role="status">
+          <span aria-hidden="true">∅</span>
+          <h2>No matching lesson</h2>
+          <p>Try a concept such as “limit,” “function,” or “series.”</p>
+          <button type="button" onClick={() => { setQuery(''); setActiveSection('all'); }}>
+            Clear search
+          </button>
+        </div>
+      ) : null}
 
       {/* 静止时明说一句,免得有人以为预览坏了。会动的时候这里什么都不该有。 */}
       {!animated && (
-        <p className="mt-8 text-[11px] text-slate-600">Previews paused — reduced motion is on.</p>
+        <p className="home-motion-note">Previews paused — reduced motion is on.</p>
       )}
     </main>
   );
@@ -227,9 +466,9 @@ export function BackLink() {
   return (
     <a
       href="#/"
-      className="absolute left-4 top-4 z-10 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300 backdrop-blur hover:text-white"
+      className="back-link absolute left-4 top-4 z-10"
     >
-      ← all topics
+      <span aria-hidden="true">←</span> all topics
     </a>
   );
 }

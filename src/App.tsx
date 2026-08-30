@@ -47,6 +47,9 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'difference-of-cubes': lazy(() => import('./labs/algebra/cubesPage')),
   'binomial-theorem': lazy(() => import('./labs/algebra/binomialPage')),
   'geometric-series': lazy(() => import('./labs/algebra/seriesPage')),
+  // 整张公式表。⚠️ 它不是工具条上那块 Formula Deck 的替代品 ——
+  //    Deck 用来**找**一条(搜索),这一页用来**通读**或打印。同一份数据两个视图。
+  formulas: lazy(() => import('./ui/formulaSheetPage')),
   // 非递减与非递增共用同一个实验台组件,只差一个 direction。
   nondecreasing: lazy(() => import('./labs/weakMonotone/nondecreasingPage')),
   nonincreasing: lazy(() => import('./labs/weakMonotone/nonincreasingPage')),
