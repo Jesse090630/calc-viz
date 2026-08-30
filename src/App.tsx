@@ -42,6 +42,11 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'exp-over-x': lazy(() => import('./labs/specialLimits/expPage')),
   'log-over-x': lazy(() => import('./labs/specialLimits/logPage')),
   'special-limits': lazy(() => import('./labs/explorer/page')),
+  // 代数一节:剪拼 / 切块 / 数方案 / 移位相减。四课共用 `labs/algebra/shared.tsx`。
+  'difference-of-squares': lazy(() => import('./labs/algebra/squaresPage')),
+  'difference-of-cubes': lazy(() => import('./labs/algebra/cubesPage')),
+  'binomial-theorem': lazy(() => import('./labs/algebra/binomialPage')),
+  'geometric-series': lazy(() => import('./labs/algebra/seriesPage')),
   // 非递减与非递增共用同一个实验台组件,只差一个 direction。
   nondecreasing: lazy(() => import('./labs/weakMonotone/nondecreasingPage')),
   nonincreasing: lazy(() => import('./labs/weakMonotone/nonincreasingPage')),

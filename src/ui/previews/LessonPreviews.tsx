@@ -99,6 +99,21 @@ import {
   spanAt as sfSpan,
 } from '../../math/specialForms';
 import { problemOf as pmProblem } from '../../math/patternMatch';
+import {
+  cornersAt as dsCorners,
+  pieces as dsPieces,
+  targetRect as dsTarget,
+} from '../../math/differenceOfSquares';
+import {
+  boxes as dcBoxes,
+  drawOrder as dcOrder,
+  facesOf as dcFaces,
+} from '../../math/differenceOfCubes';
+import { pascalTriangle as bnTriangle } from '../../math/binomial';
+import {
+  blocks as gsBlocks,
+  partialSums as gsSums,
+} from '../../math/geometricSeries';
 import { COLOR } from '../../scene/theme';
 
 /**
@@ -776,7 +791,151 @@ export function ExplorerPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㉖ 平方差:两块碎片滑成一个长方形 ─────────────────────────────── */
+export function SquaresPreview({ phase }: { phase: number }) {
+  const A = 7;
+  const B = 3;
+  const t = holdAtEnds(phase);
+  const target = dsTarget(A, B);
+  const span = Math.max(A, target.w) + 1;
+  const map = makeMap(-0.5, span - 0.5, -0.5, span - 0.5);
+  const [top, side] = dsPieces(A, B);
+  const poly = (piece: typeof top) =>
+    dsCorners(piece, t).map((c) => `${map.x(c.x).toFixed(1)},${map.y(c.y).toFixed(1)}`).join(' ');
+  return (
+    <Frame label="An L-shaped region cut in two and slid into a single rectangle">
+      {/* 目标长方形的轮廓一直在,拼好时两块正好填满它 */}
+      <rect
+        x={map.x(0)} y={map.y(target.h)}
+        width={map.x(target.w) - map.x(0)} height={map.y(0) - map.y(target.h)}
+        fill="none" stroke={COLOR.result} strokeWidth={1} strokeDasharray="4 4" opacity={0.45}
+      />
+      <polygon points={poly(top)} fill={COLOR.introduce} fillOpacity={0.3} stroke={COLOR.introduce} strokeWidth={1.4} />
+      {/* ⚠️ 会动的那块放最后 */}
+      <polygon points={poly(side)} fill={COLOR.result} fillOpacity={0.32} stroke={COLOR.result} strokeWidth={1.4} />
+    </Frame>
+  );
+}
+
+/* ── ㉗ 立方差:三块长方体拆开又合上 ───────────────────────────────── */
+export function CubesPreview({ phase }: { phase: number }) {
+  const A = 4;
+  const B = 2;
+  const explode = holdAtEnds(phase);
+  const scale = 13;
+  const list = dcOrder(dcBoxes(A, B));
+  const all = list.flatMap((box) => dcFaces(box, explode, scale).flatMap((f) => f.points));
+  const xs = all.map((p) => p.x);
+  const ys = all.map((p) => p.y);
+  const map = makeMap(Math.min(...xs) - 4, Math.max(...xs) + 4, -Math.max(...ys) - 4, -Math.min(...ys) + 4);
+  const COLOURS = [COLOR.introduce, COLOR.hero, COLOR.result];
+  return (
+    <Frame label="A cube shell splitting into three boxes and coming back together">
+      {list.map((box, i) => (
+        <g key={box.id}>
+          {dcFaces(box, explode, scale).map((face, j) => (
+            <polygon
+              key={face.kind}
+              points={face.points.map((p) => `${map.x(p.x).toFixed(1)},${map.y(-p.y).toFixed(1)}`).join(' ')}
+              fill={COLOURS[i] ?? COLOR.curve}
+              fillOpacity={0.18 + j * 0.1}
+              stroke={COLOURS[i] ?? COLOR.curve}
+              strokeWidth={1}
+            />
+          ))}
+        </g>
+      ))}
+    </Frame>
+  );
+}
+
+/* ── ㉘ 二项式:帕斯卡三角逐行点亮 ─────────────────────────────────── */
+export function BinomialPreview({ phase }: { phase: number }) {
+  const ROWS = 6;
+  const triangle = bnTriangle(ROWS);
+  const active = Math.min(ROWS - 1, Math.floor(pingPong(phase) * ROWS));
+  const map = makeMap(-3.4, 3.4, -0.6, ROWS - 0.4);
+  return (
+    <Frame label="Pascal's triangle with one row lighting up at a time">
+      {triangle.map((row, r) =>
+        row.map((value, k) => {
+          const x = k - r / 2;
+          const y = ROWS - 1 - r;
+          const on = r === active;
+          return (
+            <text
+              key={`${r}-${k}`}
+              x={map.x(x)} y={map.y(y) + 3}
+              fill={on ? COLOR.hero : COLOR.axis}
+              fontSize={on ? 11 : 9}
+              fontWeight={on ? 700 : 400}
+              textAnchor="middle"
+              fontFamily="ui-monospace, monospace"
+            >
+              {value}
+            </text>
+          );
+        }),
+      )}
+      {/* 会动的高亮条放最后 */}
+      <line
+        x1={map.x(-3.2)} y1={map.y(ROWS - 1 - active)} x2={map.x(3.2)} y2={map.y(ROWS - 1 - active)}
+        stroke={COLOR.hero} strokeWidth={1} opacity={0.25}
+      />
+    </Frame>
+  );
+}
+
+/* ── ㉙ 等比级数:一段段填进固定的槽,越填越慢 ─────────────────────── */
+export function SeriesPreview({ phase }: { phase: number }) {
+  const A = 0.5;
+  const R = 0.5;
+  const COUNT = 9;
+  const shown = 1 + pingPong(phase) * (COUNT - 1);
+  const sums = gsSums(A, R, COUNT);
+  const list = gsBlocks(A, R, COUNT);
+  const map = makeMap(0, 1, 0, 1);
+  // ⚠️ `map.y` 是**翻转**的:数学 y 越大,屏幕 y 越小。
+  //    第一版写成 `y0 = map.y(0.72)` 当下边、`y1 = map.y(0.28)` 当上边,
+  //    于是 `height = y0 - y1` 是**负数**,浏览器每帧报一次
+  //    "<rect> attribute height: A negative value is not valid"。
+  //    名字写清楚哪个是上、哪个是下,这类错就不容易再犯。
+  const yTop = map.y(0.72);
+  const yBottom = map.y(0.28);
+  return (
+    <Frame label="Shrinking blocks filling a fixed strip and never quite reaching the end">
+      <rect x={map.x(0)} y={yTop} width={map.x(1) - map.x(0)} height={yBottom - yTop}
+        fill="none" stroke={COLOR.axis} strokeWidth={1} />
+      {list.map((block, i) => {
+        if (i >= shown) return null;
+        const before = i === 0 ? 0 : sums[i - 1]!;
+        const visible = Math.min(1, shown - i);
+        return (
+          <rect
+            key={i}
+            x={map.x(before)} y={yTop}
+            width={(map.x(before + block.value * visible) - map.x(before))}
+            height={yBottom - yTop}
+            fill={i % 2 === 0 ? COLOR.hero : COLOR.introduce}
+            fillOpacity={0.75}
+          />
+        );
+      })}
+      {/* 会动的那条前沿线放最后 */}
+      <line
+        x1={map.x(sums[Math.max(0, Math.floor(shown) - 1)] ?? 0)} y1={yTop - 4}
+        x2={map.x(sums[Math.max(0, Math.floor(shown) - 1)] ?? 0)} y2={yBottom + 4}
+        stroke={COLOR.result} strokeWidth={1.6}
+      />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  'difference-of-squares': SquaresPreview,
+  'difference-of-cubes': CubesPreview,
+  'binomial-theorem': BinomialPreview,
+  'geometric-series': SeriesPreview,
   indeterminate: IndeterminatePreview,
   'tan-over-x': TanOverXPreview,
   'cos-over-x': CosOverXPreview,

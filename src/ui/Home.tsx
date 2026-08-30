@@ -114,6 +114,26 @@ const LESSONS: readonly LessonCard[] = [
     question: 'Can you turn it into one you know?',
   },
   {
+    id: 'difference-of-squares',
+    title: 'Difference of Squares',
+    question: 'Cut the square and slide the pieces.',
+  },
+  {
+    id: 'difference-of-cubes',
+    title: 'Difference of Cubes',
+    question: 'Why is the second factor so strange?',
+  },
+  {
+    id: 'binomial-theorem',
+    title: 'The Binomial Theorem',
+    question: 'Where the coefficients come from.',
+  },
+  {
+    id: 'geometric-series',
+    title: 'Geometric Series',
+    question: 'Shift, subtract, and watch the middle vanish.',
+  },
+  {
     id: 'secant-to-tangent',
     title: 'From Secant to Tangent',
     question: 'Let h shrink. Why derivatives need limits.',

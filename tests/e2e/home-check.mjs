@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 25) errors.push(`[${name}] expected 25 cards, got ${cards}`);
+  if (cards !== 29) errors.push(`[${name}] expected 29 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -54,7 +54,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (body.includes(gone)) errors.push(`[${name}] old title "${gone}" is still on the home page`);
   }
   // 概念名都在
-  for (const want of ['Indeterminate Forms', 'Special Limit Explorer', 'Why tan x / x \u2192 1', 'Why (1 \u2212 cos x) / x \u2192 0', 'Why (1 \u2212 cos x) / x\u00b2 \u2192 \u00bd', 'Why (e\u02e3 \u2212 1) / x \u2192 1', 'Why ln(1 + x) / x \u2192 1', 'From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
+  for (const want of ['Difference of Squares', 'Difference of Cubes', 'The Binomial Theorem', 'Geometric Series', 'Indeterminate Forms', 'Special Limit Explorer', 'Why tan x / x \u2192 1', 'Why (1 \u2212 cos x) / x \u2192 0', 'Why (1 \u2212 cos x) / x\u00b2 \u2192 \u00bd', 'Why (e\u02e3 \u2212 1) / x \u2192 1', 'Why ln(1 + x) / x \u2192 1', 'From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
     if (!body.includes(want)) errors.push(`[${name}] concept name "${want}" is missing`);
   }
 
@@ -106,15 +106,29 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   });
   if (clash) errors.push(`[${name}] a lesson card slid underneath the fixed toolbar`);
 
-  // 预览真的在动 —— 取**最后一个**几何元素,跨一整个循环采样
+  /*
+   * 预览真的在动 —— 跨一整个循环采样。
+   *
+   * ⚠️ 第一版只取**最后一个** `circle,line,path` 的 cx / x1 / d。三处漏网:
+   *   ① `polygon` 不在选择器里 —— 整张图由多边形组成的预览取到 undefined,
+   *      签名恒为空字符串,于是"没动"和"取不到"长得一模一样;
+   *   ② 只读 x1,而有的元素动的是 y1;
+   *   ③ 只看一个元素,那个元素恰好静止就会误判。
+   * 现在把**每个**几何元素的一组关键属性拼成签名:任何一处动了都算动。
+   * 这样既不会漏,也不会因为"最后一个元素恰好是静态的"而误报。
+   */
+  const SIGNATURE = `[...svg.querySelectorAll('circle,line,path,polygon,rect,ellipse')]
+    .map((el) => ['cx','cy','r','x1','y1','x2','y2','d','points','x','y','width','height','opacity','fill-opacity']
+      .map((name) => el.getAttribute(name) ?? '').join('|'))
+    .join(';')`;
   const frames = [];
   for (let i = 0; i < 6; i += 1) {
-    frames.push(await page.evaluate(() => [...document.querySelectorAll('[data-lesson-card] svg')].map((svg) => {
-      const last = [...svg.querySelectorAll('circle,line,path')].pop();
-      return `${last?.getAttribute('cx') ?? last?.getAttribute('x1') ?? last?.getAttribute('d')?.slice(-30) ?? ''}`;
-    })));
+    frames.push(await page.evaluate(`[...document.querySelectorAll('[data-lesson-card] svg')].map((svg) => ${SIGNATURE})`));
     await page.waitForTimeout(700);
   }
+  // ⚠️ 防空跑:签名不能全是空的,否则"每张卡都在动"是在比较空字符串
+  const empty = frames[0].filter((sig) => sig.length < 10).length;
+  if (empty > 0) errors.push(`[${name}] ${empty} previews produced an empty signature — the movement check would be vacuous`);
   for (let c = 0; c < cards; c += 1) {
     if (new Set(frames.map((f) => f[c])).size < 2) errors.push(`[${name}] preview ${c + 1} never moves across a full loop`);
   }
@@ -129,6 +143,10 @@ const NAMES = {
   functions: 'Definition of a Function', domain: 'Domain of a Function',
   increasing: 'Increasing Functions', symmetry: 'Even and Odd Functions',
   nondecreasing: 'Nondecreasing Functions', nonincreasing: 'Nonincreasing Functions',
+  'difference-of-squares': 'Difference of Squares',
+  'difference-of-cubes': 'Difference of Cubes',
+  'binomial-theorem': 'The Binomial Theorem',
+  'geometric-series': 'Geometric Series',
   indeterminate: 'Indeterminate Forms',
   'tan-over-x': 'Why tan x / x \u2192 1',
   'cos-over-x': 'Why (1 \u2212 cos x) / x \u2192 0',
@@ -144,7 +162,19 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`[lesson] console: ${m.text()}`); });
 for (const [id, title] of Object.entries(NAMES)) {
   await page.goto(`${URL}#/${id}`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(500);
+  /*
+   * ⚠️ **等到标题真的换掉**,不要固定睡 500 ms。
+   * 每节课是一个 lazy chunk,换路由时旧页面会多留一瞬。
+   * 课程一多,那一瞬就可能超过 500 ms —— 于是检查读到的是**上一课**的标题,
+   * 报出一个根本不存在的"目录与页头不一致"。轮询比睡觉可靠。
+   */
+  await page
+    .waitForFunction(
+      (want) => document.querySelector('h1')?.textContent?.trim() === want,
+      title,
+      { timeout: 8000 },
+    )
+    .catch(() => {});
   const h1 = (await page.locator('h1').first().innerText()).trim();
   // ⚠️ 目录写着一个名字、点进去顶上是另一个名字,是最招人烦的一种不一致。
   if (h1 !== title) errors.push(`[lesson/${id}] card says "${title}" but the page header says "${h1}"`);
