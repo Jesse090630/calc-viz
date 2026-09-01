@@ -14,6 +14,9 @@ import { FEATURES } from './config';
 
 /* ── 每条课一个 chunk。只有走到那个路由才会发起网络请求。 ───────────────── */
 const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => React.ReactNode>>> = {
+  // 整张公式表(通读 / 打印用)。工具条上的 ∫ deck 是用来**搜**的,两者分工不同,
+  // 但喂的是同一份 `math/formulaCatalog.ts`,所以不可能一处对一处错。
+  formulas: lazy(() => import('./ui/formulaSheetPage')),
   limits: lazy(() => import('./concepts/limits/page')),
   derivative: lazy(() => import('./concepts/derivative/page')),
   'riemann-sum': lazy(() => import('./concepts/riemann-sum/page')),

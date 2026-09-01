@@ -982,3 +982,34 @@ GITHUB_PAGES=true npx vite build && node tests/e2e/pages-check.mjs
 
 它验的是子路径下:36 张卡、5 个筛选、七条链(canvas + 步骤大纲)、PDF 的
 `%PDF-` 头、404 页,以及零 console / pageerror / 失败请求。
+
+## 把搁浅的公式表接到新首页上
+
+`archive/formula-sheet`(`4854e96`)是在**旧首页**上做的,而首页后来被整个改版了。
+直接 merge 会在 `Home.tsx`、`LessonPreviews.tsx`、`home-check.mjs` 上打架 ——
+那三个文件两边都重写过。所以这次不是合并,是**挑**:
+
+- **拿过来**(不碰首页的部分):`math/formulaCatalog.ts`(114 → 192 张卡)、
+  `ui/texCache.ts`、`ui/FormulaSheet.tsx`、`ui/formulaSheetPage.tsx`、
+  `ui/FormulaDeck.tsx`、`vite-env.d.ts`、`architecture.test.ts`、`formulas-check.mjs`
+- **不要**:分支上的 `Home.tsx` / `LessonPreviews.tsx` / `home-check.mjs`(旧首页的东西)
+- **手工接**:`App.tsx` 的 `formulas` 路由(main 这边有 `NotFound`,分支那边没有,不能整文件覆盖)
+
+⚠️ **两个只有对着看才会发现的坑:**
+
+① **分支上那条数学错误还活着。** `F↑ ⟺ F′>0` 在 main 上已经改对了,但分支是在
+   改正**之前**分出去的。整份目录端过来,等于把改对的东西又改错回去。
+   现在修正连同注释一起搬进了 192 条的版本,`formulaCatalog.test.ts` 里那条回归测试
+   也跟着过来了。**从旧分支端文件时,先问一句:这上面有没有我后来修过的东西。**
+
+② **PDF 差点变成两份。** 分支带着 `public/calculus-formula-sheet.pdf`,
+   而 main 上已经有 `public/Jesse'sSecretFormula.pdf` —— `md5sum` 一比,**同一个文件**。
+   端过来就是 651KB 的纯重复。现在 `FormulaSheet` 指向站上已有的那份。
+   **加二进制文件之前先比 md5。**
+
+首页那条黄带子原来整条是一个 `<a>`(指向 PDF),而 `<a>` 里不能再套 `<a>`。
+改成 `div` 容器 + 两个动作:`ALL 192 →`(站上通读)和 `PDF ↗`(原件)。
+视觉没动 —— 还是同一条黄带、同一个硬阴影。
+
+接完之后:**114 → 192 张卡,176 → 294 行公式,20 → 53 个「看推导」链接**,
+并且多出纸上的第 7、8 页(三角 / 级数 · 参数 · 极坐标 · 微分方程),那两页之前站上一条都没有。

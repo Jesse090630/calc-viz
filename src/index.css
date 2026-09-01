@@ -216,9 +216,15 @@ body {
   transition: box-shadow 160ms ease, transform 160ms ease;
 }
 
-.formula-download:hover {
-  box-shadow: 3px 3px 0 var(--studio-cobalt);
-  transform: translate(4px, 4px);
+/* ⚠️ 带子本身不再是链接(里面装了两个 <a>),所以 hover 位移挪到动作按钮上 */
+.formula-download__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.formula-download__action:hover {
+  background: var(--studio-ink);
+  color: var(--studio-paper);
 }
 
 .formula-download__action {

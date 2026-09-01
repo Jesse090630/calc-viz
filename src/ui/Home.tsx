@@ -391,18 +391,26 @@ export function Home() {
         <h1 id="home-title">See where{' '}<br /><em>formulas come from.</em></h1>
       </section>
 
-      <a
-        className="formula-download"
-        href="./Jesse'sSecretFormula.pdf"
-        target="_blank"
-        rel="noreferrer"
-        aria-label="Open Jesse's Secret Formula PDF in a new tab"
-      >
+      <div className="formula-download">
         <span className="formula-download__title">
           <strong>Jesse&apos;s Secret Formula</strong>
         </span>
-        <span className="formula-download__action">Open PDF <b aria-hidden="true">↗</b></span>
-      </a>
+        <span className="formula-download__actions">
+          {/* 站上读:整张表按纸上的页铺开,可筛可打印 */}
+          <a className="formula-download__action" href="#/formulas">
+            All 192 <b aria-hidden="true">→</b>
+          </a>
+          <a
+            className="formula-download__action"
+            href="./Jesse'sSecretFormula.pdf"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open Jesse's Secret Formula PDF in a new tab"
+          >
+            PDF <b aria-hidden="true">↗</b>
+          </a>
+        </span>
+      </div>
 
       <nav className="home-filters" aria-label="Lesson categories">
         <button

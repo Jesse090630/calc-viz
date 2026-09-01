@@ -22,13 +22,32 @@ const importsOf = (src: string): string[] =>
 
 describe('禁止 1 — src/math/ 不得依赖任何渲染库', () => {
   const FORBIDDEN = ['react', 'react-dom', 'three', '@react-three/fiber', '@react-three/drei', 'zustand', 'katex'];
-  const files = filesUnder(join(SRC, 'math'));
+  const all = filesUnder(join(SRC, 'math'));
+  /**
+   * ⚠️ 这条规则针对的是**会被打包的源文件**。
+   *
+   * 禁止 1 的目的是:math 模块可以被任何地方 import 而不拖进 React / Three / KaTeX。
+   * `*.test.ts` **永远不会**进产物(Vite 只打包从入口可达的东西),
+   * 所以测试文件 import katex 不影响这个目的 —— 而它能换来一件有价值的事:
+   * 把一百多条手写公式**真的丢给 KaTeX 解析一遍**。
+   * KaTeX 解析失败不抛错、不崩溃,它在页面上画一块红字;
+   * 不在测试里主动 throw,那种错就只能靠人一张张看出来。
+   *
+   * (同样的分寸在 `logIntegral` 那条规则里已经立过:源文件不许出现 `Math.log`,
+   *  而测试文件里**必须**有 —— 那是第二条独立验证路径。)
+   *
+   * 测试文件仍然不许碰 React / Three / zustand:那些和"验证公式"无关。
+   */
+  const isTest = (file: string) => /\.test\.tsx?$/.test(file);
+  const sources = all.filter((file) => !isTest(file));
+  const tests = all.filter(isTest);
 
   it('math 目录下确实有文件(防止规则因为路径写错而空跑)', () => {
-    expect(files.length).toBeGreaterThan(3);
+    expect(sources.length).toBeGreaterThan(3);
+    expect(tests.length).toBeGreaterThan(3);
   });
 
-  for (const file of files) {
+  for (const file of sources) {
     it(`${file.replace(SRC, 'src')} 只依赖 node 内置模块与自身`, () => {
       const bad = importsOf(readFileSync(file, 'utf8')).filter((s) =>
         FORBIDDEN.some((f) => s === f || s.startsWith(`${f}/`)),
@@ -36,6 +55,26 @@ describe('禁止 1 — src/math/ 不得依赖任何渲染库', () => {
       expect(bad).toEqual([]);
     });
   }
+
+  // 测试文件:只放行 katex,而且只为"渲染得出来吗"这一件事
+  const TEST_FORBIDDEN = FORBIDDEN.filter((name) => name !== 'katex');
+  for (const file of tests) {
+    it(`${file.replace(SRC, 'src')}(测试)不拉进 React / Three / zustand`, () => {
+      const bad = importsOf(readFileSync(file, 'utf8')).filter((s) =>
+        TEST_FORBIDDEN.some((f) => s === f || s.startsWith(`${f}/`)),
+      );
+      expect(bad).toEqual([]);
+    });
+  }
+
+  it('⚠️ katex 只出现在**测试**里,一个源文件都不许有', () => {
+    // 放行只针对测试。这条断言守住那个边界。
+    const leaked = sources.filter((file) => importsOf(readFileSync(file, 'utf8')).includes('katex'));
+    expect(leaked.map((f) => f.replace(SRC, 'src'))).toEqual([]);
+    // 而且放行确实被用上了 —— 否则这段例外是死条文
+    const usingKatex = tests.filter((file) => importsOf(readFileSync(file, 'utf8')).includes('katex'));
+    expect(usingKatex.length, '没有任何测试在验证公式渲染,这条例外就不该存在').toBeGreaterThan(0);
+  });
 });
 
 describe('⭐ W7/W8 专属:推导对数的模块不许用 Math.log 抄近路', () => {
