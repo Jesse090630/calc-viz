@@ -31,6 +31,7 @@ import { circlePoint } from '../../math/trig';
 import { circleVelocity } from '../../math/trigRates';
 import { areaUnderReciprocal } from '../../math/logIntegral';
 import { PAIRS as CHAIN_PAIRS, stretchFactors } from '../../math/chainRule';
+import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } from '../../math/substitution';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1198,6 +1199,42 @@ export function ChainRulePreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㊳ u-换元:同一批竖条,两种宽度 ──────────────────────────── */
+export function SubstitutionPreview({ phase }: { phase: number }) {
+  // 上排按 x 的宽度画,下排按 u 的宽度画 —— 条数相同,宽窄不同。
+  // ⚠️ 这正是 `du = g′dx` 要说的事,所以预览画的就是这件事本身。
+  const c = SUB_CASES[0]!;                      // cos(x²)·2x,内层弯,宽度差别看得见
+  const n = stepCount(phase, [4, 8, 16]);
+  const list = subSlices(c, n);
+  if (list.length === 0) return <Frame label="Strips"><g /></Frame>;
+  const uLo = Math.min(...list.map((s) => s.u0));
+  const uHi = Math.max(...list.map((s) => s.u1));
+  const f = subIntegrand(c);
+  const top = Math.max(...list.map((s) => Math.abs(f((s.x0 + s.x1) / 2))), 1e-9);
+  const band = (v: number, lo: number, hi: number) => 12 + ((v - lo) / (hi - lo || 1)) * (W - 24);
+  return (
+    <Frame label="The same strips drawn twice, once with widths in x and once with widths in u">
+      {list.map((s, i) => {
+        const h = Math.abs(f((s.x0 + s.x1) / 2)) / top;
+        const xL = band(s.x0, c.a, c.b);
+        const xR = band(s.x1, c.a, c.b);
+        const uL = band(s.u0, uLo, uHi);
+        const uR = band(s.u1, uLo, uHi);
+        return (
+          <g key={i}>
+            <rect x={xL} y={48 - h * 34} width={Math.max(xR - xL, 0.5)} height={h * 34}
+              fill={COLOR.region} fillOpacity={0.5} stroke={COLOR.introduce} strokeWidth={0.5} />
+            <rect x={uL} y={62} width={Math.max(uR - uL, 0.5)} height={h * 34}
+              fill={COLOR.region} fillOpacity={0.5} stroke={COLOR.hero} strokeWidth={0.5} />
+          </g>
+        );
+      })}
+      <line x1={12} y1={48} x2={W - 12} y2={48} stroke={COLOR.axis} strokeWidth={1} />
+      <line x1={12} y1={62} x2={W - 12} y2={62} stroke={COLOR.axis} strokeWidth={1} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1230,6 +1267,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   domain: DomainPreview,
   // 七条推导链
   'chain-rule': ChainRulePreview,
+  'u-substitution': SubstitutionPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,

@@ -38,6 +38,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'The Chain Rule',
     question: 'Two stages of stretching multiply.',
   },
+  {
+    id: 'u-substitution',
+    title: 'u-Substitution',
+    question: 'Where the du actually comes from.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -294,6 +299,7 @@ const SECTIONS: readonly LessonSection[] = [
     lessonIds: [
       'derivative',
       'chain-rule',
+      'u-substitution',
       'riemann-sum',
       'log-integral',
       'shell-method',
