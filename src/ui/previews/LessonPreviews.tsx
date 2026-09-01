@@ -33,6 +33,7 @@ import { areaUnderReciprocal } from '../../math/logIntegral';
 import { PAIRS as CHAIN_PAIRS, stretchFactors } from '../../math/chainRule';
 import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } from '../../math/substitution';
 import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
+import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1266,6 +1267,45 @@ export function FtcPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㊵ 分部积分:两种选法并排,一边降次一边升次 ─────────────── */
+export function ByPartsPreview({ phase }: { phase: number }) {
+  // ⚠️ 画的就是这一课的论点:两条路都合法,只有一条把次数**降下去**。
+  const c = BP_CASES[0]!;                     // ∫x·eˣ
+  const before = bpDegree(c) ?? 0;
+  const rows = (['first', 'second'] as const).map((choice) => ({
+    choice,
+    after: bpSplit(c, choice).remainingDegree ?? 0,
+  }));
+  const t = pingPong(phase);
+  const bar = (deg: number) => 26 + deg * 30;   // 次数越高,柱子越长
+  return (
+    <Frame label="Two choices of u compared: one lowers the polynomial degree, the other raises it">
+      {rows.map((row, i) => {
+        const y = 34 + i * 44;
+        const grown = bar(before) + (bar(row.after) - bar(before)) * t;
+        const good = row.after < before;
+        return (
+          <g key={row.choice}>
+            <text x={12} y={y - 10} fill="#64748b" fontSize={10} fontFamily="ui-monospace, monospace">
+              u = {row.choice === 'first' ? 'x' : 'e^x'}
+            </text>
+            {/* 起点:原来的次数 */}
+            <rect x={70} y={y - 9} width={bar(before)} height={9} fill={COLOR.thickness} fillOpacity={0.35} />
+            {/* 终点:剩下的次数 */}
+            <rect x={70} y={y - 9} width={Math.max(grown, 2)} height={9}
+              fill={good ? COLOR.result : COLOR.radius} fillOpacity={0.9} />
+            <text x={70 + Math.max(grown, 2) + 8} y={y - 1} fontSize={10}
+              fill={good ? COLOR.result : COLOR.radius} fontFamily="ui-monospace, monospace">
+              deg {row.after}
+            </text>
+          </g>
+        );
+      })}
+      <line x1={70} y1={18} x2={70} y2={H - 12} stroke={COLOR.axis} strokeWidth={1} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1300,6 +1340,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   'chain-rule': ChainRulePreview,
   'u-substitution': SubstitutionPreview,
   ftc: FtcPreview,
+  'by-parts': ByPartsPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,

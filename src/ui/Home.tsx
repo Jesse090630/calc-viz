@@ -48,6 +48,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'The Fundamental Theorem',
     question: 'Widen by h; the extra area is a rectangle.',
   },
+  {
+    id: 'by-parts',
+    title: 'Integration by Parts',
+    question: 'The wrong u is legal, just useless.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -306,6 +311,7 @@ const SECTIONS: readonly LessonSection[] = [
       'chain-rule',
       'u-substitution',
       'ftc',
+      'by-parts',
       'riemann-sum',
       'log-integral',
       'shell-method',
