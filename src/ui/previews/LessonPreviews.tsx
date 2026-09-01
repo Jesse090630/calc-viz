@@ -32,6 +32,7 @@ import { circleVelocity } from '../../math/trigRates';
 import { areaUnderReciprocal } from '../../math/logIntegral';
 import { PAIRS as CHAIN_PAIRS, stretchFactors } from '../../math/chainRule';
 import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } from '../../math/substitution';
+import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1235,6 +1236,36 @@ export function SubstitutionPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㊴ 基本定理:区域向右长,右端那条细缝就是矩形 ─────────────── */
+export function FtcPreview({ phase }: { phase: number }) {
+  const f = FTC_FNS[1]!;                      // 4 − t²,面积长得明显
+  const x = f.a + 0.35 + pingPong(phase) * (f.b - f.a - 0.9);
+  const h = 0.28;
+  const pts = ftcSampleF(f, 90).filter((p) => p.y !== null) as { t: number; y: number }[];
+  const hiY = Math.max(...pts.map((p) => p.y), 0.1) * 1.15;
+  const px = (t: number) => 14 + ((t - f.a) / (f.b - f.a)) * (W - 28);
+  const py = (y: number) => H - 16 - (y / hiY) * (H - 30);
+  const upTo = pts.filter((p) => p.t <= x);
+  const band = pts.filter((p) => p.t >= x && p.t <= x + h);
+  const poly = (list: typeof pts) =>
+    list.length > 1
+      ? `M${px(list[0]!.t)} ${py(0)} ` + list.map((p) => `L${px(p.t).toFixed(1)} ${py(p.y).toFixed(1)}`).join(' ') +
+        ` L${px(list[list.length - 1]!.t)} ${py(0)} Z`
+      : '';
+  return (
+    <Frame label="A region growing to the right, with the newly added sliver highlighted">
+      <path d={poly(upTo)} fill={COLOR.region} fillOpacity={0.4} />
+      <path d={poly(band)} fill={COLOR.hero} fillOpacity={0.9} />
+      <path d={pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${px(p.t).toFixed(1)} ${py(p.y).toFixed(1)}`).join(' ')}
+        fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <line x1={14} y1={py(0)} x2={W - 14} y2={py(0)} stroke={COLOR.axis} strokeWidth={1.1} />
+      {/* 右下角一条小小的 A(x) 读数条,让"面积在长"看得见 */}
+      <rect x={14} y={H - 8} width={Math.max(((ftcArea(f, x) / ftcArea(f, f.b)) * (W - 28)), 0)}
+        height={3} fill={COLOR.result} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1268,6 +1299,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   // 七条推导链
   'chain-rule': ChainRulePreview,
   'u-substitution': SubstitutionPreview,
+  ftc: FtcPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,

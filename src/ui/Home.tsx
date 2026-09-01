@@ -43,6 +43,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'u-Substitution',
     question: 'Where the du actually comes from.',
   },
+  {
+    id: 'ftc',
+    title: 'The Fundamental Theorem',
+    question: 'Widen by h; the extra area is a rectangle.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -300,6 +305,7 @@ const SECTIONS: readonly LessonSection[] = [
       'derivative',
       'chain-rule',
       'u-substitution',
+      'ftc',
       'riemann-sum',
       'log-integral',
       'shell-method',

@@ -28,6 +28,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   // 实验台,不是推导链:没有上一步/下一步,不经过 `src/engine/`。
   'chain-rule': lazy(() => import('./labs/chainRule/page')),
   'u-substitution': lazy(() => import('./labs/substitution/page')),
+  'ftc': lazy(() => import('./labs/ftc/page')),
   increasing: lazy(() => import('./labs/increasing/page')),
   intervals: lazy(() => import('./labs/scanning/page')),
   'one-sided': lazy(() => import('./labs/oneSided/page')),
