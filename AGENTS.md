@@ -12,7 +12,9 @@
 
 每个概念 = 一条 **derivation chain**,8–9 步。用户按 → 键前进,每一步屏幕上的**几何动作**和**公式变化**同时发生,且严格一一对应。产品回答的是 **"这个公式是从哪来的"**,不是 **"这个公式是什么"**。
 
-- 线上:https://calcviz.netlify.app (主) · https://jesse090630.github.io/calc-viz/ (备)
+- 线上(**唯一在跑的**):https://jesse090630.github.io/calc-viz/
+  ⚠️ https://calcviz.netlify.app **不要当成线上站** —— 它停在 2026-08-23 的构建上,
+  既没连仓库、也部署不了(账户额度用尽)。详见第 6 节。
 - 仓库:https://github.com/Jesse090630/calc-viz (public, `main`)
 - 目标用户:正在学 AP Calculus AB/BC 的高中生
 - 项目所有者 Jesse **不写代码**。他是产品经理 + 验收测试员。你写全部代码。
@@ -132,10 +134,32 @@ npm run shots    # 构建 + 逐 stage 截图到 tests/e2e/screenshots/(自带静
 
 ## 6. 部署
 
-- push 到 `main` → GitHub Actions 自动部署到 GitHub Pages(备用站)。
-- 主站 Netlify 需要一条带临时凭据的命令,由 Netlify MCP 的 `deploy-site` 操作现取现用。
-  **⚠️ 那个凭据绝对不许写进仓库**(公开仓库)。每次部署重新获取。
-  Netlify site id:`efa914ff-2725-47d0-99b2-92c1337eda3c`
+- push 到 `main` → GitHub Actions 自动部署到 **GitHub Pages**。这是目前**唯一**能用的部署路径。
+
+### ⚠️ Netlify 现在是坏的,别照着旧说明走
+
+这一节以前写着「主站 Netlify」。**那句话已经不成立了**,而且很误导 ——
+照它去验收,会跑去看一个停在几周前的站,然后以为自己刚发的东西没生效。
+
+2026-09-01 查到的事实:
+
+| 项 | 实际情况 |
+|---|---|
+| 最后一次成功部署 | `2026-08-23`,`deploy_source: "api"`、`commit_ref: null`、标题 `Deploy triggered by upload` |
+| 有没有连仓库 | **没有**。是一次性上传,所以 push 再多次它也不会动 |
+| 现在能不能部署 | **不能**。新部署直接被跳过:`error_message: "Skipped due to account credit usage exceeded"` |
+| 页面上是什么 | 8 张课程卡、没有筛选条、没有 PDF 带子 —— 首页改版之前的样子 |
+
+所以 `calcviz.netlify.app` 现在是一份**过期的公开副本**。要恢复它,需要 Jesse 本人做两件事
+(两件都超出代理的权限:一个要花钱,一个要授权 GitHub):
+1. 等额度重置,或升级 Netlify 套餐 —— 否则任何部署都会被跳过;
+2. 在 Netlify 后台把项目**连上 GitHub 仓库**(需要 GitHub OAuth 授权),
+   这样每次 push 自动构建,不会再放着放着就过期。
+   `netlify.toml` 已经写好了(`npm run build` → `dist`),连上就能用。
+
+在这两件事做完之前:**以 GitHub Pages 为准**,不要往 Netlify 部署,也不要拿它验收。
+
+Netlify site id:`efa914ff-2725-47d0-99b2-92c1337eda3c`(留着备查)
 - 查 CI 状态(免登录):`https://api.github.com/repos/Jesse090630/calc-viz/actions/runs?per_page=3`
 - 部署后**必须实测**:用无头浏览器打开线上地址,进两条链各按几次方向键,确认 canvas 渲染 + console 零错误。
   不要只看到 "Deploy is ready" 就宣布完成。

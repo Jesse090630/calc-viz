@@ -1013,3 +1013,29 @@ GITHUB_PAGES=true npx vite build && node tests/e2e/pages-check.mjs
 
 接完之后:**114 → 192 张卡,176 → 294 行公式,20 → 53 个「看推导」链接**,
 并且多出纸上的第 7、8 页(三角 / 级数 · 参数 · 极坐标 · 微分方程),那两页之前站上一条都没有。
+
+## Netlify 那份过期副本 —— 查清楚了,不是代码问题
+
+`calcviz.netlify.app` 停在 2026-08-23 的构建上,首页还是改版前的样子(8 张卡、没有筛选条)。
+而 `AGENTS.md` 一直写着它是「主站」—— 照那句话去验收,会跑去看一个几周前的站,
+然后以为自己刚发的东西没生效。
+
+查下来是两层原因,**都不是代码**:
+
+① **它从来没连过仓库。** 最后一次成功部署的记录是
+   `deploy_source: "api"`、`commit_ref: null`、`branch: null`、标题 `Deploy triggered by upload` ——
+   一次性 zip 上传。所以往 `main` push 多少次它都不会动。
+
+② **现在连部署都做不了。** 触发一次新部署,直接被跳过:
+   `error_message: "Skipped due to account credit usage exceeded"`。账户额度用尽。
+
+⚠️ 所以「手动补一次部署」这个念头是错的**两次**:额度用尽根本发不出去;
+就算发得出去,不连仓库的话过几天又会过期。
+
+恢复它需要 Jesse 本人做两件事,两件都超出代理权限(一件花钱、一件要授权 GitHub):
+等额度重置或升级套餐;在 Netlify 后台把项目连上 GitHub 仓库。
+`netlify.toml` 早就写好了(`npm run build` → `dist`),连上即可用。
+
+**这一轮真正能做的,是把文档改成不再骗人。** `AGENTS.md` 现在明确写着
+GitHub Pages 是唯一在跑的部署,并把上面这张事实表放了进去。
+一份说着假话的部署文档,比没有文档更危险。
