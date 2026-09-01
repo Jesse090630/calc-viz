@@ -49,3 +49,44 @@ describe('公式卡片库', () => {
     }
   });
 });
+
+describe('⭐ 单调性不能用严格不等号写成 iff', () => {
+  /**
+   * 这是一条**改正过的错误**的回归测试。
+   * 卡片原文是 `F↑ ⟺ F′>0` —— 反方向不成立:x³ 在整条实轴递增,
+   * 而它在 0 处的导数是 0。所以"递增"配的是 `≥`,不是 `>`。
+   */
+  const behaviour = FORMULA_SECTIONS
+    .flatMap((s) => s.entries)
+    .find((e) => e.id === 'accumulation-behavior');
+
+  it('那张卡还在(否则下面几条就是空跑)', () => {
+    expect(behaviour).toBeDefined();
+  });
+
+  it('不再声称「递增 ⟺ 导数为正」', () => {
+    const lines = behaviour!.tex;
+    for (const line of lines) {
+      const claimsIff = line.includes('\\iff');
+      const strictOnDerivative = /F'>0|F'<0/.test(line);
+      expect(
+        claimsIff && strictOnDerivative,
+        `这一行把严格不等号写进了双向箭头:${line}`,
+      ).toBe(false);
+    }
+  });
+
+  it('单调那两行用的是 ≥ / ≤', () => {
+    const monotone = behaviour!.tex.filter((l) => l.includes('increasing') || l.includes('decreasing'));
+    expect(monotone.length).toBeGreaterThanOrEqual(2);
+    expect(monotone.some((l) => l.includes('\\ge'))).toBe(true);
+    expect(monotone.some((l) => l.includes('\\le'))).toBe(true);
+  });
+
+  it('x³ 这个反例本身是真的 —— 处处递增,原点导数为零', () => {
+    const cube = (x: number) => x * x * x;
+    const dCube = (x: number) => 3 * x * x;
+    for (let x = -2; x < 2; x += 0.1) expect(cube(x + 0.1)).toBeGreaterThan(cube(x));
+    expect(dCube(0)).toBe(0);
+  });
+});

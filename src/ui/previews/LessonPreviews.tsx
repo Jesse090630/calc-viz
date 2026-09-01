@@ -22,6 +22,14 @@
  * ③ 所有卡共用**一个** rAF 时钟(见 `clock.ts`),不是各开一个。
  */
 import { holdAtEnds, pingPong } from './clock';
+// ── 七条推导链的预览所需的数学(全部来自 src/math,组件里不写裸算式) ──
+import { PARABOLA_DOWN, PARABOLA_INVERSE } from '../../math/curves';
+import { riemannRectangles } from '../../math/riemann';
+import { shellSlices, diskSlices } from '../../math/solids';
+import { tangent as derivTangent } from '../../math/derivative';
+import { circlePoint } from '../../math/trig';
+import { circleVelocity } from '../../math/trigRates';
+import { areaUnderReciprocal } from '../../math/logIntegral';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -167,6 +175,37 @@ function samples(at: (x: number) => number, from: number, to: number, n = 60) {
     const x = from + ((to - from) * i) / n;
     return { x, y: at(x) };
   });
+}
+
+/** 采样一条**参数**曲线(返回 [x, y] 的那种)。单位圆那两张卡要用。 */
+function samples2(
+  at: (t: number) => readonly [number, number],
+  from: number,
+  to: number,
+  count = 48,
+): { x: number; y: number }[] {
+  return Array.from({ length: count + 1 }, (_, i) => {
+    const [x, y] = at(from + ((to - from) * i) / count);
+    return { x, y };
+  });
+}
+
+/**
+ * **等比例**映射:x 和 y 用同一个尺度。
+ *
+ * ⚠️ `makeMap` 把 x、y 各自拉满整块画布。画函数图像没问题,画**圆**就出事 ——
+ * 预览框是 400×116 的宽扁形,单位圆会被拉成一个横躺的椭圆。
+ * 一张讲单位圆的卡片上画着椭圆,那是在教错东西(配色和形状都是词汇,不是装饰)。
+ * 这里以短边定尺度,居中摆放,圆就还是圆。
+ */
+function makeSquareMap(halfSpan: number) {
+  const pad = 8;
+  const scale = (H - pad * 2) / (halfSpan * 2);
+  return {
+    x: (x: number) => W / 2 + x * scale,
+    y: (y: number) => H / 2 - y * scale,
+    scale,
+  };
 }
 
 function Frame({ children, label }: { children: React.ReactNode; label: string }) {
@@ -931,6 +970,193 @@ export function SeriesPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+ * 七条**推导链**的预览。
+ *
+ * ⚠️ 这七条链(derivative / riemann-sum / log-integral / shell-method /
+ *    disk-method / unit-circle / trig-rates)一直都在,路由也一直能开,
+ *    但首页从改版起就不再列出它们 —— 于是**只能靠手打 URL 进去**。
+ *    按 AGENTS.md,推导链恰恰是这个产品的差异点,不该是藏起来的那部分。
+ *
+ * ⚠️ 和上面二十九张一样,曲线一律来自 `src/math/`,组件里不出现裸算式(禁止 2)。
+ *    这里用的是链自己用的那几个模块,所以卡片上画的和课里算的是同一份数学。
+ * ══════════════════════════════════════════════════════════════════════ */
+
+/** 离散档位:预览里"数量变多"要跳档,不要连续变 —— 连续变会把倍增关系糊掉。 */
+function stepCount(phase: number, steps: readonly number[]): number {
+  const i = Math.min(steps.length - 1, Math.floor(pingPong(phase) * steps.length));
+  return steps[i]!;
+}
+
+/* ── ㉚ 黎曼和:矩形越切越多,越贴越紧 ───────────────────────────── */
+export function RiemannPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.12, 2.12, -0.4, 4.6);
+  const n = stepCount(phase, [2, 4, 8, 16]);
+  const rects = riemannRectangles(PARABOLA_DOWN, n, [0, 2], 'mid');
+  const curve = samples(PARABOLA_DOWN.f, 0, 2, 60);
+  return (
+    <Frame label="Rectangles under a curve, doubling in number until they fill the region">
+      {rects.map((r, i) => {
+        const left = map.x(r.x - r.dx / 2);
+        const top = map.y(r.height);
+        return (
+          <rect key={i} x={left} y={top} width={Math.max(0, map.x(r.x + r.dx / 2) - left)}
+            height={Math.max(0, map.y(0) - top)} fill={COLOR.region} fillOpacity={0.45}
+            stroke={COLOR.hero} strokeWidth={0.7} />
+        );
+      })}
+      <path d={path(curve, map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(2)} y2={map.y(0)} stroke={COLOR.axis} strokeWidth={1.2} />
+    </Frame>
+  );
+}
+
+/* ── ㉛ 导数:点沿曲线走,下方同时画出斜率自己的那条线 ─────────────── */
+export function DerivativePreview({ phase }: { phase: number }) {
+  // 上半张画 f,下半张画 f′ —— 导数**是被画出来的**,不是被写出来的。
+  const map = makeMap(-0.12, 2.12, -4.6, 4.6);
+  const a = 0.12 + pingPong(phase) * 1.76;
+  const tan = derivTangent(PARABOLA_DOWN, a);
+  const curve = samples(PARABOLA_DOWN.f, 0, 2, 60);
+  const slopeCurve = samples((x) => derivTangent(PARABOLA_DOWN, x).slope, 0, 2, 60);
+  const traced = samples((x) => derivTangent(PARABOLA_DOWN, x).slope, 0, Math.max(0.001, a), 40);
+  const reach = 0.42;
+  return (
+    <Frame label="A point sliding along a curve while the slope it carries traces out a second curve">
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(2)} y2={map.y(0)} stroke={COLOR.axis} strokeWidth={1.2} />
+      <path d={path(curve, map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <path d={path(slopeCurve, map)} fill="none" stroke={COLOR.result} strokeWidth={1.2}
+        strokeDasharray="4 4" opacity={0.4} />
+      <path d={path(traced, map)} fill="none" stroke={COLOR.result} strokeWidth={2.2} strokeLinecap="round" />
+      <line
+        x1={map.x(a - reach)} y1={map.y(PARABOLA_DOWN.f(a) - tan.slope * reach)}
+        x2={map.x(a + reach)} y2={map.y(PARABOLA_DOWN.f(a) + tan.slope * reach)}
+        stroke={COLOR.hero} strokeWidth={2.2} strokeLinecap="round" />
+      <circle cx={map.x(a)} cy={map.y(PARABOLA_DOWN.f(a))} r={4} fill={COLOR.hero} />
+      <circle cx={map.x(a)} cy={map.y(tan.slope)} r={4} fill={COLOR.result} />
+    </Frame>
+  );
+}
+
+/* ── ㉜ 自然对数:1/x 底下的面积一路长出去 ─────────────────────── */
+export function LogIntegralPreview({ phase }: { phase: number }) {
+  const map = makeMap(0.6, 6.4, -0.12, 1.35);
+  const t = 1.55 + holdAtEnds(phase) * 4.05;
+  const under = (x: number) => 1 / x;
+  const region = samples(under, 1, t, 56);
+  const full = samples(under, 0.72, 6.3, 70);
+  const area = areaUnderReciprocal(t);
+  const filled = area !== null && area > 1;   // 面积刚好走过 1 的那一刻(t = e)
+  return (
+    <Frame label="The area under one over x growing to the right, passing the value one">
+      <path d={`${path(region, map)} L${map.x(t).toFixed(1)} ${map.y(0).toFixed(1)} L${map.x(1).toFixed(1)} ${map.y(0).toFixed(1)} Z`}
+        fill={filled ? COLOR.result : COLOR.region} fillOpacity={0.55}
+        stroke={filled ? COLOR.result : COLOR.region} strokeWidth={0.8} />
+      <path d={path(full, map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      <line x1={map.x(0.6)} y1={map.y(0)} x2={map.x(6.4)} y2={map.y(0)} stroke={COLOR.axis} strokeWidth={1.2} />
+      <line x1={map.x(t)} y1={map.y(0)} x2={map.x(t)} y2={map.y(under(t))} stroke={COLOR.hero} strokeWidth={2} />
+      <circle cx={map.x(t)} cy={map.y(under(t))} r={3.6} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
+/* ── ㉝ 壳法:一条竖条被拉出来,摊平成一块长方形 ─────────────────── */
+export function ShellPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.12, 2.12, -0.4, 4.6);
+  const slices = shellSlices(PARABOLA_DOWN, 9, [0, 2]);
+  const pick = Math.min(slices.length - 1, Math.floor(pingPong(phase) * slices.length));
+  const curve = samples(PARABOLA_DOWN.f, 0, 2, 60);
+  return (
+    <Frame label="One vertical strip of a region highlighted, the strip that becomes a cylindrical shell">
+      {slices.map((sl, i) => {
+        const left = map.x(sl.x - sl.dx / 2);
+        const top = map.y(sl.h);
+        const on = i === pick;
+        return (
+          <rect key={i} x={left} y={top} width={Math.max(0, map.x(sl.x + sl.dx / 2) - left)}
+            height={Math.max(0, map.y(0) - top)}
+            fill={on ? COLOR.hero : COLOR.region} fillOpacity={on ? 0.75 : 0.3}
+            stroke={on ? COLOR.hero : COLOR.thickness} strokeWidth={on ? 1.4 : 0.6} />
+        );
+      })}
+      <path d={path(curve, map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      {/* 半径是从轴量到这条竖条的距离 —— 红色,和场景里同一个语义 */}
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(slices[pick]!.x)} y2={map.y(0)}
+        stroke={COLOR.radius} strokeWidth={2} />
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(0)} y2={map.y(4.4)} stroke={COLOR.axis} strokeWidth={1.4} />
+    </Frame>
+  );
+}
+
+/* ── ㉞ 盘法:换一个方向切,横着一层一层叠 ───────────────────────── */
+export function DiskPreview({ phase }: { phase: number }) {
+  const map = makeMap(-0.12, 2.12, -0.4, 4.6);
+  const slices = diskSlices(PARABOLA_INVERSE, 8, [0, 4]);
+  const pick = Math.min(slices.length - 1, Math.floor(pingPong(phase) * slices.length));
+  const curve = samples(PARABOLA_DOWN.f, 0, 2, 60);
+  return (
+    <Frame label="The same region cut into horizontal slabs instead of vertical strips">
+      {slices.map((sl, i) => {
+        const top = map.y(sl.t + sl.dt / 2);
+        const on = i === pick;
+        return (
+          <rect key={i} x={map.x(0)} y={top} width={Math.max(0, map.x(sl.r) - map.x(0))}
+            height={Math.max(0, map.y(sl.t - sl.dt / 2) - top)}
+            fill={on ? COLOR.hero : COLOR.region} fillOpacity={on ? 0.75 : 0.3}
+            stroke={on ? COLOR.hero : COLOR.thickness} strokeWidth={on ? 1.4 : 0.6} />
+        );
+      })}
+      <path d={path(curve, map)} fill="none" stroke={COLOR.curve} strokeWidth={2} strokeLinecap="round" />
+      {/* 这一层的半径是横着量的 */}
+      <line x1={map.x(0)} y1={map.y(slices[pick]!.t)} x2={map.x(slices[pick]!.r)} y2={map.y(slices[pick]!.t)}
+        stroke={COLOR.radius} strokeWidth={2} />
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(0)} y2={map.y(4.4)} stroke={COLOR.axis} strokeWidth={1.4} />
+    </Frame>
+  );
+}
+
+/* ── ㉟ 单位圆:一个点绕圈,cos 与 sin 是它的两条投影 ─────────────── */
+export function UnitCirclePreview({ phase }: { phase: number }) {
+  const map = makeSquareMap(1.28);           // ⚠️ 等比例 —— 圆不能画成椭圆
+  const theta = pingPong(phase) * Math.PI;
+  const [cx, cy] = circlePoint(theta);
+  const ring = samples2((t) => circlePoint(t * Math.PI * 2), 0, 1, 72);
+  return (
+    <Frame label="A point moving around the unit circle with its horizontal and vertical projections">
+      <line x1={map.x(-1.25)} y1={map.y(0)} x2={map.x(1.25)} y2={map.y(0)} stroke={COLOR.axisDepth} strokeWidth={1} />
+      <line x1={map.x(0)} y1={map.y(-1.25)} x2={map.x(0)} y2={map.y(1.25)} stroke={COLOR.axisDepth} strokeWidth={1} />
+      <path d={path(ring, map)} fill="none" stroke={COLOR.axis} strokeWidth={1.4} />
+      {/* cos 走 x 方向(红),sin 走高度(蓝) —— 和全站语义一致 */}
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(cx)} y2={map.y(0)} stroke={COLOR.radius} strokeWidth={2.6} />
+      <line x1={map.x(cx)} y1={map.y(0)} x2={map.x(cx)} y2={map.y(cy)} stroke={COLOR.height} strokeWidth={2.6} />
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(cx)} y2={map.y(cy)} stroke={COLOR.hero} strokeWidth={1.6} />
+      <circle cx={map.x(cx)} cy={map.y(cy)} r={4} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
+/* ── ㊱ 三角变化率:速度向量永远和半径垂直 ───────────────────────── */
+export function TrigRatesPreview({ phase }: { phase: number }) {
+  const map = makeSquareMap(1.55);           // ⚠️ 同上,等比例
+  const theta = pingPong(phase) * Math.PI;
+  const [cx, cy] = circlePoint(theta);
+  const [vx, vy] = circleVelocity(theta);
+  const k = 0.5;
+  const ring = samples2((t) => circlePoint(t * Math.PI * 2), 0, 1, 72);
+  return (
+    <Frame label="A point on the unit circle with its velocity arrow staying at a right angle to the radius">
+      <line x1={map.x(-1.5)} y1={map.y(0)} x2={map.x(1.5)} y2={map.y(0)} stroke={COLOR.axisDepth} strokeWidth={1} />
+      <line x1={map.x(0)} y1={map.y(-1.5)} x2={map.x(0)} y2={map.y(1.5)} stroke={COLOR.axisDepth} strokeWidth={1} />
+      <path d={path(ring, map)} fill="none" stroke={COLOR.axis} strokeWidth={1.4} />
+      <line x1={map.x(0)} y1={map.y(0)} x2={map.x(cx)} y2={map.y(cy)} stroke={COLOR.radius} strokeWidth={2.2} />
+      <line x1={map.x(cx)} y1={map.y(cy)} x2={map.x(cx + vx * k)} y2={map.y(cy + vy * k)}
+        stroke={COLOR.introduce} strokeWidth={2.8} strokeLinecap="round" />
+      <circle cx={map.x(cx)} cy={map.y(cy)} r={4} fill={COLOR.hero} />
+      <circle cx={map.x(cx + vx * k)} cy={map.y(cy + vy * k)} r={3} fill={COLOR.introduce} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -961,4 +1187,12 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   ceiling: CeilingPreview,
   functions: FunctionPreview,
   domain: DomainPreview,
+  // 七条推导链
+  'riemann-sum': RiemannPreview,
+  derivative: DerivativePreview,
+  'log-integral': LogIntegralPreview,
+  'shell-method': ShellPreview,
+  'disk-method': DiskPreview,
+  'unit-circle': UnitCirclePreview,
+  'trig-rates': TrigRatesPreview,
 };

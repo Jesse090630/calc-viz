@@ -93,6 +93,21 @@ function LessonFallback() {
   );
 }
 
+/** 认不出的路由。⚠️ 必须把 route 原样显示出来 —— 打错字时那正是唯一的线索。 */
+function NotFound({ route }: { route: string }) {
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-slate-500">No such page</p>
+      <p className="max-w-md text-sm text-slate-400">
+        Nothing is routed to <code data-missing-route className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-slate-200">#/{route}</code>.
+      </p>
+      <a href="#/" className="rounded-lg border border-slate-600 px-4 py-2 font-mono text-xs text-slate-200 transition hover:border-slate-400">
+        ← all topics
+      </a>
+    </main>
+  );
+}
+
 /** 极简 hash 路由。没有依赖,静态托管刷新也不会 404。 */
 function useHashRoute(): string {
   const read = (): string => window.location.hash.replace(/^#\/?/, '');
@@ -145,9 +160,17 @@ export default function App() {
         <LessonPage />
       </Suspense>
     );
-  } else {
+  } else if (route === '' || route === 'notation') {
     // 首页目前是空白板。目录封存在 `ui/ConceptGrid.tsx`,链路由本身没动。
     page = <Home />;
+  } else {
+    /**
+     * ⚠️ 认不出的路由以前**静默渲染首页**,地址栏还留着那个错的 hash。
+     * 于是「链接打错一个字」和「网站正常」在屏幕上长得一模一样 ——
+     * 分享出去的坏链接、改名之后的旧链接,都会安静地变成首页,没人会发现。
+     * 现在把话说出来,并把那个认不出的名字原样显示回去。
+     */
+    page = <NotFound route={route} />;
   }
 
   return (

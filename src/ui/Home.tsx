@@ -33,6 +33,47 @@ interface LessonCard {
 }
 
 const LESSONS: readonly LessonCard[] = [
+  /* ── 七条推导链 ────────────────────────────────────────────────
+   * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
+   *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
+   *    这个产品的差异点(GeoGebra / Desmos 只给结果,不给来历),
+   *    它不该是藏起来的那一半。
+   */
+  {
+    id: 'derivative',
+    title: 'The Derivative',
+    question: 'Two points, and then only one.',
+  },
+  {
+    id: 'riemann-sum',
+    title: 'Riemann Sums',
+    question: 'Rectangles, until they stop being wrong.',
+  },
+  {
+    id: 'log-integral',
+    title: 'The Natural Log',
+    question: 'The power rule has a hole at \u22121.',
+  },
+  {
+    id: 'shell-method',
+    title: 'The Shell Method',
+    question: 'Spin a strip; get a cylinder.',
+  },
+  {
+    id: 'disk-method',
+    title: 'The Disk Method',
+    question: 'Cut the same solid the other way.',
+  },
+  {
+    id: 'unit-circle',
+    title: 'The Unit Circle',
+    question: 'Where sine and cosine actually live.',
+  },
+  {
+    id: 'trig-rates',
+    title: 'Trig Derivatives',
+    question: 'Walk the circle and read the speed.',
+  },
   {
     id: 'functions',
     title: 'Definition of a Function',
@@ -180,7 +221,7 @@ const LESSONS: readonly LessonCard[] = [
   },
 ];
 
-type SectionId = 'foundations' | 'limits' | 'algebra';
+type SectionId = 'foundations' | 'limits' | 'algebra' | 'derivations';
 type SectionFilter = 'all' | SectionId;
 
 interface LessonSection {
@@ -239,6 +280,20 @@ const SECTIONS: readonly LessonSection[] = [
       'difference-of-cubes',
       'binomial-theorem',
       'geometric-series',
+    ],
+  },
+  {
+    id: 'derivations',
+    label: 'Derivations',
+    description: 'Step through a formula being built, one move at a time.',
+    lessonIds: [
+      'derivative',
+      'riemann-sum',
+      'log-integral',
+      'shell-method',
+      'disk-method',
+      'unit-circle',
+      'trig-rates',
     ],
   },
 ] as const;

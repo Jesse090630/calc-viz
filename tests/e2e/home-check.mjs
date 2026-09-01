@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 29) errors.push(`[${name}] expected 29 cards, got ${cards}`);
+  if (cards !== 36) errors.push(`[${name}] expected 36 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -54,7 +54,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
     if (body.includes(gone)) errors.push(`[${name}] old title "${gone}" is still on the home page`);
   }
   // 概念名都在
-  for (const want of ['Difference of Squares', 'Difference of Cubes', 'The Binomial Theorem', 'Geometric Series', 'Indeterminate Forms', 'Special Limit Explorer', 'Why tan x / x \u2192 1', 'Why (1 \u2212 cos x) / x \u2192 0', 'Why (1 \u2212 cos x) / x\u00b2 \u2192 \u00bd', 'Why (e\u02e3 \u2212 1) / x \u2192 1', 'Why ln(1 + x) / x \u2192 1', 'From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function']) {
+  for (const want of ['Difference of Squares', 'Difference of Cubes', 'The Binomial Theorem', 'Geometric Series', 'Indeterminate Forms', 'Special Limit Explorer', 'Why tan x / x \u2192 1', 'Why (1 \u2212 cos x) / x \u2192 0', 'Why (1 \u2212 cos x) / x\u00b2 \u2192 \u00bd', 'Why (e\u02e3 \u2212 1) / x \u2192 1', 'Why ln(1 + x) / x \u2192 1', 'From Secant to Tangent', 'Why sin x / x \u2192 1', 'The Squeeze Theorem', 'Infinite Limits', 'The Epsilon-Delta Definition', 'Limit vs Function Value', 'One-Sided Limits', 'Increasing and Decreasing Intervals', 'Nondecreasing Functions', 'Nonincreasing Functions', 'Definition of a Function', 'Domain of a Function', 'Increasing Functions', 'Even and Odd Functions', 'Periodic Functions', 'Average Rate of Change', 'The Floor Function', 'The Ceiling Function', 'The Derivative', 'Riemann Sums', 'The Natural Log', 'The Shell Method', 'The Disk Method', 'The Unit Circle', 'Trig Derivatives']) {
     if (!body.includes(want)) errors.push(`[${name}] concept name "${want}" is missing`);
   }
 
@@ -188,6 +188,93 @@ for (const [id, title] of Object.entries(NAMES)) {
   if (h1 !== title) errors.push(`[lesson/${id}] card says "${title}" but the page header says "${h1}"`);
 }
 await page.close();
+
+/*
+ * ⭐⭐ 七条推导链 —— 它们的页头**不是**概念名(是当前那一步的标题),
+ * 所以不能塞进上面的 NAMES 对照。这里按链自己的方式验:
+ *   ① 3D 场景真的挂上了(canvas 存在);
+ *   ② 步骤条写着这条链的名字和总步数;
+ *   ③ 右上角的 fixed 工具条**没有压住**那行步骤条 —— 这是一次真事故的回归测试:
+ *      桌面端 "Derivation chain · Shell Method · step 1 of 9" 曾被切成
+ *      "DERIVATION" 加一个孤零零的数字;
+ *   ④ 步骤大纲列出全部步骤,并把第 1 步标成当前。
+ */
+const CHAINS = {
+  derivative: 'The Derivative', 'riemann-sum': 'Riemann Sums',
+  'log-integral': 'The Natural Log', 'shell-method': 'Shell Method',
+  'disk-method': 'Disk Method', 'unit-circle': 'Trigonometry',
+  'trig-rates': 'Trig derivatives & integrals',
+};
+const chainPage = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+chainPage.on('console', (m) => { if (m.type() === 'error') errors.push(`[chain] console: ${m.text()}`); });
+chainPage.on('pageerror', (e) => errors.push(`[chain] pageerror: ${e.message}`));
+for (const [id, name] of Object.entries(CHAINS)) {
+  await chainPage.goto(`${URL}#/${id}`, { waitUntil: 'networkidle' });
+  await chainPage.waitForSelector('[data-step-outline]', { timeout: 8000 }).catch(() => {});
+  const info = await chainPage.evaluate(() => {
+    const bar = document.querySelector('[data-learning-tools]')?.getBoundingClientRect();
+    const header = [...document.querySelectorAll('aside p')]
+      .find((el) => el.textContent.includes('Derivation chain'));
+    const box = header?.getBoundingClientRect();
+    const steps = [...document.querySelectorAll('[data-step-outline]')];
+    return {
+      canvas: document.querySelectorAll('canvas').length,
+      header: header?.textContent?.trim() ?? '',
+      covered: !!(bar && box && box.top < bar.bottom && box.right > bar.left && box.left < bar.right),
+      steps: steps.length,
+      current: steps.filter((el) => el.dataset.stepOutline === 'current').length,
+      firstIsCurrent: steps[0]?.dataset.stepOutline === 'current',
+    };
+  });
+  if (info.canvas !== 1) errors.push(`[chain/${id}] expected one canvas, got ${info.canvas}`);
+  if (!info.header.includes(name)) errors.push(`[chain/${id}] step header reads "${info.header}"`);
+  // ⚠️ 这一条就是那次事故本身
+  if (info.covered) errors.push(`[chain/${id}] the fixed toolbar still covers the step header`);
+  const declared = Number(info.header.match(/of (\d+)/)?.[1] ?? 0);
+  if (declared < 6) errors.push(`[chain/${id}] step header did not say how many steps there are: "${info.header}"`);
+  if (info.steps !== declared) errors.push(`[chain/${id}] outline lists ${info.steps} steps but the header says ${declared}`);
+  if (info.current !== 1 || !info.firstIsCurrent) errors.push(`[chain/${id}] outline does not mark step 1 as the current one`);
+}
+await chainPage.close();
+
+/*
+ * ⭐ 认不出的路由必须**说出来**。以前它静默渲染首页,地址栏还留着坏 hash ——
+ * 于是"链接打错一个字"和"网站正常"在屏幕上一模一样。
+ */
+{
+  const p404 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await p404.goto(`${URL}#/definitely-not-a-route`, { waitUntil: 'networkidle' });
+  await p404.waitForTimeout(400);
+  const shown = await p404.evaluate(() => ({
+    home: !!document.querySelector('[data-home-shell]'),
+    echoed: document.querySelector('[data-missing-route]')?.textContent?.trim() ?? '',
+  }));
+  if (shown.home) errors.push('[404] an unknown route still silently renders the home page');
+  // ⚠️ 必须把那个名字回显出来 —— 打错字时那是唯一的线索
+  if (!shown.echoed.includes('definitely-not-a-route')) errors.push(`[404] the bad route is not echoed back (saw "${shown.echoed}")`);
+  await p404.close();
+}
+
+/*
+ * ⭐ 390px 上**每一个**筛选都要在屏幕里。原来是单行横向滚动,没有任何提示,
+ * "Algebra patterns" 整个落在屏幕外 —— 能滚到,但没人知道要滚。加了第五个分区之后更藏。
+ */
+{
+  const pf = await browser.newPage({ viewport: { width: 390, height: 900 } });
+  await pf.goto(URL, { waitUntil: 'networkidle' });
+  await pf.waitForTimeout(600);
+  const clipped = await pf.evaluate(() => {
+    const nav = document.querySelector('.home-filters');
+    const edge = nav.getBoundingClientRect().right;
+    return [...nav.querySelectorAll('button')]
+      .filter((b) => b.getBoundingClientRect().right > edge + 0.5)
+      .map((b) => b.textContent.trim());
+  });
+  if (clipped.length) errors.push(`[mobile] these filters sit off-screen at 390px: ${clipped.join(', ')}`);
+  const count = await pf.evaluate(() => document.querySelectorAll('.home-filters button').length);
+  if (count !== 5) errors.push(`[mobile] expected 5 filter buttons, got ${count}`);
+  await pf.close();
+}
 
 await browser.close();
 server.close();

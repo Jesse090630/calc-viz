@@ -127,7 +127,14 @@ export const FORMULA_SECTIONS: readonly FormulaSection[] = [
       entry('tangent-line', 'Tangent line at x = a', 1, [String.raw`m=f'(a)`, String.raw`y=f(a)+f'(a)(x-a)`], { deriveRoute: 'derivative' }),
       entry('instantaneous-rate', 'Instantaneous rate & velocity', 1, [String.raw`f'(a)=\text{instantaneous rate of change at }x=a`, String.raw`s'(a)=\text{velocity at }t=a`]),
       entry('accumulation', 'Accumulation function', 1, [String.raw`F(x)=\int_a^x f(t)\,dt\Longrightarrow F'(x)=f(x)`], { deriveRoute: 'riemann-sum', search: ['FTC', 'fundamental theorem'] }),
-      entry('accumulation-behavior', 'Behavior of accumulation', 1, [String.raw`F\uparrow\iff F'>0\iff f>0`, String.raw`F\downarrow\iff F'<0\iff f<0`, String.raw`F\text{ has extrema when }f\text{ changes sign}`, String.raw`F\text{ concave up/down according as }f'\gtrless0`]),
+      /**
+     * ⚠️ 这里以前写的是 `F↑ ⟺ F′>0`,那个双向箭头是**错的**。
+     *   `F′>0 ⟹ F 严格递增` 成立;但反过来不成立 —— `x³` 在整条实轴上递增,
+     *   而它在 0 处的导数恰好是 0。所以「递增」对应的是 `F′ ≥ 0`,不是 `F′ > 0`。
+     *   一个方向是充分条件、另一个方向是必要条件,合不成 iff。
+     *   凹凸那一行同理:`F 上凹 ⟺ F″ ≥ 0 ⟺ f 递增`。
+     */
+    entry('accumulation-behavior', 'Behavior of accumulation', 1, [String.raw`F'>0\Rightarrow F\text{ strictly increasing}`, String.raw`F\text{ increasing}\iff F'\ge0\iff f\ge0`, String.raw`F\text{ decreasing}\iff F'\le0\iff f\le0`, String.raw`F\text{ has extrema where }f\text{ changes sign}`, String.raw`F\text{ concave up}\iff f\text{ increasing}`], { note: 'The one-way arrow is not a typo. x³ is increasing everywhere yet its derivative is 0 at the origin, so “increasing” pairs with ≥, never with >.' }),
     ],
   },
   {

@@ -253,6 +253,12 @@ body {
   z-index: 12;
   top: 0;
   display: flex;
+  /*
+   * ⚠️ 原来是单行 + 横向滚动。滚动条没有任何提示,390px 上第四个筛选
+   * (Algebra patterns)整个落在屏幕外 —— 能滚到,但没人知道要滚。
+   * 加上第五个分区之后只会更藏。换行之后每一个都在屏幕上,不需要提示。
+   */
+  flex-wrap: wrap;
   align-items: stretch;
   border-block: 2px solid var(--studio-ink);
   background: rgb(238 243 240 / 94%);

@@ -152,7 +152,7 @@ export function SpecialLimitLab() {
           提示词要的顺序是:代入失败 → 数值上的悬念 → 才轮到几何。
           「Interesting. But numerical evidence is not a proof.」那句话是这两块的落点。
         */}
-        <div className="grid gap-4 border-b border-slate-700 p-4 sm:p-5 md:grid-cols-2">
+        <div className="grid items-start gap-4 border-b border-slate-700 p-4 sm:p-5 md:grid-cols-2">
           <SubstitutionPanel id={FORM} />
           <LadderTable id={FORM} />
         </div>
@@ -214,7 +214,7 @@ export function SpecialLimitLab() {
               <p className="mt-2 text-sm text-slate-200"><Tex src={FLIPPED_TEX} /></p>
               <p className="mt-2 text-base text-slate-100"><Tex src={RESULT_TEX} /></p>
               <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                cos x → 1 and 1 → 1, so the thing between them has nowhere else to go.
+                Both outer curves head for 1, so the one trapped between them has nowhere else to go.
               </p>
               {/* ⚠️ 「这条立在什么上面」和另外五课一样,写在结论旁边 ——
                   这一课是**根**:它不由更早的极限推出,而是由几何推出。 */}

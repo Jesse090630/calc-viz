@@ -56,9 +56,10 @@ export function ChainPlayer({
       </div>
 
       {/* 面板区 */}
-      <aside className="flex max-h-[52dvh] shrink-0 flex-col overflow-y-auto border-t border-slate-700 bg-slate-900 px-5 pb-4 pt-5 md:max-h-none md:w-[380px] md:border-l md:border-t-0">
+      <aside className="flex max-h-[52dvh] shrink-0 flex-col overflow-y-auto border-t border-slate-700 bg-slate-900 px-5 pb-4 pt-5 md:max-h-none md:w-[380px] md:border-l md:border-t-0 md:pt-16">
         <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
-          {chain.subtitle} · step {stage.label} of {chain.stages.length}
+          {chain.subtitle} ·{' '}
+          <span className="whitespace-nowrap">step {stage.label} of {chain.stages.length}</span>
         </p>
         <h1 className="mt-2 text-xl font-bold leading-tight">{stage.title}</h1>
         <p className="mb-4 mt-2.5 text-sm leading-relaxed text-slate-300 md:min-h-[6.5rem]">
@@ -68,7 +69,38 @@ export function ChainPlayer({
         <FormulaPanel lines={stage.formula ?? []} params={params} />
         <ControlPanel controls={stage.controls ?? []} params={params} setParam={setParam} />
 
-        <div className="min-h-2 flex-1" />
+        {/*
+          * 步骤大纲。⚠️ 这块以前是一个纯粹的 flex 撑杆:第 1 步只有三行旁白,
+          * 底下就是约 700px 的空白直到翻页按钮 —— 一个播放器却看不到自己有几步、
+          * 现在在第几步、后面是什么。现在把那段空白换成能用的东西。
+          *
+          * 禁止 3:这里只读 `chain.stages[].title`,不出现任何概念的名字。
+          * 手机端面板本来就矮(max-h-52dvh),不需要填空,所以只在 md 以上出现。
+          */}
+        <nav aria-label="Steps in this derivation" className="mt-4 hidden min-h-2 flex-1 md:block">
+          <ol className="space-y-0.5">
+            {chain.stages.map((s, i) => (
+              <li key={s.label}>
+                <button
+                  type="button"
+                  onClick={() => goto(i)}
+                  aria-current={i === index ? 'step' : undefined}
+                  data-step-outline={i === index ? 'current' : 'other'}
+                  className={
+                    'flex w-full items-baseline gap-2 rounded px-1.5 py-1 text-left text-[11px] leading-snug transition ' +
+                    (i === index
+                      ? 'bg-slate-800 font-semibold text-white'
+                      : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300')
+                  }
+                >
+                  <span className="w-3 shrink-0 text-right font-mono text-[10px] opacity-70">{i + 1}</span>
+                  <span className="min-w-0 truncate">{s.title}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+        <div className="min-h-2 flex-1 md:hidden" />
 
         <nav className="flex items-center gap-2.5 border-t border-slate-700 pt-3.5">
           <button
