@@ -968,3 +968,17 @@ Formula deck 的 `Behavior of accumulation` 写的是 `F↑ ⟺ F′>0`。**这�
 其中四处(椭圆、盘法传错曲线、切片没缝、面积看不见)甚至是我自己刚写完的代码 ——
 `npm run check` 全过、tsc 全过、浏览器检查全过。
 **能自动测的是"有没有东西",不是"画对了没有"。** 画面这一层,眼睛仍然是唯一的检查。
+
+### 补:子路径检查(`tests/e2e/pages-check.mjs`)
+
+`home-check` 从 `/` 起服务,而线上挂在 `/calc-viz/` 子路径下。
+有一类错**只在部署之后才暴露**,本地永远绿:`public/` 资源写死斜杠开头的路径、
+lazy chunk 没跟着 base 走、任何硬编码的绝对链接。
+现在多了一条从 `/calc-viz/` 起服务的检查,跑法:
+
+```bash
+GITHUB_PAGES=true npx vite build && node tests/e2e/pages-check.mjs
+```
+
+它验的是子路径下:36 张卡、5 个筛选、七条链(canvas + 步骤大纲)、PDF 的
+`%PDF-` 头、404 页,以及零 console / pageerror / 失败请求。
