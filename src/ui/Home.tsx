@@ -33,6 +33,11 @@ interface LessonCard {
 }
 
 const LESSONS: readonly LessonCard[] = [
+  {
+    id: 'chain-rule',
+    title: 'The Chain Rule',
+    question: 'Two stages of stretching multiply.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -288,6 +293,7 @@ const SECTIONS: readonly LessonSection[] = [
     description: 'Step through a formula being built, one move at a time.',
     lessonIds: [
       'derivative',
+      'chain-rule',
       'riemann-sum',
       'log-integral',
       'shell-method',

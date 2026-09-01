@@ -26,6 +26,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'unit-circle': lazy(() => import('./concepts/unit-circle/page')),
   'trig-rates': lazy(() => import('./concepts/trig-rates/page')),
   // 实验台,不是推导链:没有上一步/下一步,不经过 `src/engine/`。
+  'chain-rule': lazy(() => import('./labs/chainRule/page')),
   increasing: lazy(() => import('./labs/increasing/page')),
   intervals: lazy(() => import('./labs/scanning/page')),
   'one-sided': lazy(() => import('./labs/oneSided/page')),

@@ -30,6 +30,7 @@ import { tangent as derivTangent } from '../../math/derivative';
 import { circlePoint } from '../../math/trig';
 import { circleVelocity } from '../../math/trigRates';
 import { areaUnderReciprocal } from '../../math/logIntegral';
+import { PAIRS as CHAIN_PAIRS, stretchFactors } from '../../math/chainRule';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1157,6 +1158,46 @@ export function TrigRatesPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㊲ 链式法则:一步 x 变成一步 u,再变成一步 y —— 倍率相乘 ────── */
+export function ChainRulePreview({ phase }: { phase: number }) {
+  // 三条各自定比例的数轴。⚠️ 要让人看见的是"这一跳被放大了多少",
+  //    所以每条按自己那一步定比例,而不是共用一个坐标系。
+  const pair = CHAIN_PAIRS[0]!;                 // y = (2x)² —— 两级都非平凡
+  const x = -0.9 + pingPong(phase) * 1.8;
+  const dx = 0.35;
+  const s = stretchFactors(pair, x, dx);
+  const rows = s
+    ? [
+        { from: x, delta: s.dx, color: COLOR.introduce },
+        { from: pair.inner.at(x), delta: s.du, color: COLOR.hero },
+        { from: pair.outer.at(pair.inner.at(x)), delta: s.dy, color: COLOR.result },
+      ]
+    : [];
+  return (
+    <Frame label="One step in x becoming a larger step in u and a larger step again in y">
+      {rows.map((row, i) => {
+        const y = 24 + i * 34;
+        const span = Math.max(Math.abs(row.delta) * 3, 1e-9);
+        const mid = W / 2;
+        const px = (v: number) => mid + ((v - row.from) / span) * (W * 0.34);
+        return (
+          <g key={i}>
+            <line x1={24} y1={y} x2={W - 24} y2={y} stroke={COLOR.axis} strokeWidth={1.1} />
+            <line x1={px(row.from)} y1={y} x2={px(row.from + row.delta)} y2={y}
+              stroke={row.color} strokeWidth={4.5} strokeLinecap="round" />
+            <circle cx={px(row.from)} cy={y} r={3.4} fill={COLOR.background} stroke={row.color} strokeWidth={1.8} />
+            <circle cx={px(row.from + row.delta)} cy={y} r={3.4} fill={row.color} />
+          </g>
+        );
+      })}
+      {[0, 1].map((i) => (
+        <line key={i} x1={W / 2} y1={24 + i * 34 + 6} x2={W / 2} y2={24 + (i + 1) * 34 - 6}
+          stroke={COLOR.thickness} strokeWidth={1} strokeDasharray="3 3" />
+      ))}
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1188,6 +1229,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   functions: FunctionPreview,
   domain: DomainPreview,
   // 七条推导链
+  'chain-rule': ChainRulePreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,
