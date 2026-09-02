@@ -160,6 +160,38 @@ npm run shots    # 构建 + 逐 stage 截图到 tests/e2e/screenshots/(自带静
 在这两件事做完之前:**以 GitHub Pages 为准**,不要往 Netlify 部署,也不要拿它验收。
 
 Netlify site id:`efa914ff-2725-47d0-99b2-92c1337eda3c`(留着备查)
+### 接自定义域名:只需要新建一个文件
+
+⚠️ 这里有一个**只在部署之后才会暴露**的陷阱。GitHub Pages 有两种挂法,base 完全不同:
+
+| 情况 | 站点地址 | base 必须是 |
+|---|---|---|
+| 没有自定义域名 | `https://jesse090630.github.io/calc-viz/` | `/calc-viz/` |
+| **有**自定义域名 | `https://<域名>/` 的**根**上 | `/` |
+
+而部署工作流是**无条件**设 `GITHUB_PAGES=true` 的。所以接上域名的那一刻,
+如果 base 还是 `/calc-viz/`,每个资源都会去请求 `https://<域名>/calc-viz/assets/…` ——
+**全部 404、整站白屏**,而本地怎么测都是好的(本地永远从根路径起服务)。
+
+所以 base **不再由环境变量单独决定**,而是跟着 `public/CNAME` 走 ——
+GitHub Pages 本来就是靠这个文件认自定义域名的,让两者共用同一个事实来源,
+它们就不可能再对不上。见 `vite.config.ts` 的 `resolveBase`,
+以及 `src/math/deployBase.test.ts`(空 CNAME 与不存在的行为也钉住了)。
+
+**操作步骤(买好域名之后):**
+
+1. 新建 `public/CNAME`,里面**只写域名一行**,例如 `calcviz.app`;
+2. 在域名商那边配 DNS:
+   - 用二级域名(如 `www.calcviz.app`):加一条 `CNAME` 记录指向 `jesse090630.github.io`
+   - 用裸域名(如 `calcviz.app`):加四条 `A` 记录指向
+     `185.199.108.153` / `185.199.109.153` / `185.199.110.153` / `185.199.111.153`
+3. push。base 会自动变成 `/`,`CNAME` 会被带进 `dist/`,Pages 读到它就切过去。
+4. GitHub 仓库 Settings → Pages 里勾上 **Enforce HTTPS**(证书签发要等几分钟)。
+
+⚠️ `deployBase.test.ts` 最后那条断言写着"现在还没有配域名"——
+**建了 CNAME 之后它会变红,那是故意的**:提醒你 base 已经切了,DNS 要跟上,
+旧的 `github.io/calc-viz/` 链接会开始重定向。改掉那条断言,别绕过它。
+
 - 查 CI 状态(免登录):`https://api.github.com/repos/Jesse090630/calc-viz/actions/runs?per_page=3`
 - 部署后**必须实测**:用无头浏览器打开线上地址,进两条链各按几次方向键,确认 canvas 渲染 + console 零错误。
   不要只看到 "Deploy is ready" 就宣布完成。
