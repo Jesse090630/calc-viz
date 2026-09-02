@@ -34,6 +34,7 @@ import { PAIRS as CHAIN_PAIRS, stretchFactors } from '../../math/chainRule';
 import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } from '../../math/substitution';
 import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
 import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
+import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1306,6 +1307,31 @@ export function ByPartsPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㊶ 隐函数求导:点沿圆滑动,切线跟着转;到最右端变竖直 ─────── */
+export function ImplicitPreview({ phase }: { phase: number }) {
+  const c = impCurve('circle');
+  // ⚠️ 等比例:圆必须是圆。
+  const map = makeSquareMap(6.2);
+  const x = -4.6 + pingPong(phase) * 9.2;
+  const p = impPoint(c, Math.max(-4.999, Math.min(4.999, x)), 'upper');
+  const t = p ? impTangent(c, p.x, p.y) : null;
+  const ring = [...impBranch(c, 'upper', 60), ...[...impBranch(c, 'lower', 60)].reverse()];
+  return (
+    <Frame label="A point sliding around a circle with its tangent line turning to follow">
+      <path d={ring.map((q, i) => `${i === 0 ? 'M' : 'L'}${map.x(q.x).toFixed(1)} ${map.y(q.y).toFixed(1)}`).join(' ')}
+        fill="none" stroke={COLOR.curve} strokeWidth={1.8} />
+      {p && t && (t.vertical ? (
+        <line x1={map.x(p.x)} y1={map.y(-5.6)} x2={map.x(p.x)} y2={map.y(5.6)}
+          stroke={COLOR.radius} strokeWidth={2.2} />
+      ) : (
+        <line x1={map.x(p.x - 3)} y1={map.y(t.at(p.x - 3)!)} x2={map.x(p.x + 3)} y2={map.y(t.at(p.x + 3)!)}
+          stroke={COLOR.result} strokeWidth={2} />
+      ))}
+      {p && <circle cx={map.x(p.x)} cy={map.y(p.y)} r={4} fill={COLOR.hero} />}
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1341,6 +1367,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   'u-substitution': SubstitutionPreview,
   ftc: FtcPreview,
   'by-parts': ByPartsPreview,
+  implicit: ImplicitPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,
