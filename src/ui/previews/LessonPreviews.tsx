@@ -35,6 +35,7 @@ import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } fr
 import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
 import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
+import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1332,6 +1333,34 @@ export function ImplicitPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ── ㊷ 相关变化率:梯脚匀速外移,顶端越掉越快 ──────────────────── */
+export function RelatedRatesPreview({ phase }: { phase: number }) {
+  const s = rrScenario('ladder');
+  // ⚠️ 停在失效点之前 —— 预览不该展示一个已经无效的模型
+  const t = pingPong(phase) * (s.breaksAt! * 0.96);
+  const x = s.driverAt(t);
+  const y = s.trackedAt(t);
+  const k = (W - 40) / 5.6;
+  const ox = 22;
+  const oy = H - 16;
+  return (
+    <Frame label="A ladder sliding down a wall, its top falling faster as the foot moves out">
+      <line x1={ox} y1={10} x2={ox} y2={oy} stroke={COLOR.axis} strokeWidth={1.4} />
+      <line x1={ox} y1={oy} x2={W - 14} y2={oy} stroke={COLOR.axis} strokeWidth={1.4} />
+      {y !== null && (
+        <>
+          <line x1={ox} y1={oy} x2={ox + x * k} y2={oy} stroke={COLOR.introduce} strokeWidth={2.5} />
+          <line x1={ox} y1={oy} x2={ox} y2={oy - y * k} stroke={COLOR.result} strokeWidth={2.5} />
+          <line x1={ox} y1={oy - y * k} x2={ox + x * k} y2={oy}
+            stroke={COLOR.hero} strokeWidth={3} strokeLinecap="round" />
+          <circle cx={ox} cy={oy - y * k} r={3.4} fill={COLOR.result} />
+          <circle cx={ox + x * k} cy={oy} r={3.4} fill={COLOR.introduce} />
+        </>
+      )}
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1368,6 +1397,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   ftc: FtcPreview,
   'by-parts': ByPartsPreview,
   implicit: ImplicitPreview,
+  'related-rates': RelatedRatesPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,
