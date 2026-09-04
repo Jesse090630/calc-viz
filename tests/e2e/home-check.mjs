@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 43) errors.push(`[${name}] expected 43 cards, got ${cards}`);
+  if (cards !== 44) errors.push(`[${name}] expected 44 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -172,6 +172,7 @@ const NAMES = {
   implicit: 'Implicit Differentiation',
   'related-rates': 'Related Rates',
   optimization: 'Optimization',
+  'bisect-line': 'Cut It in Half Through P',
 };
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`[lesson] console: ${m.text()}`); });

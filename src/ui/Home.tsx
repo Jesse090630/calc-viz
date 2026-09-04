@@ -68,6 +68,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Optimization',
     question: 'Setting the derivative to zero is a filter, not an answer.',
   },
+  {
+    id: 'bisect-line',
+    title: 'Cut It in Half Through P',
+    question: 'Turn the line halfway around and the two sides trade places.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -330,6 +335,7 @@ const SECTIONS: readonly LessonSection[] = [
       'implicit',
       'related-rates',
       'optimization',
+      'bisect-line',
       'riemann-sum',
       'log-integral',
       'shell-method',

@@ -37,6 +37,11 @@ import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from 
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
+import {
+  boundary as bisectBoundary,
+  clipLeft as bisectClip,
+  shapeOf as bisectShape,
+} from '../../math/bisectByLine';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1398,6 +1403,38 @@ export function OptimizationPreview({ phase }: { phase: number }) {
   );
 }
 
+
+/**
+ * ⭐ 这张预览动的正是那一步:直线绕 P 转,涂色的那一半跟着变,
+ *   转过 π 时两块**恰好对调** —— 于是中间必有一刻两块一样大。
+ */
+export function BisectPreview({ phase }: { phase: number }) {
+  const s = bisectShape('ellipse');
+  const P = [4.6, 2.4] as const;
+  const theta = pingPong(phase) * Math.PI;
+  const k = (W - 40) / 13.5;
+  const ox = W / 2 - 8;
+  const oy = H / 2;
+  const at = (q: readonly [number, number]) => `${ox + q[0] * k},${oy - q[1] * k}`;
+  const outline = bisectBoundary(s, 160);
+  const half = bisectClip(outline, P, theta);
+  const e0x = P[0] - Math.cos(theta) * 20;
+  const e0y = P[1] - Math.sin(theta) * 20;
+  const e1x = P[0] + Math.cos(theta) * 20;
+  const e1y = P[1] + Math.sin(theta) * 20;
+  return (
+    <Frame label="A line turning about an outside point, the shaded half of the ellipse growing and shrinking">
+      {half.length > 2 && (
+        <polygon points={half.map(at).join(' ')} fill={COLOR.result} fillOpacity={0.34} />
+      )}
+      <polygon points={outline.map(at).join(' ')} fill="none" stroke={COLOR.curve} strokeWidth={1.8} />
+      <line x1={ox + e0x * k} y1={oy - e0y * k} x2={ox + e1x * k} y2={oy - e1y * k}
+        stroke={COLOR.hero} strokeWidth={1.8} />
+      <circle cx={ox + P[0] * k} cy={oy - P[1] * k} r={3.2} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1436,6 +1473,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   implicit: ImplicitPreview,
   'related-rates': RelatedRatesPreview,
   optimization: OptimizationPreview,
+  'bisect-line': BisectPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,
