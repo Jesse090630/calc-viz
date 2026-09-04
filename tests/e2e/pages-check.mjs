@@ -32,7 +32,7 @@ p.on('requestfailed',r=>note('request failed: '+r.url().slice(-70)));
 await p.goto(B,{waitUntil:'networkidle'}); await p.waitForTimeout(1400);
 
 const cards=await p.locator('[data-lesson-card]').count();
-if(cards!==42) note(`expected 42 lesson cards, got ${cards}`);
+if(cards!==43) note(`expected 43 lesson cards, got ${cards}`);
 const filters=await p.locator('.home-filters button').count();
 if(filters!==5) note(`expected 5 filters, got ${filters}`);
 
@@ -57,4 +57,4 @@ if(await p.locator('[data-missing-route]').count()!==1) note('the not-found page
 
 await b.close(); server.close();
 if(bad.length){console.error('✗ pages-check\n'+bad.map(x=>'  '+x).join('\n'));process.exit(1);}
-console.log('✓ 子路径 /calc-viz/ 下一切正常:42 张卡、5 个筛选、七条链、PDF、404');
+console.log('✓ 子路径 /calc-viz/ 下一切正常:43 张卡、5 个筛选、七条链、PDF、404');

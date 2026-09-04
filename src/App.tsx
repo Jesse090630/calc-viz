@@ -32,6 +32,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'by-parts': lazy(() => import('./labs/byParts/page')),
   'implicit': lazy(() => import('./labs/implicit/page')),
   'related-rates': lazy(() => import('./labs/relatedRates/page')),
+  optimization: lazy(() => import('./labs/optimization/page')),
   increasing: lazy(() => import('./labs/increasing/page')),
   intervals: lazy(() => import('./labs/scanning/page')),
   'one-sided': lazy(() => import('./labs/oneSided/page')),

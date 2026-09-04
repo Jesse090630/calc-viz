@@ -36,6 +36,7 @@ import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcS
 import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
+import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
 import { SECANT_FN, secantLine, readSecant } from '../../math/rateOfChange';
 import { PERIODIC_FUNCTIONS } from '../../math/periodicity';
 import { SYMMETRY_FUNCTIONS } from '../../math/symmetry';
@@ -1361,6 +1362,42 @@ export function RelatedRatesPreview({ phase }: { phase: number }) {
   );
 }
 
+
+/**
+ * ⭐⭐ 这张预览动的就是这一课的论点本身:
+ *   围栏边界从右往左扫,越过 x = 25 的那一刻,
+ *   最优点**从曲线的峰顶跳到了边界上** —— 函数一个字没改,只是能到的地方变了。
+ */
+export function OptimizationPreview({ phase }: { phase: number }) {
+  const base = optScenario('fence');
+  const edge = 50 - pingPong(phase) * 36;              // 50 → 14 → 50
+  const s = { ...base, domain: [0, edge] as const };
+  const best = optimumByDerivative(s);
+  const ox = 20;
+  const oy = H - 14;
+  const kx = (W - 34) / 50;
+  const ky = (oy - 12) / 1250;
+  const at = (x: number) => `${ox + x * kx},${oy - base.f(x) * ky}`;
+  const pts: string[] = [];
+  for (let i = 0; i <= 60; i += 1) pts.push(at((50 * i) / 60));
+  return (
+    <Frame label="A parabola of area; as the allowed interval shrinks, the best point jumps from the peak to the edge">
+      <line x1={ox} y1={oy} x2={W - 10} y2={oy} stroke={COLOR.axis} strokeWidth={1.4} />
+      <polyline points={pts.join(' ')} fill="none" stroke={COLOR.curve} strokeWidth={2} opacity={0.5} />
+      {/* 能到达的那一段画实 */}
+      <polyline
+        points={Array.from({ length: 41 }, (_, i) => at((edge * i) / 40)).join(' ')}
+        fill="none" stroke={COLOR.curve} strokeWidth={2.6}
+      />
+      {/* 边界 */}
+      <line x1={ox + edge * kx} y1={12} x2={ox + edge * kx} y2={oy}
+        stroke={COLOR.radius} strokeWidth={1.6} strokeDasharray="3 3" />
+      {/* 最优点 */}
+      <circle cx={ox + best.x * kx} cy={oy - best.value * ky} r={4.2} fill={COLOR.result} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1398,6 +1435,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   'by-parts': ByPartsPreview,
   implicit: ImplicitPreview,
   'related-rates': RelatedRatesPreview,
+  optimization: OptimizationPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,
