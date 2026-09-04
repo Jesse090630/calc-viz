@@ -562,6 +562,42 @@ export function gapCurve(
 
 /* ══ 显示 ═════════════════════════════════════════════════════════ */
 
+/**
+ * ⭐⭐ 这一课的**标题就是论点**:IVT 要三样东西,难的是第三样。
+ * ⚠️ 放在模块里而不是组件里 —— 禁止 2:组件不自己写内容。
+ */
+export interface Need {
+  readonly n: string;
+  readonly what: string;
+  /** 这一条难不难拿到 */
+  readonly hard: boolean;
+  readonly here: string;
+}
+
+export const IVT_NEEDS: readonly Need[] = [
+  {
+    n: '1',
+    what: 'a continuous function',
+    hard: false,
+    here: 'Area on one side of the line. Turn the line a little, the area moves a little.',
+  },
+  {
+    n: '2',
+    what: 'two specific inputs',
+    hard: false,
+    here: 'θ and θ + π. Not "some a and some b" — these two.',
+  },
+  {
+    n: '3',
+    what: 'a reason the values have opposite signs',
+    hard: true,
+    here: 'Rotating a directed line by π gives back the same line with left and right swapped. So g(θ + π) = −g(θ), and the two ends are negatives of each other before you compute anything.',
+  },
+] as const;
+
+export const NEEDS_NOTE =
+  'Most write-ups stop after the first two and assert the third. The third is the entire problem — and here it costs nothing, because the construction hands it to you.';
+
 export const HEADLINE = 'Turn the Line Halfway Around and the Two Sides Trade Places';
 export const MAIN_IDEA =
   'That is the whole proof. Rotating a directed line by π gives back the same line with left and right swapped, so the difference in area at θ and at θ + π are negatives of each other. Opposite signs, continuous function, done.';

@@ -71,7 +71,7 @@ const LESSONS: readonly LessonCard[] = [
   {
     id: 'bisect-line',
     title: 'Cut It in Half Through P',
-    question: 'Turn the line halfway around and the two sides trade places.',
+    question: 'The hard part of an IVT proof is the opposite signs, not the continuity.',
   },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,

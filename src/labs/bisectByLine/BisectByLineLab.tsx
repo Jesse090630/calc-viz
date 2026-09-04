@@ -19,7 +19,9 @@ import { useMemo, useRef, useState } from 'react';
 import {
   CENTROID_TRAP,
   HEADLINE,
+  IVT_NEEDS,
   MAIN_IDEA,
+  NEEDS_NOTE,
   OUTSIDE_NOTE,
   type Pt,
   SHAPES,
@@ -151,6 +153,31 @@ export function BisectByLineLab() {
         </h1>
         <p className="mt-3 text-base text-slate-400">{HEADLINE}. {MAIN_IDEA}</p>
       </header>
+
+      {/* ⭐⭐ 论点前置:IVT 要三样东西,难的只有第三样。
+          学生的答卷通常给了前两样、把第三样当成了显然。 */}
+      <section data-panel="needs" className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/40 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          To use the Intermediate Value Theorem you must produce
+        </p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          {IVT_NEEDS.map((need) => (
+            <div
+              key={need.n} data-need={need.n} data-hard={need.hard ? 'yes' : 'no'}
+              className={
+                'rounded-lg border px-2.5 py-2 ' +
+                (need.hard ? 'border-amber-400/50 bg-amber-400/10' : 'border-slate-800')
+              }
+            >
+              <p className="font-mono text-[11px]" style={{ color: need.hard ? '#fcd34d' : '#94a3b8' }}>
+                {need.n}. {need.what}
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{need.here}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-slate-400">{NEEDS_NOTE}</p>
+      </section>
 
       <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-3">
         <div className="flex flex-wrap gap-1.5">

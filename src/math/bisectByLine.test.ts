@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  IVT_NEEDS,
   SHAPES,
   angleTo,
   areaLeft,
@@ -701,5 +702,29 @@ describe('countRuns —— 环形数组数段数', () => {
   it('单个元素', () => {
     expect(countRuns([T])).toBe(1);
     expect(countRuns([F])).toBe(0);
+  });
+});
+
+describe('⭐ 论点前置:IVT 要的三样东西', () => {
+  it('恰好三条,而且**只有一条**是难的', () => {
+    expect(IVT_NEEDS).toHaveLength(3);
+    const hard = IVT_NEEDS.filter((n) => n.hard);
+    expect(hard).toHaveLength(1);
+    expect(hard[0]!.n).toBe('3');
+  });
+
+  it('每一条都说清了「在这道题里是什么」', () => {
+    for (const n of IVT_NEEDS) {
+      expect(n.what.length).toBeGreaterThan(10);
+      expect(n.here.length).toBeGreaterThan(30);
+    }
+  });
+
+  it('⭐ 难的那一条必须点名 π —— 否则它就没说到点子上', () => {
+    expect(IVT_NEEDS.find((n) => n.hard)!.here).toContain('π');
+  });
+
+  it('编号是 1、2、3,不重不漏', () => {
+    expect(IVT_NEEDS.map((n) => n.n)).toEqual(['1', '2', '3']);
   });
 });

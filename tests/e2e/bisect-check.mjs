@@ -60,6 +60,23 @@ const setTheta = async (v) => {
   await page.waitForTimeout(90);
 };
 
+/* ⭐⭐ 论点必须在页面**最上面**就说出来:三样东西,只有第三样是难的 */
+{
+  const needs = await page.$$eval('[data-need]', (els) =>
+    els.map((e) => ({ n: e.dataset.need, hard: e.dataset.hard, text: e.textContent })));
+  if (needs.length !== 3) fail.push(`IVT 三要素只列了 ${needs.length} 条`);
+  const hard = needs.filter((n) => n.hard === 'yes');
+  if (hard.length !== 1 || hard[0]?.n !== '3') fail.push('没把第三条标成难的那一条');
+  if (!hard[0]?.text.includes('π')) fail.push('难的那一条没点名 π —— 那就没说到点子上');
+  // ⭐ 而且它要排在图的**前面**,不是藏在末尾
+  const order = await page.evaluate(() => {
+    const a = document.querySelector('[data-panel="needs"]');
+    const b = document.querySelector('[data-panel="stage"]');
+    return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? 'before' : 'after';
+  });
+  if (order !== 'before') fail.push('论点排在图后面了 —— 那就不是标题了');
+}
+
 /* ① 总面积就是 πab */
 near('椭圆总面积', await num('total'), T_ELLIPSE, 0.02);
 
