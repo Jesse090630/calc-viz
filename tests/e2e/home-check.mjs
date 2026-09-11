@@ -281,7 +281,7 @@ await chainPage.close();
   });
   if (clipped.length) errors.push(`[mobile] these filters sit off-screen at 390px: ${clipped.join(', ')}`);
   const count = await pf.evaluate(() => document.querySelectorAll('.home-filters button').length);
-  if (count !== 5) errors.push(`[mobile] expected 5 filter buttons, got ${count}`);
+  if (count !== 10) errors.push(`[mobile] expected 10 filter buttons, got ${count}`);
   await pf.close();
 }
 

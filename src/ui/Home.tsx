@@ -266,38 +266,65 @@ const LESSONS: readonly LessonCard[] = [
   },
 ];
 
-type SectionId = 'foundations' | 'limits' | 'algebra' | 'derivations';
+/**
+ * ⭐⭐ 分组跟着 **AP Calculus BC 的十个单元**走,不再按"我们碰巧建了什么"来分。
+ *
+ * ⚠️ 学生手里那本书就是按单元编的 —— 他们找东西时脑子里是"Unit 6 的积分",
+ *   不是"Derivations 这一栏"。目录的分法应当**和课程的分法一致**,
+ *   否则每次查都要在两套编号之间翻译一次。
+ *
+ * ⭐ 单元 7(微分方程)和单元 9(参数/极坐标/向量)目前一课都没有,所以**不列出来**。
+ *   编号自己会说话:6 之后直接跳到 8、8 之后跳到 10 —— 缺口一眼可见,
+ *   不需要再写一行"敬请期待"。
+ */
+type SectionId =
+  | 'precalc'
+  | 'unit-1' | 'unit-2' | 'unit-3' | 'unit-4' | 'unit-5'
+  | 'unit-6' | 'unit-8' | 'unit-10';
 type SectionFilter = 'all' | SectionId;
 
 interface LessonSection {
   readonly id: SectionId;
+  /** 小标题上写的全名 */
   readonly label: string;
+  /**
+   * 筛选钮上写的短名。
+   * ⚠️ 分成九组之后,钮上再写全名就会在手机上排到屏幕外面去 ——
+   *   `home-check.mjs` 有一条断言专门盯着这个。
+   */
+  readonly chip: string;
   readonly description: string;
   readonly lessonIds: readonly string[];
 }
 
 const SECTIONS: readonly LessonSection[] = [
   {
-    id: 'foundations',
-    label: 'Functions & behavior',
-    description: 'Read a function before you calculate with it.',
+    id: 'precalc',
+    label: 'Pre-Calculus',
+    chip: 'Pre-Calc',
+    description: 'The things BC assumes you already read fluently.',
     lessonIds: [
       'functions',
       'domain',
-      'increasing',
-      'intervals',
-      'nondecreasing',
-      'nonincreasing',
       'symmetry',
       'periodic',
+      'increasing',
+      'nondecreasing',
+      'nonincreasing',
+      'intervals',
       'secant',
       'floor',
       'ceiling',
+      'unit-circle',
+      'difference-of-squares',
+      'difference-of-cubes',
+      'binomial-theorem',
     ],
   },
   {
-    id: 'limits',
-    label: 'Limits & change',
+    id: 'unit-1',
+    label: 'Unit 1 · Limits and Continuity',
+    chip: 'U1',
     description: 'Approach, compare, and make the destination unavoidable.',
     lessonIds: [
       'one-sided',
@@ -313,42 +340,57 @@ const SECTIONS: readonly LessonSection[] = [
       'exp-over-x',
       'log-over-x',
       'special-limits',
-      'secant-to-tangent',
-    ],
-  },
-  {
-    id: 'algebra',
-    label: 'Algebra patterns',
-    description: 'Cut, rearrange, and watch an identity explain itself.',
-    lessonIds: [
-      'difference-of-squares',
-      'difference-of-cubes',
-      'binomial-theorem',
-      'geometric-series',
-    ],
-  },
-  {
-    id: 'derivations',
-    label: 'Derivations',
-    description: 'Step through a formula being built, one move at a time.',
-    lessonIds: [
-      'derivative',
-      'chain-rule',
-      'u-substitution',
-      'ftc',
-      'by-parts',
-      'implicit',
-      'related-rates',
-      'optimization',
       'bisect-line',
-      'taylor',
-      'riemann-sum',
-      'log-integral',
-      'shell-method',
-      'disk-method',
-      'unit-circle',
-      'trig-rates',
     ],
+  },
+  {
+    id: 'unit-2',
+    label: 'Unit 2 · Defining the Derivative',
+    chip: 'U2',
+    description: 'Where the slope of a curve comes from.',
+    lessonIds: ['derivative', 'secant-to-tangent', 'trig-rates'],
+  },
+  {
+    id: 'unit-3',
+    label: 'Unit 3 · Composite, Implicit, and Inverse Functions',
+    chip: 'U3',
+    description: 'Differentiating what is not written as y = f(x).',
+    lessonIds: ['chain-rule', 'implicit'],
+  },
+  {
+    id: 'unit-4',
+    label: 'Unit 4 · Contextual Applications of Differentiation',
+    chip: 'U4',
+    description: 'Derivatives attached to something that is actually moving.',
+    lessonIds: ['related-rates'],
+  },
+  {
+    id: 'unit-5',
+    label: 'Unit 5 · Analytical Applications of Differentiation',
+    chip: 'U5',
+    description: 'What the derivative tells you about the shape of the curve.',
+    lessonIds: ['optimization'],
+  },
+  {
+    id: 'unit-6',
+    label: 'Unit 6 · Integration and Accumulation of Change',
+    chip: 'U6',
+    description: 'Adding up infinitely many pieces, and the shortcut for it.',
+    lessonIds: ['riemann-sum', 'ftc', 'u-substitution', 'by-parts', 'log-integral'],
+  },
+  {
+    id: 'unit-8',
+    label: 'Unit 8 · Applications of Integration',
+    chip: 'U8',
+    description: 'Turning an integral back into a solid you can picture.',
+    lessonIds: ['disk-method', 'shell-method'],
+  },
+  {
+    id: 'unit-10',
+    label: 'Unit 10 · Infinite Sequences and Series',
+    chip: 'U10',
+    description: 'Building a function out of powers, and knowing where it stops working.',
+    lessonIds: ['taylor', 'geometric-series'],
   },
 ] as const;
 
@@ -481,7 +523,7 @@ export function Home() {
             aria-pressed={activeSection === section.id}
             onClick={() => setActiveSection(section.id)}
           >
-            {section.label}
+            {section.chip}
           </button>
         ))}
       </nav>
