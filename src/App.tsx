@@ -35,6 +35,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   optimization: lazy(() => import('./labs/optimization/page')),
   'bisect-line': lazy(() => import('./labs/bisectByLine/page')),
   taylor: lazy(() => import('./labs/taylor/page')),
+  'limit-drill': lazy(() => import('./labs/limitDrill/page')),
   increasing: lazy(() => import('./labs/increasing/page')),
   intervals: lazy(() => import('./labs/scanning/page')),
   'one-sided': lazy(() => import('./labs/oneSided/page')),

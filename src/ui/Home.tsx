@@ -78,6 +78,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Taylor Series',
     question: 'More terms is not the same as more accurate.',
   },
+  {
+    id: 'limit-drill',
+    title: 'Special Limits Drill',
+    question: 'Substitute first. Only then look for a pattern.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -340,6 +345,7 @@ const SECTIONS: readonly LessonSection[] = [
       'exp-over-x',
       'log-over-x',
       'special-limits',
+      'limit-drill',
       'bisect-line',
     ],
   },
