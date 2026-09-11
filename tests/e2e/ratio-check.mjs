@@ -348,6 +348,40 @@ if (substitutionsSeen.size !== 1) note(`the six lessons do not agree on the subs
   if (!/RADIANS/i.test(text)) note('sin x / x never states that theta is in radians');
 }
 
+/* ⭐ 390 宽下编号必须**递增** —— 三栏塌成一栏时,DOM 顺序就是阅读顺序。
+   这条是被手机截图逼出来的:①③②④⑤⑥ 在桌面三栏下看着还行,
+   一到手机就是明晃晃的错。断言量的是**页面上圈码出现的先后**,
+   不是「面板都在」—— 面板一直都在,顺序才是错的。 */
+{
+  const narrow = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥'];
+  let orderedLessons = 0;
+  for (const { route } of LESSONS) {
+    await narrow.goto(BASE + route, { waitUntil: 'networkidle' });
+    await narrow.waitForTimeout(300);
+    const seen = await narrow.evaluate((marks) => {
+      const out = [];
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let t = walk.nextNode(); t; t = walk.nextNode()) {
+        for (const m of marks) if (t.nodeValue.includes(m) && !out.includes(m)) out.push(m);
+      }
+      return out;
+    }, CIRCLED);
+    if (seen.length < 3) continue; // sin x / x 是另一个实验台,没有这套圈码
+    orderedLessons += 1;
+    const rank = seen.map((m) => CIRCLED.indexOf(m));
+    for (let i = 1; i < rank.length; i += 1) {
+      if (rank[i] < rank[i - 1]) {
+        note(`[${route}] mobile reading order is ${seen.join(' ')} — the numbering goes backwards`);
+        break;
+      }
+    }
+  }
+  // ⚠️ 一条"什么都没找到"的检查不是检查。五课共用 RatioLab,必须全都量到。
+  if (orderedLessons !== 5) note(`numbered-order check only reached ${orderedLessons} of the 5 RatioLab lessons`);
+  await narrow.close();
+}
+
 await browser.close();
 server.close();
 console.log(`checked ${LESSONS.length} lessons · ${zoomsChecked} zoom sweeps · ${factorPanelsChecked} factor panels`);

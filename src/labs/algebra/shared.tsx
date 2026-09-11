@@ -57,7 +57,10 @@ export function Panel({
       data-panel={name}
       {...extra}
       className={
-        'rounded-2xl border p-4 ' +
+        // ⚠️ min-w-0 不是排版口味。作为 grid/flex 子项,面板默认 min-width:auto,
+        // 于是最宽的那块内容(② 那两行 a, ar, ar², …)会把整条轨道撑到比视口还宽,
+        // 把同一列里别的面板一起顶出裁切边缘 —— DOM 里全在,屏幕上没了。
+        'min-w-0 rounded-2xl border p-4 ' +
         (tone === 'good' ? '' : 'border-slate-700 bg-slate-950/60')
       }
       style={style}

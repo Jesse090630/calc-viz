@@ -37,6 +37,7 @@ import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from 
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
+import { partialSum as taylorPartial, seriesOf as taylorSeries } from '../../math/taylor';
 import {
   boundary as bisectBoundary,
   clipLeft as bisectClip,
@@ -1435,6 +1436,41 @@ export function BisectPreview({ phase }: { phase: number }) {
   );
 }
 
+
+/**
+ * ⭐ 这张预览动的就是这一课的论点:项数一点点加上去,
+ *   多项式在收敛区间里越贴越紧,**一出区间就甩飞**。
+ */
+export function TaylorPreview({ phase }: { phase: number }) {
+  const s = taylorSeries('geometric');
+  const deg = Math.floor(1 + pingPong(phase) * 9);
+  const k = (W - 30) / 3.4;                       // x ∈ [−1.7, 1.7]
+  const ox = W / 2;
+  const oy = H / 2;
+  const ky = (H / 2 - 8) / 3.2;                   // y 夹在 ±3.2
+  const clamp = (v: number) => Math.max(Math.min(v, 3.2), -3.2);
+  const draw = (f: (x: number) => number) => {
+    const out: string[] = [];
+    let pen = false;
+    for (let i = 0; i <= 120; i += 1) {
+      const x = -1.7 + (3.4 * i) / 120;
+      const y = f(x);
+      if (!Number.isFinite(y) || Math.abs(y) > 3.2) { pen = false; continue; }
+      out.push(`${pen ? 'L' : 'M'}${ox + x * k},${oy - clamp(y) * ky}`);
+      pen = true;
+    }
+    return out.join(' ');
+  };
+  return (
+    <Frame label="A Taylor polynomial hugging a curve inside the radius and flying away outside it">
+      <rect x={ox - k} y={4} width={2 * k} height={H - 8} fill={COLOR.result} opacity={0.08} />
+      <line x1={8} y1={oy} x2={W - 8} y2={oy} stroke={COLOR.axis} strokeWidth={1.2} />
+      <path d={draw((x) => s.f(x))} fill="none" stroke={COLOR.curve} strokeWidth={2} />
+      <path d={draw((x) => taylorPartial(s, deg, x))} fill="none" stroke={COLOR.introduce} strokeWidth={1.8} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
@@ -1474,6 +1510,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   'related-rates': RelatedRatesPreview,
   optimization: OptimizationPreview,
   'bisect-line': BisectPreview,
+  taylor: TaylorPreview,
   'riemann-sum': RiemannPreview,
   derivative: DerivativePreview,
   'log-integral': LogIntegralPreview,

@@ -107,21 +107,17 @@ export function RatioLab({ id }: { id: FormId }) {
 
         <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_1fr_0.95fr]">
           {/*
-            左栏:① 代入 → 那一课自己的画面(没有就用缩放面板顶上)。
-            ⚠️ 顺序是从截图上改的:原来缩放面板排在代入**上面**,
-            于是同一栏里先看到 ③ 再看到 ① —— 编号和阅读顺序打架。
+            左栏:① 代入 → ② 阶梯。中栏:③ 放大。右栏:④⑤⑥。
+            ⚠️ 这个顺序是从**手机截图**上改的,而且是同一个错的第二次。
+            上一轮只在栏**内**把 ① 挪到 ③ 上面,可 ② 一直待在另一栏 ——
+            390 宽下三栏塌成一栏,DOM 顺序说了算,屏幕上读到的是 ① ③ ② ④ ⑤ ⑥。
+            编号是给人指路的;指错方向的编号比不编号更糟。
+            现在 ①②③ 各就各位,塌成一栏时读出来仍是 ①②③④⑤⑥。
           */}
           <div className="flex min-w-0 flex-col gap-4">
             <SubstitutionPanel id={id} />
-            {leftColumn ?? <ZoomPanel id={id} level={level} onLevel={setLevel} />}
-            {id === 'tan-over-x' && <ThreeWayPanel x={x} />}
-            {id === 'cos-over-x' && <ConjugatePanel x={x} />}
-            {id === 'cos-over-x2' && <HalfAnglePanel x={x} />}
-          </div>
-
-          {/* 中栏:阶梯 + 缩放(左栏已经占用时缩放挪到这里) */}
-          <div className="flex min-w-0 flex-col gap-4">
-            {leftColumn ? <ZoomPanel id={id} level={level} onLevel={setLevel} /> : null}
+            {/* 那一课自己的画面(有的话)顶在阶梯前面,它是这一课的主视觉 */}
+            {leftColumn}
             {/* ⚠️ `exactOptionalPropertyTypes` 下不能传 `undefined` 当"不传" ——
                 两个分支各写一次,比给 prop 的类型加上 `| undefined` 诚实。 */}
             {showNaive ? (
@@ -129,6 +125,14 @@ export function RatioLab({ id }: { id: FormId }) {
             ) : (
               <LadderTable id={id} />
             )}
+          </div>
+
+          {/* 中栏:③ 放大 + 每课自己那一块 */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <ZoomPanel id={id} level={level} onLevel={setLevel} />
+            {id === 'tan-over-x' && <ThreeWayPanel x={x} />}
+            {id === 'cos-over-x' && <ConjugatePanel x={x} />}
+            {id === 'cos-over-x2' && <HalfAnglePanel x={x} />}
             {id === 'cos-over-x2' && <LocalBehaviourPanel x={x} />}
             {id === 'exp-over-x' && <BasePanel />}
           </div>
