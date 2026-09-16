@@ -88,6 +88,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Parametric Motion',
     question: 'dy/dt is not the slope.',
   },
+  {
+    id: 'polar-area',
+    title: 'Polar Area',
+    question: 'A sector is not a rectangle.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -401,7 +406,7 @@ const SECTIONS: readonly LessonSection[] = [
     label: 'Unit 9 · Parametric, Polar, and Vector-Valued Functions',
     chip: 'U9',
     description: 'Curves a moving point traces, where time and position are different questions.',
-    lessonIds: ['parametric'],
+    lessonIds: ['parametric', 'polar-area'],
   },
   {
     id: 'unit-10',
