@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 46) errors.push(`[${name}] expected 46 cards, got ${cards}`);
+  if (cards !== 47) errors.push(`[${name}] expected 47 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -175,6 +175,7 @@ const NAMES = {
   'bisect-line': 'Cut It in Half Through P',
   taylor: 'Taylor Series',
   'limit-drill': 'Special Limits Drill',
+  parametric: 'Parametric Motion',
 };
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`[lesson] console: ${m.text()}`); });
@@ -282,7 +283,7 @@ await chainPage.close();
   });
   if (clipped.length) errors.push(`[mobile] these filters sit off-screen at 390px: ${clipped.join(', ')}`);
   const count = await pf.evaluate(() => document.querySelectorAll('.home-filters button').length);
-  if (count !== 10) errors.push(`[mobile] expected 10 filter buttons, got ${count}`);
+  if (count !== 11) errors.push(`[mobile] expected 11 filter buttons, got ${count}`);
   await pf.close();
 }
 

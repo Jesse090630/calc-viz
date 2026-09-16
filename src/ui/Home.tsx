@@ -83,6 +83,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Special Limits Drill',
     question: 'Substitute first. Only then look for a pattern.',
   },
+  {
+    id: 'parametric',
+    title: 'Parametric Motion',
+    question: 'dy/dt is not the slope.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -285,7 +290,7 @@ const LESSONS: readonly LessonCard[] = [
 type SectionId =
   | 'precalc'
   | 'unit-1' | 'unit-2' | 'unit-3' | 'unit-4' | 'unit-5'
-  | 'unit-6' | 'unit-8' | 'unit-10';
+  | 'unit-6' | 'unit-8' | 'unit-9' | 'unit-10';
 type SectionFilter = 'all' | SectionId;
 
 interface LessonSection {
@@ -390,6 +395,13 @@ const SECTIONS: readonly LessonSection[] = [
     chip: 'U8',
     description: 'Turning an integral back into a solid you can picture.',
     lessonIds: ['disk-method', 'shell-method'],
+  },
+  {
+    id: 'unit-9',
+    label: 'Unit 9 · Parametric, Polar, and Vector-Valued Functions',
+    chip: 'U9',
+    description: 'Curves a moving point traces, where time and position are different questions.',
+    lessonIds: ['parametric'],
   },
   {
     id: 'unit-10',
