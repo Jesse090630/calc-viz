@@ -103,6 +103,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Slope Fields',
     question: 'The solution you divided away.',
   },
+  {
+    id: 'euler',
+    title: "Euler’s Method",
+    question: 'It will not tell you it is wrong.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -409,7 +414,7 @@ const SECTIONS: readonly LessonSection[] = [
     label: 'Unit 7 · Differential Equations',
     chip: 'U7',
     description: 'An equation that hands you a direction at every point instead of a curve.',
-    lessonIds: ['slope-field'],
+    lessonIds: ['slope-field', 'euler'],
   },
   {
     id: 'unit-8',
