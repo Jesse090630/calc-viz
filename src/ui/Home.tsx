@@ -98,6 +98,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Mean Value Theorem',
     question: 'One missing point is enough.',
   },
+  {
+    id: 'slope-field',
+    title: 'Slope Fields',
+    question: 'The solution you divided away.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -300,7 +305,7 @@ const LESSONS: readonly LessonCard[] = [
 type SectionId =
   | 'precalc'
   | 'unit-1' | 'unit-2' | 'unit-3' | 'unit-4' | 'unit-5'
-  | 'unit-6' | 'unit-8' | 'unit-9' | 'unit-10';
+  | 'unit-6' | 'unit-7' | 'unit-8' | 'unit-9' | 'unit-10';
 type SectionFilter = 'all' | SectionId;
 
 interface LessonSection {
@@ -398,6 +403,13 @@ const SECTIONS: readonly LessonSection[] = [
     chip: 'U6',
     description: 'Adding up infinitely many pieces, and the shortcut for it.',
     lessonIds: ['riemann-sum', 'ftc', 'u-substitution', 'by-parts', 'log-integral'],
+  },
+  {
+    id: 'unit-7',
+    label: 'Unit 7 · Differential Equations',
+    chip: 'U7',
+    description: 'An equation that hands you a direction at every point instead of a curve.',
+    lessonIds: ['slope-field'],
   },
   {
     id: 'unit-8',
