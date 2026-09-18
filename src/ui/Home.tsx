@@ -93,6 +93,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Polar Area',
     question: 'A sector is not a rectangle.',
   },
+  {
+    id: 'mvt',
+    title: 'Mean Value Theorem',
+    question: 'One missing point is enough.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -385,7 +390,7 @@ const SECTIONS: readonly LessonSection[] = [
     label: 'Unit 5 · Analytical Applications of Differentiation',
     chip: 'U5',
     description: 'What the derivative tells you about the shape of the curve.',
-    lessonIds: ['optimization'],
+    lessonIds: ['mvt', 'optimization'],
   },
   {
     id: 'unit-6',

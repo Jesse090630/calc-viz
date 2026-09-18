@@ -38,6 +38,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'limit-drill': lazy(() => import('./labs/limitDrill/page')),
   parametric: lazy(() => import('./labs/parametric/page')),
   'polar-area': lazy(() => import('./labs/polar/page')),
+  mvt: lazy(() => import('./labs/mvt/page')),
   increasing: lazy(() => import('./labs/increasing/page')),
   intervals: lazy(() => import('./labs/scanning/page')),
   'one-sided': lazy(() => import('./labs/oneSided/page')),
