@@ -108,6 +108,11 @@ const LESSONS: readonly LessonCard[] = [
     title: "Euler’s Method",
     question: 'It will not tell you it is wrong.',
   },
+  {
+    id: 'convergence',
+    title: 'Convergence Tests',
+    question: 'Inconclusive is not a verdict.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -435,7 +440,7 @@ const SECTIONS: readonly LessonSection[] = [
     label: 'Unit 10 · Infinite Sequences and Series',
     chip: 'U10',
     description: 'Building a function out of powers, and knowing where it stops working.',
-    lessonIds: ['taylor', 'geometric-series'],
+    lessonIds: ['convergence', 'taylor', 'geometric-series'],
   },
 ] as const;
 
