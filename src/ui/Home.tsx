@@ -113,6 +113,11 @@ const LESSONS: readonly LessonCard[] = [
     title: 'Convergence Tests',
     question: 'Inconclusive is not a verdict.',
   },
+  {
+    id: 'theorems',
+    title: 'Theorems and Corollaries',
+    question: 'Where each one comes from.',
+  },
   /* ── 七条推导链 ────────────────────────────────────────────────
    * ⚠️ 这七条一直都在,路由也一直能开,但改版之后首页不再列出它们,
    *    于是只能靠手打 URL 进去。AGENTS.md 说得很清楚:推导链**就是**
@@ -315,7 +320,7 @@ const LESSONS: readonly LessonCard[] = [
 type SectionId =
   | 'precalc'
   | 'unit-1' | 'unit-2' | 'unit-3' | 'unit-4' | 'unit-5'
-  | 'unit-6' | 'unit-7' | 'unit-8' | 'unit-9' | 'unit-10';
+  | 'unit-6' | 'unit-7' | 'unit-8' | 'unit-9' | 'unit-10' | 'reference';
 type SectionFilter = 'all' | SectionId;
 
 interface LessonSection {
@@ -434,6 +439,18 @@ const SECTIONS: readonly LessonSection[] = [
     chip: 'U9',
     description: 'Curves a moving point traces, where time and position are different questions.',
     lessonIds: ['parametric', 'polar-area'],
+  },
+  {
+    /**
+     * ⚠️ 这一节**不挂在任何一个单元下面**,因为它横跨全部单元:
+     *   中值定理属于单元 5,介值定理属于单元 1,牛顿法属于单元 4 ——
+     *   可它们是一条链,拆到各自的单元里就看不见那条链了,而那条链才是内容。
+     */
+    id: 'reference',
+    label: 'Reference · Theorems and Corollaries',
+    chip: 'Thm',
+    description: 'Every theorem the course leans on, with its conditions, its proof, and a worked example.',
+    lessonIds: ['theorems'],
   },
   {
     id: 'unit-10',

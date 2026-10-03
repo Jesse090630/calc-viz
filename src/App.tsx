@@ -42,6 +42,7 @@ const LESSON_PAGES: Readonly<Record<string, React.LazyExoticComponent<() => Reac
   'slope-field': lazy(() => import('./labs/slopeField/page')),
   euler: lazy(() => import('./labs/euler/page')),
   convergence: lazy(() => import('./labs/convergence/page')),
+  theorems: lazy(() => import('./labs/theorems/page')),
   increasing: lazy(() => import('./labs/increasing/page')),
   intervals: lazy(() => import('./labs/scanning/page')),
   'one-sided': lazy(() => import('./labs/oneSided/page')),
