@@ -653,7 +653,7 @@ export function restsOnCompleteness(id: string): boolean {
 
 export const HEADLINE = 'Where Each One Comes From';
 export const MAIN_IDEA =
-  'These are not eight separate facts. The extreme value theorem hands you a maximum, Fermat flattens it, Rolle is those two together, the mean value theorem is Rolle tilted, Cauchy is the mean value theorem with two functions, and the error bound on a tangent line falls out of Cauchy. Follow the arrows.';
+  'These are not nine separate facts. The extreme value theorem hands you a maximum, Fermat flattens it, Rolle is those two together, the mean value theorem is Rolle tilted, Cauchy is the mean value theorem with two functions, and the error bound on a tangent line falls out of Cauchy. Follow the arrows.';
 
 export const COMPLETENESS_NOTE =
   'Two proofs on this page stop at the same place: every nonempty set of reals that is bounded above has a least upper bound. That is the completeness of the real numbers, it is an axiom rather than something provable from the rest, and it is what fails for the rationals — where x² = 2 has no solution even though 1.4, 1.41, 1.414 … march straight at one. Everything below the two marked steps is ordinary algebra and limits.';

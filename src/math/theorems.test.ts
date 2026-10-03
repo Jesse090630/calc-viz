@@ -369,6 +369,18 @@ describe('prose', () => {
     expect(COMPLETENESS_NOTE.length).toBeGreaterThan(200);
   });
 
+  it('⚠️ 开篇那句里的数目必须和实际条数对得上', () => {
+    // 第一版写着"not eight separate facts",而页面上有九条 ——
+    // 任何一个数一下方块的读者都会发现。**打开线上页面读出来才看见的。**
+    const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six',
+      'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+    expect(MAIN_IDEA).toContain(`not ${WORDS[THEOREMS.length]} separate facts`);
+    for (let i = 0; i < WORDS.length; i += 1) {
+      if (i === THEOREMS.length) continue;
+      expect(MAIN_IDEA).not.toContain(`not ${WORDS[i]} separate facts`);
+    }
+  });
+
   it('开篇那段把链讲了一遍', () => {
     for (const w of ['extreme value', 'Fermat', 'Rolle', 'mean value', 'Cauchy']) {
       expect(MAIN_IDEA).toContain(w);
