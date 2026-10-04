@@ -293,6 +293,38 @@ await chainPage.close();
   await pf.close();
 }
 
+/* ⚠️⚠️ **悬停每一张卡。**
+   这是整个事故的根源:预览是 `onPointerEnter` 触发的,
+   `PREVIEWS` 少一个条目就会让 `Home` 渲染 `undefined` → React #130 →
+   **整棵树被卸载**,屏幕变黑、地址栏退回 `#/`。
+   以前的脚本一律 `goto('#/xxx')` 直接进课页,**从来没有真的悬停过一张卡**,
+   于是一次加了八课、八张卡全是地雷,而仓库从头到尾是绿的。 */
+{
+  const page2 = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+  const hoverErrors = [];
+  page2.on('pageerror', (e) => hoverErrors.push(String(e).slice(0, 120)));
+  await page2.goto(URL, { waitUntil: 'networkidle' });
+  await page2.waitForTimeout(600);
+  const ids = await page2.$$eval('[data-lesson-card]', (els) =>
+    els.map((el) => el.getAttribute('data-lesson-card')));
+  for (const id of ids) {
+    const card = page2.locator(`[data-lesson-card="${id}"]`);
+    await card.scrollIntoViewIfNeeded();
+    await card.hover();
+    await page2.waitForTimeout(25);
+    const alive = await page2.evaluate(() => document.getElementById('root').innerHTML.length > 0);
+    if (!alive) { errors.push(`[hover/${id}] 悬停这张卡让整个首页卸载了 —— 它没有预览`); break; }
+    const shown = await page2.getAttribute('[data-active-preview]', 'data-preview-for');
+    if (shown !== id) errors.push(`[hover/${id}] 预览没跟着切换(显示的是 ${shown})`);
+    if ((await page2.locator('[data-missing-preview]').count()) !== 0) {
+      errors.push(`[hover/${id}] 落到了"暂无预览"的占位上 —— 这一课缺预览`);
+      break;
+    }
+  }
+  if (hoverErrors.length) errors.push(`[hover] 页面抛错:${hoverErrors.join(' | ')}`);
+  await page2.close();
+}
+
 await browser.close();
 server.close();
 if (errors.length) { console.error('✗\n' + errors.map((e) => '  ' + e).join('\n')); process.exit(1); }

@@ -38,6 +38,15 @@ import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, samp
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
 import { partialSum as taylorPartial, seriesOf as taylorSeries } from '../../math/taylor';
+/* ── 本季新增八课的预览所需的数学(同样只从 src/math 取,组件里不写裸算式) ── */
+import { caseOf as mvtCase, chordAt as mvtChordAt, findC as mvtFindC, sampleF as mvtSampleF, tangentAt as mvtTangentAt } from '../../math/mvt';
+import { curveOf as paramCurve, samplePath as paramSample } from '../../math/parametric';
+import { polarOf, samplePolar, wedgePath } from '../../math/polar';
+import { eqOf as sfEq, field as sfField, curveByStepping as sfWalk } from '../../math/slopeField';
+import { eqOf as eulerEq, eulerPath, exactPath as eulerExact } from '../../math/euler';
+import { seriesOf as convSeries, sumPoints as convSums } from '../../math/convergence';
+import { THEOREMS, edges as thmEdges, theoremOf } from '../../math/theorems';
+import { SPECIALS as DRILL_SPECIALS } from '../../math/limitDrill';
 import {
   boundary as bisectBoundary,
   clipLeft as bisectClip,
@@ -1471,7 +1480,181 @@ export function TaylorPreview({ phase }: { phase: number }) {
   );
 }
 
+/* ══ 本季新增的八课 ═══════════════════════════════════════════════
+ * ⚠️⚠️ 这八个不是装饰。少一个,悬停那张卡就会让 `Home` 渲染 `undefined`,
+ *   React 抛 #130,**整棵树被卸载** —— 屏幕变黑、地址栏退回 `#/`。
+ *   见 `src/ui/Home.tsx` 里 `MissingPreview` 的注释,以及 `coverage.test.ts`。
+ */
+
+/** 中值定理:连线不动,切线扫过去,扫到 c 时两条平行。 */
+export function MvtPreview({ phase }: { phase: number }) {
+  const c = mvtCase('cubic');
+  const m = makeMap(c.a, c.b, c.yView[0], c.yView[1]);
+  const at = c.a + (c.b - c.a) * pingPong(phase);
+  const pts = mvtSampleF(c, 90).filter((q): q is readonly [number, number] => q !== null);
+  return (
+    <Frame label="A chord fixed across a cubic while a tangent sweeps along it, matching slope at two points">
+      <polyline points={pts.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ')} fill="none"
+        stroke={COLOR.curve} strokeWidth={1.8} />
+      <line x1={m.x(c.a)} y1={m.y(mvtChordAt(c, c.a))} x2={m.x(c.b)} y2={m.y(mvtChordAt(c, c.b))}
+        stroke={COLOR.introduce} strokeWidth={1.8} />
+      {c.df(at) !== null && (
+        <line x1={m.x(c.a)} y1={m.y(mvtTangentAt(c, at, c.a)!)}
+          x2={m.x(c.b)} y2={m.y(mvtTangentAt(c, at, c.b)!)}
+          stroke={COLOR.hero} strokeWidth={1.5} strokeDasharray="5 4" />
+      )}
+      {mvtFindC(c).map((cx, i) => (
+        <circle key={i} cx={m.x(cx)} cy={m.y(c.f(cx))} r={3} fill={COLOR.result} />
+      ))}
+    </Frame>
+  );
+}
+
+/** 参数运动:点沿椭圆跑,速度分量画成直角三角形。 */
+export function ParametricPreview({ phase }: { phase: number }) {
+  const c = paramCurve('ellipse');
+  const t = c.tRange[0] + (c.tRange[1] - c.tRange[0]) * pingPong(phase);
+  const m = makeMap(-3.6, 3.6, -2.6, 2.6);
+  const pts = paramSample(c, 160);
+  const px = c.x(t); const py = c.y(t);
+  const vx = px + c.dx(t) * 0.42; const vy = py + c.dy(t) * 0.42;
+  return (
+    <Frame label="A point travelling round an ellipse with its velocity drawn as a right triangle">
+      <polyline points={pts.map((q) => `${m.x(q.x)},${m.y(q.y)}`).join(' ')} fill="none"
+        stroke={COLOR.curve} strokeWidth={1.8} />
+      <line x1={m.x(px)} y1={m.y(py)} x2={m.x(vx)} y2={m.y(py)} stroke={COLOR.hero} strokeWidth={1.6} />
+      <line x1={m.x(vx)} y1={m.y(py)} x2={m.x(vx)} y2={m.y(vy)} stroke={COLOR.result} strokeWidth={1.6} />
+      <line x1={m.x(px)} y1={m.y(py)} x2={m.x(vx)} y2={m.y(vy)} stroke={COLOR.introduce} strokeWidth={1.8} />
+      <circle cx={m.x(px)} cy={m.y(py)} r={3.2} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
+/** 极坐标面积:一枚楔形扫过心形线。 */
+export function PolarPreview({ phase }: { phase: number }) {
+  const c = polarOf('cardioid');
+  const m = makeMap(-2.6, 2.6, -1.7, 1.7);
+  const sweep = c.sweep[0] + (c.sweep[1] - c.sweep[0]) * holdAtEnds(phase);
+  const outline = samplePolar(c, 240);
+  const wedge = wedgePath(c, sweep, 0.36, 18);
+  return (
+    <Frame label="A thin wedge sweeping round a cardioid">
+      <polygon points={outline.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ')} fill="none"
+        stroke={COLOR.curve} strokeWidth={1.8} />
+      <polygon points={wedge.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ')}
+        fill={COLOR.result} fillOpacity={0.4} stroke={COLOR.hero} strokeWidth={1.4} />
+    </Frame>
+  );
+}
+
+/** 斜率场:方向场不动,一条解曲线从中长出来。 */
+export function SlopeFieldPreview({ phase }: { phase: number }) {
+  const e = sfEq('logistic');
+  const m = makeMap(e.window[0], e.window[1], e.window[2], e.window[3]);
+  const ticks = sfField(e, 15, 9);
+  const grown = sfWalk(e, e.starts[0]!);
+  const upto = Math.max(2, Math.floor(grown.length * holdAtEnds(phase)));
+  const pts = grown.slice(0, upto);
+  return (
+    <Frame label="A slope field with a solution curve growing along the arrows">
+      {ticks.map((t, i) => {
+        if (t.dir === null) return null;
+        return (
+          <line key={i}
+            x1={m.x(t.at[0] - t.dir[0] * 0.26)} y1={m.y(t.at[1] - t.dir[1] * 0.26)}
+            x2={m.x(t.at[0] + t.dir[0] * 0.26)} y2={m.y(t.at[1] + t.dir[1] * 0.26)}
+            stroke={COLOR.thickness} strokeWidth={1.1} />
+        );
+      })}
+      {pts.length > 1 && (
+        <polyline points={pts.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ')} fill="none"
+          stroke={COLOR.result} strokeWidth={2.2} />
+      )}
+    </Frame>
+  );
+}
+
+/** 欧拉法:折线一步步走,步长变小就慢慢贴上真解。 */
+export function EulerPreview({ phase }: { phase: number }) {
+  const e = eulerEq('exp');
+  const m = makeMap(e.x0, e.window[1], e.window[2], e.window[3]);
+  const h = 0.5 - pingPong(phase) * 0.42;
+  const walk = eulerPath(e, h).pts;
+  const truth = eulerExact(e, 90).filter((q): q is readonly [number, number] => q !== null);
+  return (
+    <Frame label="An Euler polygon with a shrinking step, creeping up towards the true curve">
+      <polyline points={truth.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ')} fill="none"
+        stroke={COLOR.introduce} strokeWidth={1.8} />
+      <polyline points={walk.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ')} fill="none"
+        stroke={COLOR.hero} strokeWidth={1.6} />
+      {walk.map((q, i) => <circle key={i} cx={m.x(q[0])} cy={m.y(q[1])} r={2} fill={COLOR.hero} />)}
+    </Frame>
+  );
+}
+
+/** 收敛判别法:两条部分和并排 —— 一条爬个没完,一条躺平。 */
+export function ConvergencePreview({ phase }: { phase: number }) {
+  const h = convSeries('harmonic');
+  const p = convSeries('psquare');
+  const m = makeMap(1, h.plotN, 0, 7);
+  const upto = Math.max(3, Math.floor(h.plotN * holdAtEnds(phase)));
+  const line = (q: readonly (readonly [number, number])[]) =>
+    q.slice(0, upto).map((v) => `${m.x(v[0])},${m.y(v[1])}`).join(' ');
+  return (
+    <Frame label="Partial sums of one over n climbing without end beside one over n squared levelling off">
+      <polyline points={line(convSums(h))} fill="none" stroke={COLOR.radius} strokeWidth={2} />
+      <polyline points={line(convSums(p))} fill="none" stroke={COLOR.result} strokeWidth={2} />
+    </Frame>
+  );
+}
+
+/** 定理与推论:依赖链上的箭头依次点亮。 */
+export function TheoremsPreview({ phase }: { phase: number }) {
+  const m = makeMap(-0.4, 5.4, -0.6, 3.4);
+  const list = thmEdges();
+  const lit = Math.floor(holdAtEnds(phase) * list.length);
+  return (
+    <Frame label="The chain of theorems, each arrow lighting up in turn">
+      {list.map((e, i) => {
+        const a = theoremOf(e.from).at; const b = theoremOf(e.to).at;
+        return (
+          <line key={i} x1={m.x(a[0])} y1={m.y(3 - a[1])} x2={m.x(b[0])} y2={m.y(3 - b[1])}
+            stroke={i <= lit ? COLOR.hero : COLOR.thickness} strokeWidth={i <= lit ? 1.9 : 1.1} />
+        );
+      })}
+      {THEOREMS.map((t) => (
+        <circle key={t.id} cx={m.x(t.at[0])} cy={m.y(3 - t.at[1])} r={4} fill={COLOR.curve} />
+      ))}
+    </Frame>
+  );
+}
+
+/** 特殊极限练习:八个特殊极限轮流亮起来。 */
+export function LimitDrillPreview({ phase }: { phase: number }) {
+  const n = DRILL_SPECIALS.length;
+  const active = Math.min(n - 1, Math.floor(holdAtEnds(phase) * n));
+  const slotW = (W - 56) / n;
+  return (
+    <Frame label="The eight special limits, highlighted one after another">
+      {DRILL_SPECIALS.map((_, i) => (
+        <rect key={i} x={28 + i * slotW + 3} y={H / 2 - 16} width={slotW - 6} height={32} rx={5}
+          fill={i === active ? COLOR.hero : COLOR.axisDepth}
+          fillOpacity={i === active ? 0.35 : 0.5}
+          stroke={i === active ? COLOR.hero : COLOR.thickness} strokeWidth={i === active ? 1.8 : 1} />
+      ))}
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
+  mvt: MvtPreview,
+  parametric: ParametricPreview,
+  'polar-area': PolarPreview,
+  'slope-field': SlopeFieldPreview,
+  euler: EulerPreview,
+  convergence: ConvergencePreview,
+  theorems: TheoremsPreview,
+  'limit-drill': LimitDrillPreview,
   'difference-of-squares': SquaresPreview,
   'difference-of-cubes': CubesPreview,
   'binomial-theorem': BinomialPreview,

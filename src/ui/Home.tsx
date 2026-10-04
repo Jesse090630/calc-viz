@@ -17,6 +17,23 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { PREVIEWS } from './previews/LessonPreviews';
+
+/**
+ * 没有预览时的占位。
+ * ⚠️ 它存在的唯一理由是:**少一个预览不该让整个站点变黑**。
+ *   正常情况下走不到这里(有测试钉着),走到了也只是这一小块安静下来。
+ */
+function MissingPreview(): React.ReactElement {
+  return (
+    <svg data-missing-preview viewBox="0 0 400 116" className="preview-svg" role="img"
+      aria-label="No preview for this lesson yet">
+      <text x="200" y="62" textAnchor="middle" fill="#475569"
+        style={{ font: '11px ui-monospace, monospace', letterSpacing: '0.12em' }}>
+        no preview yet
+      </text>
+    </svg>
+  );
+}
 import { usePreviewClock } from './previews/clock';
 // ⚠️ 六条特殊极限的**标题从目录里取**,不在这里再抄一遍。
 //    抄一遍的代价是:课页顶上写一个名字、目录卡上写另一个 —— 那是最招人烦的一种不一致,
@@ -32,7 +49,12 @@ interface LessonCard {
   readonly question: string;
 }
 
-const LESSONS: readonly LessonCard[] = [
+/**
+ * ⚠️ 导出是为了**测得到**。
+ *   `PREVIEWS` 少一个条目会让首页在悬停时整个黑掉(见 `MissingPreview` 的注释),
+ *   而那是一条只靠手点才会撞上的路。导出之后就能用一条单元测试钉死它。
+ */
+export const LESSONS: readonly LessonCard[] = [
   {
     id: 'chain-rule',
     title: 'The Chain Rule',
@@ -526,7 +548,21 @@ export function Home() {
   const previewLesson = visibleLessons.find((lesson) => lesson.id === previewLessonId)
     ?? visibleLessons[0]
     ?? LESSONS[0]!;
-  const Preview = PREVIEWS[previewLesson.id]!;
+  /**
+   * ⚠️⚠️ 这里以前写的是 `PREVIEWS[previewLesson.id]!`。
+   *   那个 `!` 是**一句谎话**:这一季新加的八课都没有预览,
+   *   于是 `Preview` 是 `undefined`,`<Preview />` 抛 React #130,
+   *   **整个首页连同整棵树被卸载** —— 屏幕变黑,地址栏退回 `#/`。
+   *
+   *   触发条件是 `onPointerEnter`:**真用鼠标点**卡片会先触发悬停,
+   *   而脚本里的 `.click()` 不会。所以这个洞被所有浏览器脚本漏掉了 ——
+   *   它们全都是直接 `goto('#/xxx')`,从来没有真的悬停过一张卡。
+   *
+   * ⭐ 现在:缺预览就退回一块安静的占位,**绝不渲染 undefined**。
+   *   同时有一条单元测试钉死"每一课都必须有预览",所以这条回退路径
+   *   在仓库是绿的时候根本走不到 —— 它只是不让一个疏忽变成黑屏。
+   */
+  const Preview = PREVIEWS[previewLesson.id] ?? MissingPreview;
 
   return (
     <main data-home-shell className="home-shell">
