@@ -10,6 +10,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Home, BackLink } from './ui/Home';
+import { RouteErrorBoundary, RouteHealthy } from './ui/RouteErrorBoundary';
 import { FEATURES } from './config';
 
 /* ── 每条课一个 chunk。只有走到那个路由才会发起网络请求。 ───────────────── */
@@ -175,10 +176,22 @@ export default function App() {
   if (FEATURES.customFunctionInput && CUSTOM_ROUTES.has(route)) {
     page = <CustomExperience route={route} />;
   } else if (LessonPage) {
+    /**
+     * ⚠️⚠️ boundary 必须包在 Suspense **外面**,而且要带 `key={route}`。
+     *   外面:chunk 解析失败是在 Suspense 边界上抛的,包在里面就接不住。
+     *   带 key:换路由时让它重新挂载 —— 否则一条课出过错之后,
+     *   后面每一条课都会继续显示错误界面。
+     *   没有这一层的时候,一次换版就能把整站变成一块**黑屏**(见 `ui/chunkRecovery.ts`)。
+     */
     page = (
-      <Suspense fallback={<LessonFallback />}>
-        <LessonPage />
-      </Suspense>
+      <RouteErrorBoundary key={route} route={route}>
+        <Suspense fallback={<LessonFallback />}>
+          {/* ⚠️ `RouteHealthy` 必须在 Suspense **里面** —— 它挂载即代表 chunk 真的到了。
+              放外面就会在 fallback 阶段提前把标记清掉,于是无限重载。 */}
+          <RouteHealthy route={route} />
+          <LessonPage />
+        </Suspense>
+      </RouteErrorBoundary>
     );
   } else if (route === '' || route === 'notation') {
     // 首页目前是空白板。目录封存在 `ui/ConceptGrid.tsx`,链路由本身没动。
