@@ -58,6 +58,7 @@ const setAlpha = async (deg) => {
 const read = (k) => page.$eval(`[data-readout="${k}"]`, (el) => el.textContent.trim()).catch(() => undefined);
 const num = async (k) => Number((await read(k)).replace(/[^0-9.\-]/g, ''));
 const count = (sel) => page.$$eval(sel, (els) => els.length);
+const attr = (sel, n) => page.$eval(sel, (el, k) => el.getAttribute(k), n).catch(() => undefined);
 
 /* ① 论点前置:要打掉的那句话 */
 const trap = await page.$eval('[data-panel="trap"]', (el) => el.textContent).catch(() => '');
@@ -217,6 +218,52 @@ const curveFlat = await page.evaluate(() => {
 });
 if (curveFlat.omegaFlat > 0.5) fail.push('ω 那条线不是水平的');
 if (curveFlat.rateSpread < 40) fail.push('dA/dt 那条曲线几乎是平的 —— 对比就没了');
+
+/* ⚠️ 这一页面向学生,**屏幕上不许出现中文**。
+   注释用中文是这个项目的习惯,但一不小心就会漏进 JSX 文本里 ——
+   刚才就漏了一个「计算」。这里直接查渲染出来的文字。 */
+await setAlpha(60);
+const cjk = await page.evaluate(() => {
+  const txt = document.querySelector('main').innerText;
+  const hits = txt.match(/[\u4e00-\u9fff]+/g);
+  return hits ? [...new Set(hits)].slice(0, 5) : [];
+});
+if (cjk.length) fail.push(`页面上出现了中文:${cjk.join(' ')}`);
+
+/* ⭐⭐⭐ Given / Need,以及算出来的那个答案 */
+if ((await count('[data-given]')) !== 4) fail.push('Given 应该列 4 条');
+// ⚠️ r 必须标成常数 —— 把它当变量是这题最典型的翻车
+if ((await attr('[data-given="r"]', 'data-kind')) !== 'constant') fail.push('r 没标成常数');
+if ((await attr('[data-given="dα/dt"]', 'data-kind')) !== 'constant') fail.push('dα/dt 没标成常数');
+if ((await attr('[data-given="α"]', 'data-kind')) !== 'changing') fail.push('α 没标成变量');
+if ((await attr('[data-given="A"]', 'data-kind')) !== 'changing') fail.push('A 没标成变量');
+if ((await page.$eval('[data-need-symbol]', (e) => e.textContent.trim())) !== 'dA/dt') {
+  fail.push('Need 不是 dA/dt');
+}
+const givenText = await page.$eval('[data-panel="given"]', (e) => e.innerText);
+if (!givenText.includes('dr/dt = 0')) fail.push('Given 里没点明 dr/dt = 0');
+
+// ⭐ 手推:α = 60° ⇒ cos = 0.5 ⇒ 1+cos = 1.5 ⇒ ×0.5 = 0.75
+await setAlpha(60);
+const subs = await page.$$eval('[data-sub-value]', (els) =>
+  els.map((e) => Number(e.getAttribute('data-sub-value'))));
+if (subs.length !== 6) fail.push(`代入步骤应有 6 个数,实际 ${subs.length}`);
+const want60 = [60, 0.5, 1.5, 0.5, 0.75, 0.75];
+for (let i = 0; i < want60.length; i += 1) {
+  if (Math.abs(subs[i] - want60[i]) > 1e-6) {
+    fail.push(`α=60° 第 ${i + 1} 个代入值应为 ${want60[i]},读到 ${subs[i]}`);
+  }
+}
+const finalText = await page.$eval('[data-final-answer]', (e) => e.textContent.trim());
+if (!/0\.7500\s*r²/.test(finalText)) fail.push(`α=60° 的最终答案不对:「${finalText}」`);
+if (!finalText.includes('per second')) fail.push('最终答案没给单位');
+// ⚠️ 答案必须带 r² —— 题目没给半径,报纯数字是错的
+if (!finalText.includes('r²')) fail.push('最终答案漏了 r²');
+// 换个角度也得对:α = 0 ⇒ 1.0 r²
+await setAlpha(0);
+if (!/1\.0000\s*r²/.test(await page.$eval('[data-final-answer]', (e) => e.textContent))) {
+  fail.push('α=0 时最终答案应为 1.0000 r²');
+}
 
 /* ⑩ 画框与溢出 */
 const outside = await page.evaluate(() => {

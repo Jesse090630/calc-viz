@@ -20,7 +20,8 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  ALPHA_MAX, HEADLINE, MAIN_IDEA, N, OMEGA, RHOMBUS_NOTE, STEPS, TRAP,
+  ALPHA_MAX, ANSWER_NOTE, GIVEN, GIVEN_NOTE, HEADLINE, MAIN_IDEA, N, NEED, OMEGA,
+  RHOMBUS_NOTE, STEPS, TRAP, coefficient, substitution,
   type Pt,
   centerBottom, centerTop, centerDistance, centralAngle, circlePoints, degrees,
   diskArea, halfAngleAtNail, overlapClosed, polygonArea, rate, secondPoint,
@@ -104,6 +105,37 @@ export function RotatingDisksLab() {
           The assumption to kill
         </p>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{TRAP}</p>
+      </section>
+
+      {/* ⭐ 相关变化率的第一步永远是把已知和所求分开写。
+          学生卡住的地方通常不是求导,是没分清哪个量在变、哪个是常数。 */}
+      <section data-panel="setup" className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div data-panel="given" className="rounded-2xl border border-slate-700 bg-slate-900/40 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Given</p>
+          <ul className="mt-2 space-y-2">
+            {GIVEN.map((f) => (
+              <li key={f.symbol} data-given={f.symbol} data-kind={f.kind}
+                className="rounded-lg border border-slate-800 px-2.5 py-1.5">
+                <p className="font-mono text-[11px]">
+                  <span className="text-slate-200">{f.symbol}</span>
+                  <span className="ml-2 text-[10px]"
+                    style={{ color: f.kind === 'constant' ? LAB.x1 : LAB.x2 }}>
+                    {f.kind === 'constant' ? 'constant' : 'changing'}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{f.text}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div data-panel="need" className="rounded-2xl border border-amber-400/40 bg-amber-400/5 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300">Need</p>
+          <p className="mt-2 font-mono text-[13px] text-amber-100" data-need-symbol>{NEED.symbol}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-300">{NEED.text}</p>
+          <p className="mt-3 border-t border-amber-400/20 pt-2 text-[11px] leading-relaxed text-slate-400">
+            {GIVEN_NOTE}
+          </p>
+        </div>
       </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_minmax(0,19rem)]">
@@ -315,6 +347,34 @@ export function RotatingDisksLab() {
           The dashed line is the angular velocity, which never moves. The solid curve is dA/dt. They
           start apart, cross, and end apart — two rates in the same problem, only one of them constant.
         </p>
+      </section>
+
+      {/* ── ⭐⭐⭐ 把答案真的算出来 ──────────────────────────── */}
+      <section data-panel="answer" className="mt-4 rounded-2xl border border-green-500/40 bg-green-500/5 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-green-300">
+          The answer, substituted and worked out — at the angle the slider is on
+        </p>
+        <p className="mt-2 text-[14px] text-slate-200">
+          <Tex src={String.raw`\frac{dA}{dt}=r^2\bigl(1+\cos\alpha\bigr)\frac{d\alpha}{dt}`} display />
+        </p>
+        <ol className="mt-2 space-y-1">
+          {substitution(alpha, OMEGA).map((l, i) => (
+            <li key={i} data-sub={i} className="font-mono text-[11px] leading-relaxed text-slate-300">
+              {l.text}
+              {l.value !== undefined && (
+                <span data-sub-value={l.value} className="ml-1.5"
+                  style={{ color: l.perRSquared ? LAB.pass : LAB.x1 }}>
+                  {show(l.value, l.places ?? 4)}{l.perRSquared ? ' r²' : ''}
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+        <p data-final-answer className="mt-3 border-t border-green-500/20 pt-2.5 font-mono text-[14px]"
+          style={{ color: LAB.pass }}>
+          dA/dt = {show(coefficient(alpha, OMEGA), 4)} r² square units per second
+        </p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">{ANSWER_NOTE}</p>
       </section>
 
       {/* ── 推导八步 ─────────────────────────────────────────── */}

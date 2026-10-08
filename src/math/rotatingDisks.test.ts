@@ -6,6 +6,7 @@ import {
   overlapClosed, overlapByDistance, shadedClosed, shadedByDistance, shadedByGrid,
   rate, rateNumeric, fastestAlpha, shadedBoundary, polygonArea, circlePoints,
   degrees, show,
+  GIVEN, NEED, GIVEN_NOTE, ANSWER_NOTE, coefficient, substitution,
 } from './rotatingDisks';
 
 const R = 1.3;
@@ -318,5 +319,80 @@ describe('the written derivation', () => {
     expect(show(Number.NaN)).toBe('undefined');
     expect(show(Number.POSITIVE_INFINITY)).toBe('undefined');
     expect(show(1.5, 2)).toContain('1.5');
+  });
+});
+
+/* ── Given / Need,以及把答案真的算出来 ────────────────────────── */
+
+describe('given, need, and the computed answer', () => {
+  it('⭐ Given 里把常数和变量分清楚了', () => {
+    expect(GIVEN).toHaveLength(4);
+    const byKind = (k: string) => GIVEN.filter((f) => f.kind === k).map((f) => f.symbol);
+    // ⚠️ r 和 dα/dt 是常数;α 和 A 在变。分不清这个,求导就会出错。
+    expect(byKind('constant').sort()).toEqual(['dα/dt', 'r']);
+    expect(byKind('changing').sort()).toEqual(['A', 'α']);
+    for (const f of GIVEN) expect(f.text.length).toBeGreaterThan(40);
+  });
+
+  it('⚠️ r 必须被标成常数 —— 把它当变量是这题最典型的翻车', () => {
+    const r = GIVEN.find((f) => f.symbol === 'r')!;
+    expect(r.kind).toBe('constant');
+    expect(r.text).toContain('dr/dt = 0');
+  });
+
+  it('Need 是 dA/dt,而且标成未知', () => {
+    expect(NEED.symbol).toBe('dA/dt');
+    expect(NEED.kind).toBe('unknown');
+    expect(NEED.text.length).toBeGreaterThan(40);
+    expect(GIVEN_NOTE.length).toBeGreaterThan(60);
+  });
+
+  it('⭐⭐ 系数和 rate 对得上:dA/dt = k·r²', () => {
+    for (const a of ANGLES) {
+      for (const r of [1, 1.3, 2.5]) {
+        expect(coefficient(a) * r * r).toBeCloseTo(rate(r, a), 12);
+      }
+    }
+  });
+
+  it('⭐⭐⭐ 手推:α = 60° 时 dA/dt = 0.75 r²', () => {
+    // cos 60° = 0.5 → 1 + cos α = 1.5 → ×0.5 = 0.75
+    const a = Math.PI / 3;
+    expect(Math.cos(a)).toBeCloseTo(0.5, 12);
+    expect(coefficient(a)).toBeCloseTo(0.75, 12);
+    expect(rate(2, a)).toBeCloseTo(0.75 * 4, 12);
+  });
+
+  it('⭐ 另外三个手推值', () => {
+    expect(coefficient(0)).toBeCloseTo(1, 12);            // (1+1)·0.5
+    expect(coefficient(Math.PI / 2)).toBeCloseTo(0.5, 12); // (1+0)·0.5
+    expect(coefficient(Math.PI)).toBe(0);                  // (1−1)·0.5
+  });
+
+  it('⚠️ 代入那几行每一行的数都对得上,而且最后一行带 r²', () => {
+    const a = Math.PI / 3;
+    const lines = substitution(a);
+    expect(lines).toHaveLength(7);
+    const val = (i: number) => lines[i]!.value!;
+    expect(val(1)).toBeCloseTo(60, 10);      // 角度
+    expect(val(2)).toBeCloseTo(0.5, 12);     // cos 60°
+    expect(val(3)).toBeCloseTo(1.5, 12);     // 1 + cos
+    expect(val(4)).toBeCloseTo(0.5, 12);     // ω
+    expect(val(5)).toBeCloseTo(0.75, 12);    // 乘起来
+    expect(val(6)).toBeCloseTo(0.75, 12);    // 答案
+    // ⭐ 只有最后一行标了 r² —— 答案不许写成一个纯数字
+    expect(lines.filter((l) => l.perRSquared === true)).toHaveLength(1);
+    // 角度只要一位小数,`60.0000` 是噪声
+    expect(lines[1]!.places).toBe(1);
+    expect(lines[6]!.perRSquared).toBe(true);
+    expect(ANSWER_NOTE).toContain('r²');
+  });
+
+  it('⚠️ 代入的结果和解析式永远一致 —— 不是另写了一套算法', () => {
+    for (const a of ANGLES) {
+      const lines = substitution(a);
+      expect(lines[lines.length - 1]!.value!).toBeCloseTo(coefficient(a), 12);
+      expect(lines[2]!.value!).toBeCloseTo(Math.cos(a), 12);
+    }
   });
 });

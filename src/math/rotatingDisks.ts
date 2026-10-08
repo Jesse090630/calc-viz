@@ -362,6 +362,97 @@ export const STEPS: readonly Step[] = [
   },
 ] as const;
 
+/** 角度显示用。 */
+export function degrees(rad: number): number {
+  return (rad * 180) / Math.PI;
+}
+
+/* ══ Given / Need ═════════════════════════════════════════════════
+ *
+ * ⭐ 相关变化率题的第一步永远是**把已知和所求分开写**。
+ *   学生最常见的卡壳不是不会求导,是没分清「哪个量在变、变化率是已知还是未知」。
+ *   ⚠️ 尤其是 `r`:它出现在答案里,却**不是变量** —— dr/dt = 0。
+ *     把它当变量去求导,是这道题最典型的翻车方式。
+ */
+
+export interface Fact {
+  readonly symbol: string;
+  readonly text: string;
+  /** ⚠️ 它是常数还是在变 —— 这一栏决定了求导时它怎么处理 */
+  readonly kind: 'constant' | 'changing' | 'unknown';
+}
+
+export const GIVEN: readonly Fact[] = [
+  {
+    symbol: 'r',
+    text: 'Both disks have the same radius r. The problem never gives it a number, so it stays a symbol — and it never changes, so dr/dt = 0.',
+    kind: 'constant',
+  },
+  {
+    symbol: 'α',
+    text: 'The angle the top disk has turned through, measured at the nail N. At t = 0 it is 0 and the disks sit exactly on top of each other.',
+    kind: 'changing',
+  },
+  {
+    symbol: 'dα/dt',
+    text: 'The top disk turns at a constant angular velocity of 0.5 rad/s, so this is the rate we are handed.',
+    kind: 'constant',
+  },
+  {
+    symbol: 'A',
+    text: 'The area of the bottom disk that is showing — the part the top disk is not covering.',
+    kind: 'changing',
+  },
+];
+
+export const NEED: Fact = {
+  symbol: 'dA/dt',
+  text: 'How fast the exposed area is changing, at the moment the top disk has turned through angle α. The answer is allowed to contain both r and α.',
+  kind: 'unknown',
+};
+
+export const GIVEN_NOTE =
+  'Two quantities change here, α and A, and they are linked by geometry. That link is what has to be found before any differentiating happens — the chain rule can only carry a relationship that already exists.';
+
+/* ══ 代入算出答案 ═════════════════════════════════════════════════ */
+
+/**
+ * ⭐ `dA/dt = k·r²`,这里返回那个系数 `k = (1 + cos α)·ω`。
+ * ⚠️ 答案必须带着 `r²` —— 题目没给半径,报一个纯数字就是错的。
+ */
+export function coefficient(alpha: number, omega = OMEGA): number {
+  return (1 + Math.cos(alpha)) * omega;
+}
+
+export interface SubLine {
+  readonly text: string;
+  readonly value?: number;
+  /** 显示成 `… r²` */
+  readonly perRSquared?: boolean;
+  /** ⚠️ 角度写成 `60.0000` 是噪声,它只需要一位小数。 */
+  readonly places?: number;
+}
+
+/**
+ * 把最后一步**代进去算一遍**,每一行都带真数。
+ * ⭐ 学生要看的不是「dA/dt = r²(1+cos α)ω」,是「在 α = 60° 时它到底等于多少」。
+ */
+export function substitution(alpha: number, omega = OMEGA): readonly SubLine[] {
+  const c = Math.cos(alpha);
+  return [
+    { text: 'start from the rate, before any numbers go in' },
+    { text: 'the angle, in degrees', value: degrees(alpha), places: 1 },
+    { text: 'cos α', value: c },
+    { text: '1 + cos α', value: 1 + c },
+    { text: 'dα/dt, the given angular velocity', value: omega },
+    { text: 'multiply: (1 + cos α) · dα/dt', value: coefficient(alpha, omega) },
+    { text: 'so dA/dt =', value: coefficient(alpha, omega), perRSquared: true },
+  ];
+}
+
+export const ANSWER_NOTE =
+  'The answer keeps r² because the disks were never given a size. Double the radius and the exposed area grows four times as fast, which is the only way an area rate can depend on a length.';
+
 export const HEADLINE = 'Constant Spin, Changing Rate';
 export const MAIN_IDEA =
   'The top disk turns at a fixed 0.5 rad/s from start to finish, and the exposed area still does not grow at a fixed rate. It grows fastest at the very first instant, when the sliver showing is thinnest, and the growth dies to exactly zero as the disks come apart.';
@@ -376,7 +467,3 @@ export function show(v: number | null, places = 4): string {
   return v === null || !Number.isFinite(v) ? 'undefined' : showNumber(v, places);
 }
 
-/** 角度显示用。 */
-export function degrees(rad: number): number {
-  return (rad * 180) / Math.PI;
-}
