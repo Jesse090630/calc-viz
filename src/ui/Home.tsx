@@ -86,6 +86,11 @@ export const LESSONS: readonly LessonCard[] = [
     question: 'Same move, but the variable is time.',
   },
   {
+    id: 'rotating-disks',
+    title: 'Two Nailed Disks',
+    question: 'Constant spin, changing rate.',
+  },
+  {
     id: 'optimization',
     title: 'Optimization',
     question: 'Setting the derivative to zero is a filter, not an answer.',
@@ -425,7 +430,7 @@ const SECTIONS: readonly LessonSection[] = [
     label: 'Unit 4 · Contextual Applications of Differentiation',
     chip: 'U4',
     description: 'Derivatives attached to something that is actually moving.',
-    lessonIds: ['related-rates'],
+    lessonIds: ['related-rates', 'rotating-disks'],
   },
   {
     id: 'unit-5',

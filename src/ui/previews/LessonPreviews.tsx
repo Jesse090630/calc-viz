@@ -48,6 +48,11 @@ import { seriesOf as convSeries, sumPoints as convSums } from '../../math/conver
 import { THEOREMS, edges as thmEdges, theoremOf } from '../../math/theorems';
 import { SPECIALS as DRILL_SPECIALS } from '../../math/limitDrill';
 import {
+  ALPHA_MAX as DISK_MAX,
+  centerBottom as diskO1, centerTop as diskO2,
+  circlePoints as diskCircle, shadedBoundary as diskShaded,
+} from '../../math/rotatingDisks';
+import {
   boundary as bisectBoundary,
   clipLeft as bisectClip,
   shapeOf as bisectShape,
@@ -1646,8 +1651,28 @@ export function LimitDrillPreview({ phase }: { phase: number }) {
   );
 }
 
+/** 钉在一起的两块圆盘:上盘绕钉子转,下面露出来的月牙跟着长。 */
+export function RotatingDisksPreview({ phase }: { phase: number }) {
+  const r = 1;
+  const alpha = Math.max(0.04, pingPong(phase) * DISK_MAX);
+  const m = makeMap(-2.45, 1.25, -1.15, 1.15);
+  const line = (pts: readonly (readonly [number, number])[]) =>
+    pts.map((q) => `${m.x(q[0])},${m.y(q[1])}`).join(' ');
+  return (
+    <Frame label="Two equal disks pinned at a point, the top one turning so a crescent of the bottom shows">
+      <polygon points={line(diskShaded(r, alpha, 120))} fill={COLOR.result} fillOpacity={0.34} />
+      <polyline points={line(diskCircle(diskO1(r), r, 160))} fill="none"
+        stroke={COLOR.curve} strokeWidth={1.8} />
+      <polyline points={line(diskCircle(diskO2(r, alpha), r, 160))} fill="none"
+        stroke={COLOR.hero} strokeWidth={1.6} strokeDasharray="5 4" />
+      <circle cx={m.x(0)} cy={m.y(0)} r={3.4} fill={COLOR.radius} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   mvt: MvtPreview,
+  'rotating-disks': RotatingDisksPreview,
   parametric: ParametricPreview,
   'polar-area': PolarPreview,
   'slope-field': SlopeFieldPreview,
