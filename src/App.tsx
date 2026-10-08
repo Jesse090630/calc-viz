@@ -11,6 +11,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Home, BackLink } from './ui/Home';
 import { RouteErrorBoundary, RouteHealthy } from './ui/RouteErrorBoundary';
+import { setPreviewsFrozen } from './ui/previews/clock';
 import { FEATURES } from './config';
 
 /* ── 每条课一个 chunk。只有走到那个路由才会发起网络请求。 ───────────────── */
@@ -165,7 +166,10 @@ export default function App() {
   const notationTriggerRef = useRef<HTMLAnchorElement>(null);
   const deckTriggerRef = useRef<HTMLButtonElement>(null);
   const [deckOpen, setDeckOpen] = useState(false);
-  const closeDeck = useCallback(() => setDeckOpen(false), []);
+  const closeDeck = useCallback(() => {
+    setPreviewsFrozen(false);
+    setDeckOpen(false);
+  }, []);
   const closeNotation = useCallback(() => {
     window.location.hash = '#/';
   }, []);
@@ -237,7 +241,17 @@ export default function App() {
           aria-label="Open formula deck"
           aria-expanded={deckOpen}
           aria-controls="formula-deck-dialog"
-          onClick={() => setDeckOpen(true)}
+          onClick={() => {
+            /**
+             * ⚠️⚠️ **先停时钟,再开弹窗。** 顺序是关键。
+             *   弹窗第一次渲染要跑两百多次 KaTeX,那是一次低优先级渲染;
+             *   首页预览的 rAF 每帧 `setPhase`,会把它一次次重启 —— 实测十秒打不开。
+             *   先把时钟停掉,这次长渲染才有机会跑完。
+             *   反过来写(先开再停)救不了当前这一次渲染,bug 照旧。
+             */
+            setPreviewsFrozen(true);
+            setDeckOpen(true);
+          }}
           className="flex items-center gap-2 rounded-xl border border-amber-400/40 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-100 shadow-lg shadow-black/25 backdrop-blur transition hover:border-amber-300 hover:bg-slate-900"
         >
           <span aria-hidden="true" className="text-base leading-none">∫</span>

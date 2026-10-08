@@ -7,11 +7,50 @@
  *
  * 纯函数 + 一个 hook,不 import 任何绘图库。
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePrefersReducedMotion } from '../../accessibility/usePrefersReducedMotion';
 
 /** 预览循环一圈的时长(毫秒)。慢一点,首页不该抢注意力。 */
 export const LOOP_MS = 5200;
+
+/* ══ 冻结开关 ═════════════════════════════════════════════════════
+ *
+ * ⭐⭐⭐ 这个开关是为了修一个真实故障:**首页上点 ∫ Formula deck,十秒打不开。**
+ *
+ *   `texCache.ts` 开头记过同一个病:弹窗第一次渲染要跑两百多次 KaTeX,
+ *   那是一次**低优先级**的 Suspense 渲染;而首页的预览时钟每一帧都在
+ *   `setPhase`,持续产生**高优先级**更新,React 于是把那次长渲染一次次从头重启。
+ *   它不是崩了,是**被饿死了**。
+ *
+ * ⚠️ 当时的修法(把 TeX 预渲染搬到模块求值期)管用了一阵,
+ *   但这一季首页从几张动画卡涨到了**九张**,rAF 的压力又把它压回去了。
+ *   —— 治标的修法会随着内容增长失效,这次治根:**弹窗开着的时候,把时钟停掉。**
+ *   首页的卡片在弹窗后面,本来也看不见;停掉它们没有任何损失。
+ */
+let frozen = false;
+const listeners = new Set<() => void>();
+
+/** 弹窗打开/关闭时调用。⚠️ 要在**渲染之前**调到,否则救不了这一次渲染。 */
+export function setPreviewsFrozen(next: boolean): void {
+  if (next === frozen) return;
+  frozen = next;
+  for (const fn of listeners) fn();
+}
+
+export function previewsFrozen(): boolean {
+  return frozen;
+}
+
+function subscribeFrozen(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+
+/** 测试用:把开关恢复原状。 */
+export function resetPreviewsFrozen(): void {
+  frozen = false;
+  listeners.clear();
+}
 
 /**
  * 返回 0 → 1 循环的相位。
@@ -21,12 +60,15 @@ export const LOOP_MS = 5200;
  */
 export function usePreviewClock(): { phase: number; animated: boolean } {
   const reduced = usePrefersReducedMotion();
+  const halted = useSyncExternalStore(subscribeFrozen, previewsFrozen, () => false);
   const [phase, setPhase] = useState(STILL_PHASE);
   const frame = useRef<number | null>(null);
 
   useEffect(() => {
-    if (reduced) {
-      setPhase(STILL_PHASE);
+    // ⚠️ 冻结时**一帧都不要调度**。只是"少调度几帧"是不够的 ——
+    //   饿死那次长渲染只需要偶尔来一个高优先级更新。
+    if (reduced || halted) {
+      if (reduced) setPhase(STILL_PHASE);
       return;
     }
     const start = performance.now();
@@ -39,9 +81,9 @@ export function usePreviewClock(): { phase: number; animated: boolean } {
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = null;
     };
-  }, [reduced]);
+  }, [reduced, halted]);
 
-  return { phase, animated: !reduced };
+  return { phase, animated: !reduced && !halted };
 }
 
 /** 静止时停在哪一相位 —— 挑一个四张卡都好看的位置 */
