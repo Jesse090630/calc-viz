@@ -34,6 +34,7 @@ import { PAIRS as CHAIN_PAIRS, stretchFactors } from '../../math/chainRule';
 import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } from '../../math/substitution';
 import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
 import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
+import { curveOf as ciCurve, problemOf as ciProblem } from '../../math/chooseIntegral';
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
@@ -1670,6 +1671,39 @@ export function RotatingDisksPreview({ phase }: { phase: number }) {
   );
 }
 
+
+/**
+ * 选哪个方法:正确答案求导回去压在被积函数上,错答案岔开。
+ *
+ * ⭐ 挑的是 `∫x/(x²+1)dx` 这一道:三条曲线都落在一个窄区间里,在宽扁的卡片上
+ *   铺得开;而且它和错答案(arctan x)**在 x = 1 处相交** ——
+ *   动画里那根竖线会缩到零再张开,刚好演示"在一个点上对上不等于对"。
+ */
+export function ChooseIntegralPreview({ phase }: { phase: number }) {
+  const p = ciProblem('x-over-x2-plus-1');
+  const f = ciCurve(p, 'integrand', 70);
+  const good = ciCurve(p, 'answer', 70);
+  const bad = ciCurve(p, 'wrong', 70);
+  const ys = [...f, ...bad].map((q) => q.y);
+  const m = makeMap(p.safe[0], p.safe[1], Math.min(...ys) - 0.1, Math.max(...ys) + 0.1);
+  const at = p.safe[0] + (p.safe[1] - p.safe[0]) * pingPong(phase);
+  const fy = p.f(at);
+  const by = bad[Math.round(((at - p.safe[0]) / (p.safe[1] - p.safe[0])) * 70)]?.y ?? fy;
+  return (
+    <Frame label="A correct antiderivative differentiated back lies exactly on the integrand, while a plausible wrong one peels away">
+      {/* 错的那条先画 */}
+      <path d={path(bad, m)} fill="none" stroke={COLOR.radius} strokeWidth={1.5} strokeDasharray="2 3" />
+      <path d={path(f, m)} fill="none" stroke={COLOR.hero} strokeWidth={2.6} />
+      {/* 正确答案压在最上面,虚线 —— 看得出是两条线在重合 */}
+      <path d={path(good, m)} fill="none" stroke={COLOR.result} strokeWidth={1.5} strokeDasharray="6 4" />
+      {/* 游标处的差距,画成一根竖线 */}
+      <line x1={m.x(at)} y1={m.y(fy)} x2={m.x(at)} y2={m.y(by)} stroke={COLOR.radius} strokeWidth={1.2} />
+      <circle cx={m.x(at)} cy={m.y(by)} r={2.6} fill={COLOR.radius} />
+      <circle cx={m.x(at)} cy={m.y(fy)} r={3} fill={COLOR.hero} />
+    </Frame>
+  );
+}
+
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   mvt: MvtPreview,
   'rotating-disks': RotatingDisksPreview,
@@ -1714,6 +1748,7 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   'u-substitution': SubstitutionPreview,
   ftc: FtcPreview,
   'by-parts': ByPartsPreview,
+  'choose-integral': ChooseIntegralPreview,
   implicit: ImplicitPreview,
   'related-rates': RelatedRatesPreview,
   optimization: OptimizationPreview,

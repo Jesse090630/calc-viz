@@ -76,6 +76,11 @@ export const LESSONS: readonly LessonCard[] = [
     question: 'The wrong u is legal, just useless.',
   },
   {
+    id: 'choose-integral',
+    title: 'Choosing a Technique',
+    question: 'Two integrals that look alike need different tools.',
+  },
+  {
     id: 'implicit',
     title: 'Implicit Differentiation',
     question: 'That dy/dx is the chain rule.',
@@ -444,7 +449,7 @@ const SECTIONS: readonly LessonSection[] = [
     label: 'Unit 6 · Integration and Accumulation of Change',
     chip: 'U6',
     description: 'Adding up infinitely many pieces, and the shortcut for it.',
-    lessonIds: ['riemann-sum', 'ftc', 'u-substitution', 'by-parts', 'log-integral'],
+    lessonIds: ['riemann-sum', 'ftc', 'u-substitution', 'by-parts', 'log-integral', 'choose-integral'],
   },
   {
     id: 'unit-7',
