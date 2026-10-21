@@ -50,6 +50,7 @@ const val = (k) => page.$eval(`[data-read="${k}"]`, (el) => {
   return v === '' ? null : Number(v);
 });
 const text = (sel) => page.$eval(sel, (el) => el.textContent.replace(/\s+/g, ' ').trim()).catch(() => null);
+const attr = (sel, name) => page.$eval(sel, (el, n) => el.getAttribute(n), name);
 
 /** 在设置面板里写一个数。 */
 async function setField(key, value) {
@@ -98,6 +99,57 @@ if ((await count('[data-strip]')) !== 9) note(`expected 8 channels + master, got
   if (dropped !== 1) note(`expected exactly one dropped channel, got ${dropped}`);
   const muted = await count('[data-strip][data-state="muted"]');
   if (muted !== 1) note(`expected exactly one muted channel, got ${muted}`);
+}
+
+/* ── ①b 三档目标 ────────────────────────────────────────── */
+/**
+ * ⭐⭐ 三个按钮 A / B / C,分数线 89.5 / 79.5 / 69.5。
+ *   并且切到 C 之后,**结论必须真的变**(默认数据下 A 是 Doable、C 是 Comfortable)——
+ *   加一个选项却看不出任何区别,等于没加。
+ */
+{
+  const goals = await page.$$eval('[data-goal]', (els) => els.map((e) => e.dataset.goal));
+  if (goals.join(',') !== 'A,B,C') note(`expected goal buttons A,B,C — got ${goals.join(',')}`);
+
+  const CUTOFF = { A: 89.5, B: 79.5, C: 69.5 };
+  for (const g of ['A', 'B', 'C']) {
+    await page.click(`[data-goal="${g}"]`);
+    await page.waitForTimeout(140);
+    if ((await attr(`[data-goal="${g}"]`, 'data-active')) !== 'yes') note(`[${g}] clicking the goal did not select it`);
+    // 手算同一条式子,用这一档的分数线
+    const want = (CUTOFF[g] - 0.1 * 100 - 0.65 * SEED_MEAN) / 0.25;
+    const got = await val('need');
+    if (Math.abs(got - want) > 1e-9) note(`[goal ${g}] the page says ${got}, hand-computed ${want}`);
+  }
+  // 三档严格递减
+  const needs = [];
+  for (const g of ['A', 'B', 'C']) {
+    await page.click(`[data-goal="${g}"]`);
+    await page.waitForTimeout(130);
+    needs.push(await val('need'));
+  }
+  if (!(needs[0] > needs[1] && needs[1] > needs[2])) note(`the three targets do not decrease: ${needs.join(' > ')}`);
+
+  // ⭐ C 档确实走到了另一个结论
+  await page.click('[data-goal="C"]');
+  await page.waitForTimeout(150);
+  const cVerdict = await page.$eval('[data-panel="verdict"]', (el) => el.dataset.verdict);
+  await page.click('[data-goal="A"]');
+  await page.waitForTimeout(150);
+  const aVerdict = await page.$eval('[data-panel="verdict"]', (el) => el.dataset.verdict);
+  if (cVerdict === aVerdict) note(`switching to C changes nothing visible (both read "${aVerdict}")`);
+
+  // C 的分数线自己也能改
+  await setField('targetC', 65);
+  const afterEdit = await val('need');
+  if (Math.abs(afterEdit - (89.5 - 10 - 0.65 * SEED_MEAN) / 0.25) > 1e-9) {
+    note('editing the C cutoff changed the A result');
+  }
+  await page.click('[data-goal="C"]');
+  await page.waitForTimeout(140);
+  const cAfter = await val('need');
+  if (Math.abs(cAfter - (65 - 10 - 0.65 * SEED_MEAN) / 0.25) > 1e-9) note(`the edited C cutoff is not being used (got ${cAfter})`);
+  await fresh();
 }
 
 /* ── ②⭐⭐⭐ 够不到时,"差多少"必须是总评的分 ──────────────── */
@@ -299,4 +351,4 @@ if (fail.length) {
   for (const f of fail) console.error('  - ' + f);
   process.exit(1);
 }
-console.log('✓ grade-console:默认数值手算一致、够不到时报的是总评差距(9.0 而非 36)、七种结论都可达、权重警告只在该出现时出现、存得住、键盘可调、无 CJK');
+console.log('✓ grade-console:默认数值手算一致、A/B/C 三档手算一致且结论真的不同、够不到时报的是总评差距(9.0 而非 36)、七种结论都可达、权重警告只在该出现时出现、存得住、键盘可调、无 CJK');

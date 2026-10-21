@@ -24,6 +24,15 @@
  * ⚠️ 分数一律夹在 0..100;权重用百分数存(和输入框一致),算的时候才除以 100。
  */
 
+/**
+ * 可以瞄的目标。
+ * ⭐ 用一个数组 + `typeof GOALS[number]` 推类型,而不是手写联合:
+ *   页面上的按钮直接遍历它,以后再加一档(D 之类)只改这一行,
+ *   `targetOf` 的 switch 会**编译不过**,逼着你把该改的地方都改掉。
+ */
+export const GOALS = ['A', 'B', 'C'] as const;
+export type Goal = (typeof GOALS)[number];
+
 /** 一条测验通道。`muted` = 这场可能不考,先不算进去。 */
 export interface Item {
   readonly name: string;
@@ -40,8 +49,9 @@ export interface Setup {
   readonly assignScore: number;
   readonly targetA: number;
   readonly targetB: number;
+  readonly targetC: number;
   readonly dropLowest: boolean;
-  readonly goal: 'A' | 'B';
+  readonly goal: Goal;
 }
 
 export const SEED_SETUP: Setup = {
@@ -51,6 +61,7 @@ export const SEED_SETUP: Setup = {
   assignScore: 100,
   targetA: 89.5,
   targetB: 79.5,
+  targetC: 69.5,
   dropLowest: true,
   goal: 'A',
 };
@@ -70,8 +81,24 @@ export function clampScore(x: number): number {
   return Math.max(0, Math.min(100, x));
 }
 
+/** 某一档的分数线。 */
+export function cutoffOf(s: Setup, goal: Goal): number {
+  // ⚠️ 故意不写 `default` —— 没有 default 的 switch 在 strict 下会做穷尽性检查,
+  //   以后 `GOALS` 里多一档而这里漏了,就是一个编译错误,而不是一个悄悄返回
+  //   undefined 的运行时 bug。
+  switch (goal) {
+    case 'A':
+      return s.targetA;
+    case 'B':
+      return s.targetB;
+    case 'C':
+      return s.targetC;
+  }
+}
+
+/** 当前瞄的那一档的分数线。 */
 export function targetOf(s: Setup): number {
-  return s.goal === 'A' ? s.targetA : s.targetB;
+  return cutoffOf(s, s.goal);
 }
 
 export function weightsOf(s: Setup): {

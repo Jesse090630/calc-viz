@@ -23,10 +23,10 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  EQUATION_TEX, HEADLINE, MAIN_IDEA, SEED_ITEMS, SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
+  EQUATION_TEX, GOALS, HEADLINE, MAIN_IDEA, SEED_ITEMS, SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
   type Item, type Setup, type Verdict,
-  clampScore, countedMean, finalNeeded, gradeWith, lockedGrade, missBy, spareBy, targetOf,
-  verdictOf, weightSum, weightsBalanced,
+  clampScore, countedMean, cutoffOf, finalNeeded, gradeWith, lockedGrade, missBy, spareBy,
+  targetOf, verdictOf, weightSum, weightsBalanced,
 } from '../../math/gradeTarget';
 import { LAB } from '../shared/theme';
 import { Tex } from '../shared/Tex';
@@ -175,7 +175,8 @@ export function GradeConsoleLab() {
         <div>
           <p className="font-mono text-[9px] uppercase tracking-wider text-slate-500">Target</p>
           <div className="mt-1 flex gap-1.5">
-            {(['A', 'B'] as const).map((g) => (
+            {/* ⚠️ 遍历 `GOALS`,不写死 ['A','B'] —— 加一档的时候这里不用动。 */}
+            {GOALS.map((g) => (
               <button
                 key={g} type="button" data-goal={g} data-active={setup.goal === g ? 'yes' : 'no'}
                 onClick={() => patch({ goal: g })}
@@ -186,7 +187,7 @@ export function GradeConsoleLab() {
                     : 'border-slate-700 text-slate-400 hover:border-slate-500')
                 }
               >
-                {g} <span className="text-slate-500">{show(g === 'A' ? setup.targetA : setup.targetB)}</span>
+                {g} <span className="text-slate-500">{show(cutoffOf(setup, g))}</span>
               </button>
             ))}
           </div>
@@ -319,7 +320,7 @@ export function GradeConsoleLab() {
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
           Weights, cutoffs, drop rule
         </p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-7">
           {([
             ['Assignments %', setup.wAssign, (v: number) => patch({ wAssign: v }), 'wAssign'],
             ['Assessments %', setup.wAssess, (v: number) => patch({ wAssess: v }), 'wAssess'],
@@ -327,6 +328,7 @@ export function GradeConsoleLab() {
             ['Assignments score', setup.assignScore, (v: number) => patch({ assignScore: v }), 'assignScore'],
             ['A cutoff', setup.targetA, (v: number) => patch({ targetA: v }), 'targetA'],
             ['B cutoff', setup.targetB, (v: number) => patch({ targetB: v }), 'targetB'],
+            ['C cutoff', setup.targetC, (v: number) => patch({ targetC: v }), 'targetC'],
           ] as const).map(([label, value, set, key]) => (
             <label key={key} className="block">
               <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">{label}</span>

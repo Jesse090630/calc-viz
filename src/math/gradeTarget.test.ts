@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  COMFORTABLE_BELOW, EQUATION_TEX, HEADLINE, MAIN_IDEA, SEED_ITEMS, SEED_SETUP, SOLVED_TEX,
+  COMFORTABLE_BELOW, EQUATION_TEX, GOALS, HEADLINE, MAIN_IDEA, SEED_ITEMS, SEED_SETUP, SOLVED_TEX,
   TIGHT_ABOVE, VERDICT_WORD, WEIGHT_SLOP,
-  clampScore, countedMean, finalNeeded, finalNeededByBisection, gradeWith, lockedGrade, missBy,
-  spareBy, targetOf, verdictOf, weightSum, weightsBalanced, weightsOf,
+  clampScore, countedMean, cutoffOf, finalNeeded, finalNeededByBisection, gradeWith, lockedGrade,
+  missBy, spareBy, targetOf, verdictOf, weightSum, weightsBalanced, weightsOf,
   type Item, type Setup,
 } from './gradeTarget';
 
@@ -20,7 +20,7 @@ describe('the one equation, both directions', () => {
    */
   it('⭐⭐⭐ 解出来的期末分代回去,正好等于目标', () => {
     let checked = 0;
-    for (const goal of ['A', 'B'] as const) {
+    for (const goal of GOALS) {
       for (const wFinal of [5, 20, 25, 40, 60]) {
         for (const mean of [0, 55, 72.5, 88.6667, 100]) {
           const s = withS({ goal, wFinal, wAssess: 100 - 10 - wFinal });
@@ -31,7 +31,7 @@ describe('the one equation, both directions', () => {
         }
       }
     }
-    expect(checked).toBe(50); // 空转防护:循环真的跑满了
+    expect(checked).toBe(GOALS.length * 5 * 5); // 空转防护:循环真的跑满了
   });
 
   /** ⭐⭐⭐ 路径③ —— 二分正向函数,完全不碰反解公式。 */
@@ -348,11 +348,43 @@ describe('weights', () => {
 });
 
 describe('targets and clamping', () => {
-  it('A / B 两个目标切得动', () => {
-    expect(targetOf(S)).toBe(89.5);
+  it('⭐⭐ 三档都切得动,而且默认分数线是 89.5 / 79.5 / 69.5', () => {
+    expect(GOALS).toEqual(['A', 'B', 'C']);
+    expect(targetOf(withS({ goal: 'A' }))).toBe(89.5);
     expect(targetOf(withS({ goal: 'B' }))).toBe(79.5);
-    // 目标低了,期末要求也低 —— 方向必须对
-    expect(finalNeeded(withS({ goal: 'B' }), 88.6667)!).toBeLessThan(finalNeeded(S, 88.6667)!);
+    expect(targetOf(withS({ goal: 'C' }))).toBe(69.5);
+    // `cutoffOf` 查任意一档,`targetOf` 查当前那一档 —— 两者必须一致
+    for (const g of GOALS) {
+      expect(cutoffOf(S, g)).toBe(targetOf(withS({ goal: g })));
+    }
+  });
+
+  it('⭐⭐ 目标越低,期末要求越低 —— 三档严格递减', () => {
+    // ⚠️ 用精确的 532/6,不用 88.6667 那个截断值:
+    //   手算的期望值 7.4666… 是从精确均分来的,拿截断值去对会差在小数第五位,
+    //   那是**我抄错了数**,不是代码错了。
+    const mean = 532 / 6;
+    const needs = GOALS.map((g) => finalNeeded(withS({ goal: g }), mean)!);
+    expect(needs[0]).toBeGreaterThan(needs[1]!);
+    expect(needs[1]).toBeGreaterThan(needs[2]!);
+    // 手算一组:C 档 = (69.5 − 10 − 0.65×88.6667) / 0.25 = 7.4666…
+    expect(needs[2]).toBeCloseTo((69.5 - 10 - 0.65 * mean) / 0.25, 9);
+    expect(needs[2]).toBeCloseTo(7.4666666667, 6);
+  });
+
+  it('⭐ C 档在默认数据下是"稳了" —— 新加的这一档真的会走到别的分支', () => {
+    // 加一个选项却只能看到和原来一样的结论,等于没加。
+    const c = countedMean(SEED_ITEMS, true);
+    expect(verdictOf(withS({ goal: 'C' }), c.mean)).toBe('comfortable');
+    expect(verdictOf(withS({ goal: 'A' }), c.mean)).toBe('doable');
+  });
+
+  it('⚠️ 分数线之间没有强制的大小关系 —— 模型不管,别有人假设它管', () => {
+    // 有人把 C 设成 95 是他自己的事,算出来仍然自洽;
+    // 这条写在这里,是防止后来者"顺手"加一个会改变数值的排序假设。
+    const odd = withS({ goal: 'C', targetC: 95 });
+    expect(targetOf(odd)).toBe(95);
+    expect(gradeWith(odd, 80, finalNeeded(odd, 80)!)).toBeCloseTo(95, 9);
   });
 
   it('⚠️ 分数夹在 0..100', () => {
