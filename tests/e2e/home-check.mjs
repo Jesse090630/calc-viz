@@ -295,7 +295,63 @@ await chainPage.close();
   const WANT_FILTERS = 14; // All + 预备 + 十个单元 + 定理 + 工具
   const count = await pf.evaluate(() => document.querySelectorAll('.home-filters button').length);
   if (count !== WANT_FILTERS) errors.push(`[mobile] expected ${WANT_FILTERS} filter buttons, got ${count}`);
+
+  /**
+   * ⭐⭐ 首屏那两条横幅不许横着溢出屏幕。
+   *   这一条是被真实事故逼出来的:`minmax(26rem, 1fr)` 的下界是**硬的**,
+   *   390px 的屏上列宽照样 416px,整条横幅横着顶出去,
+   *   "PDF" 和 "OPEN" 两个按钮被切掉一半 —— 而首屏横幅的全部意义就是"一眼看见能点"。
+   *   顺带把整页的横向溢出也钉住:横向滚动条在手机上就是个坏掉的信号。
+   */
+  const bands = await pf.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const out = { pageOverflow: document.documentElement.scrollWidth > vw + 0.5, clipped: [], missing: false };
+    const row = document.querySelector('.studio-bands');
+    if (!row) { out.missing = true; return out; }
+    out.clipped = [...new Set([...row.querySelectorAll('*')]
+      .filter((e) => e.getBoundingClientRect().right > vw + 0.5)
+      .map((e) => e.textContent.trim().slice(0, 16)))];
+    return out;
+  });
+  if (bands.missing) errors.push('[mobile] the top band row is gone');
+  if (bands.pageOverflow) errors.push('[mobile] the home page scrolls sideways at 390px');
+  if (bands.clipped.length) errors.push(`[mobile] these band parts sit off-screen at 390px: ${bands.clipped.join(' | ')}`);
+
+  /** ⭐ 工具横幅必须**整条**落在首屏里 —— 它排在这儿就是为了不用滚就能看见。 */
+  const band = await pf.evaluate(() => {
+    const el = document.querySelector('[data-tool-band]');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { bottom: Math.round(r.bottom), fold: window.innerHeight, href: el.getAttribute('href') };
+  });
+  if (!band) errors.push('[mobile] the Grade Console band is missing from the home page');
+  else {
+    if (band.bottom > band.fold) errors.push(`[mobile] the Grade Console band ends at ${band.bottom}px, below the ${band.fold}px fold`);
+    if (band.href !== '#/grade-console') errors.push(`[mobile] the band points at ${band.href}`);
+  }
   await pf.close();
+}
+
+/**
+ * ⭐ 首屏预览默认跟着**显示顺序**走,不是跟着 `LESSONS` 数组的第一项。
+ *   这两者是两回事:把某一节挪到最前面之后,写死的那个会让预览和页面顶上
+ *   摆着的东西对不上(实测挪完之后首屏预览里还是「链式法则」)。
+ */
+{
+  const pp = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await pp.goto(URL, { waitUntil: 'networkidle' });
+  await pp.waitForTimeout(900);
+  const shown = await pp.evaluate(() => {
+    const first = document.querySelector('.home-section a[data-lesson-card]');
+    return {
+      previewFor: document.querySelector('[data-preview-for]')?.dataset.previewFor ?? null,
+      firstCard: first?.dataset.lessonCard ?? null,
+    };
+  });
+  if (shown.previewFor !== shown.firstCard) {
+    errors.push(`[desktop] the landing preview shows "${shown.previewFor}" but the first card is "${shown.firstCard}"`);
+  }
+  await pp.close();
 }
 
 /* ⚠️⚠️ **悬停每一张卡。**

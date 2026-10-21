@@ -201,6 +201,26 @@ body {
   font-style: normal;
 }
 
+/* ⭐ 首屏那一排"直接可用"的横幅。
+     ⚠️ 用 auto-fit + minmax 而不是写死两列:窄屏自动堆成两行,
+       不必为手机单独写一套断点。
+     ⚠️ 外边距挪到这一排身上 —— 横幅自己不再带 margin-bottom,
+       否则并排时两个横幅各带一份,中间会多出一道空档。 */
+.studio-bands {
+  display: grid;
+  gap: 0.9rem;
+  /* ⚠️ 必须是 `min(26rem, 100%)`,不能只写 `26rem`。
+       `minmax(26rem, 1fr)` 的下界是**硬的**:容器只有 350px 时,
+       列宽照样是 416px,于是整条横幅横着溢出屏幕 ——
+       手机上 "PDF" 和 "OPEN" 两个按钮被切掉了一半。
+       套一层 `min(..., 100%)` 之后,窄屏时下界自动让步。 */
+  grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
+  margin-bottom: 3rem;
+}
+.studio-bands > .formula-download {
+  margin-bottom: 0;
+}
+
 .formula-download {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -252,6 +272,13 @@ body {
 .formula-download__action b {
   color: var(--studio-orange);
   font-size: 1rem;
+}
+
+/* ⚠️ 工具横幅复用同一套骨架,只换底色。
+     不另造一套视觉语言 —— 两个横幅并排时,同形不同色最容易读成"两件同类的东西"。
+     底色用 aqua 而不是再来一次黄:两块一样的黄会互相抢,谁也不显眼。 */
+.formula-download--tool {
+  background: var(--studio-aqua);
 }
 
 .home-filters {

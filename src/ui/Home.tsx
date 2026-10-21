@@ -376,6 +376,21 @@ interface LessonSection {
 
 const SECTIONS: readonly LessonSection[] = [
   {
+    /**
+     * ⚠️ 这一节放的是**工具,不是课**。
+     *   成绩台没有要教的概念,它只是把一条加权平均反过来解 ——
+     *   硬塞进某个单元里,就是在假装它是一课。单开一节,名字就说清它是什么。
+     *
+     * ⭐ 排在最前面,而且首屏还有一条横幅直接进去:
+     *   它是**不需要先懂什么就能用**的东西,放在要按顺序读的课前面才对。
+     */
+    id: 'tools',
+    label: 'Tools',
+    chip: 'Tool',
+    description: 'Small calculators built on the same algebra the lessons teach.',
+    lessonIds: ['grade-console'],
+  },
+  {
     id: 'precalc',
     label: 'Pre-Calculus',
     chip: 'Pre-Calc',
@@ -490,18 +505,6 @@ const SECTIONS: readonly LessonSection[] = [
     lessonIds: ['theorems'],
   },
   {
-    /**
-     * ⚠️ 这一节放的是**工具,不是课**。
-     *   成绩台没有要教的概念,它只是把一条加权平均反过来解 ——
-     *   硬塞进某个单元里,就是在假装它是一课。单开一节,名字就说清它是什么。
-     */
-    id: 'tools',
-    label: 'Tools',
-    chip: 'Tool',
-    description: 'Small calculators built on the same algebra the lessons teach.',
-    lessonIds: ['grade-console'],
-  },
-  {
     id: 'unit-10',
     label: 'Unit 10 · Infinite Sequences and Series',
     chip: 'U10',
@@ -543,7 +546,15 @@ export function Home() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [activeSection, setActiveSection] = useState<SectionFilter>('all');
-  const [previewLessonId, setPreviewLessonId] = useState(LESSONS[0]!.id);
+  /**
+   * ⚠️ 初始值用 `null`,表示"还没挑过",而不是写死 `LESSONS[0]`。
+   *   `LESSONS` 的顺序和页面上的显示顺序**是两回事** ——
+   *   它只是一个按 id 查卡片的清单。写死 `LESSONS[0]` 的后果是:
+   *   把某一节挪到最前面之后,首屏预览里放的还是「链式法则」,
+   *   和页面顶上摆着的东西对不上。现在默认跟着**显示顺序**走,
+   *   以后再调整分节顺序,这里不用改。
+   */
+  const [previewLessonId, setPreviewLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -572,7 +583,9 @@ export function Home() {
 
   const resultCount = visibleSections.reduce((total, section) => total + section.lessons.length, 0);
   const visibleLessons = visibleSections.flatMap((section) => section.lessons);
-  const previewLesson = visibleLessons.find((lesson) => lesson.id === previewLessonId)
+  const previewLesson = (previewLessonId === null
+    ? undefined
+    : visibleLessons.find((lesson) => lesson.id === previewLessonId))
     ?? visibleLessons[0]
     ?? LESSONS[0]!;
   /**
@@ -617,6 +630,7 @@ export function Home() {
         <h1 id="home-title">See where{' '}<br /><em>formulas come from.</em></h1>
       </section>
 
+      <div className="studio-bands">
       <div className="formula-download">
         <span className="formula-download__title">
           <strong>Jesse&apos;s Secret Formula</strong>
@@ -636,6 +650,21 @@ export function Home() {
             PDF <b aria-hidden="true">↗</b>
           </a>
         </span>
+      </div>
+
+      {/* ⭐ 工具横幅:和上面那条同形,直接进成绩台。
+          放在首屏是因为它是**马上能用**的东西,不是要读的一课 ——
+          和那张公式表是同一类:不需要先懂什么才能点。 */}
+      <a className="formula-download formula-download--tool" href="#/grade-console" data-tool-band>
+        <span className="formula-download__title">
+          <strong>Grade Console</strong>
+        </span>
+        <span className="formula-download__actions">
+          <span className="formula-download__action" aria-hidden="true">
+            Open <b>→</b>
+          </span>
+        </span>
+      </a>
       </div>
 
       <nav className="home-filters" aria-label="Lesson categories">
