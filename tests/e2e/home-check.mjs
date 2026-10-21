@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 55) errors.push(`[${name}] expected 55 cards, got ${cards}`);
+  if (cards !== 56) errors.push(`[${name}] expected 56 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -289,8 +289,12 @@ await chainPage.close();
       .map((b) => b.textContent.trim());
   });
   if (clipped.length) errors.push(`[mobile] these filters sit off-screen at 390px: ${clipped.join(', ')}`);
+  // ⚠️ 这个数字写死了两处(断言里一处、消息里一处),而且**已经漂了**:
+  //   代码查的是 13,消息却说 11。错的时候报一个错的期望值比不报还糟。
+  //   现在只留一个常量,消息从它来。
+  const WANT_FILTERS = 14; // All + 预备 + 十个单元 + 定理 + 工具
   const count = await pf.evaluate(() => document.querySelectorAll('.home-filters button').length);
-  if (count !== 13) errors.push(`[mobile] expected 11 filter buttons, got ${count}`);
+  if (count !== WANT_FILTERS) errors.push(`[mobile] expected ${WANT_FILTERS} filter buttons, got ${count}`);
   await pf.close();
 }
 

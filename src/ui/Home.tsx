@@ -81,6 +81,11 @@ export const LESSONS: readonly LessonCard[] = [
     question: 'Two integrals that look alike need different tools.',
   },
   {
+    id: 'grade-console',
+    title: 'Grade Console',
+    question: 'A weighted average, solved backwards.',
+  },
+  {
     id: 'implicit',
     title: 'Implicit Differentiation',
     question: 'That dy/dx is the chain rule.',
@@ -352,7 +357,7 @@ export const LESSONS: readonly LessonCard[] = [
 type SectionId =
   | 'precalc'
   | 'unit-1' | 'unit-2' | 'unit-3' | 'unit-4' | 'unit-5'
-  | 'unit-6' | 'unit-7' | 'unit-8' | 'unit-9' | 'unit-10' | 'reference';
+  | 'unit-6' | 'unit-7' | 'unit-8' | 'unit-9' | 'unit-10' | 'reference' | 'tools';
 type SectionFilter = 'all' | SectionId;
 
 interface LessonSection {
@@ -483,6 +488,18 @@ const SECTIONS: readonly LessonSection[] = [
     chip: 'Thm',
     description: 'Every theorem the course leans on, with its conditions, its proof, and a worked example.',
     lessonIds: ['theorems'],
+  },
+  {
+    /**
+     * ⚠️ 这一节放的是**工具,不是课**。
+     *   成绩台没有要教的概念,它只是把一条加权平均反过来解 ——
+     *   硬塞进某个单元里,就是在假装它是一课。单开一节,名字就说清它是什么。
+     */
+    id: 'tools',
+    label: 'Tools',
+    chip: 'Tool',
+    description: 'Small calculators built on the same algebra the lessons teach.',
+    lessonIds: ['grade-console'],
   },
   {
     id: 'unit-10',

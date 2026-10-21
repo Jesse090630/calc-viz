@@ -32,9 +32,9 @@ p.on('requestfailed',r=>note('request failed: '+r.url().slice(-70)));
 await p.goto(B,{waitUntil:'networkidle'}); await p.waitForTimeout(1400);
 
 const cards=await p.locator('[data-lesson-card]').count();
-if(cards!==55) note(`expected 55 lesson cards, got ${cards}`);
+if(cards!==56) note(`expected 56 lesson cards, got ${cards}`);
 const filters=await p.locator('.home-filters button').count();
-if(filters!==13) note(`expected 13 filters, got ${filters}`);
+if(filters!==14) note(`expected 14 filters, got ${filters}`);
 
 // PDF 在子路径下必须还能拿到(这类错只在部署后才暴露)
 const pdf=await p.evaluate(async()=>{const a=document.querySelector('a[href*="SecretFormula"]');
@@ -57,4 +57,4 @@ if(await p.locator('[data-missing-route]').count()!==1) note('the not-found page
 
 await b.close(); server.close();
 if(bad.length){console.error('✗ pages-check\n'+bad.map(x=>'  '+x).join('\n'));process.exit(1);}
-console.log('✓ 子路径 /calc-viz/ 下一切正常:55 张卡、13 个筛选、七条链、PDF、404');
+console.log('✓ 子路径 /calc-viz/ 下一切正常:56 张卡、14 个筛选、七条链、PDF、404');

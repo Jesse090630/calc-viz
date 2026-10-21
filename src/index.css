@@ -722,3 +722,69 @@ body {
     transform: none;
   }
 }
+
+/* ── Grade console: vertical faders ───────────────────────────────
+   ⚠️ 竖向滑块只用 `writing-mode: vertical-lr` + `direction: rtl` 实现,
+     不用 `transform: rotate()`。旋转过的 range 的命中区域仍然是旋转**前**的矩形,
+     鼠标按下的位置和拇指的位置对不上 —— 拖起来会跳。
+   ⚠️ 也不用 `appearance: slider-vertical`:那是已经废弃的私有属性。 */
+.fader-input {
+  /* ⚠️ `appearance: none` 必须加在**输入框自己**身上,不是只加在 thumb 上。
+       第一版只写了 `::-webkit-slider-thumb { appearance: none }`,
+       结果原生的轨道和滑块照样画出来 —— 屏幕上多出一条蓝线和一个蓝点,
+       自定义的 thumb 又叠在旁边,一条推子上出现了三个"滑块"。 */
+  appearance: none;
+  -webkit-appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: ns-resize;
+  position: relative;
+  z-index: 2;
+}
+.fader-input::-webkit-slider-runnable-track {
+  width: 100%;
+  background: transparent;
+}
+.fader-input::-moz-range-track {
+  width: 100%;
+  background: transparent;
+}
+/* ⚠️ 推子帽做成**横贯整条轨道**的一道,而不是一个居中的小方块。
+     竖向滑块里 thumb 的横向位置走的是 inline 轴,Chrome 会把它顶到起始边 ——
+     第一版 30px 宽的帽子整个贴在轨道左边,看着像没对齐。
+     做成满宽就不存在居中的问题,而且点击目标更大。 */
+.fader-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  border: 1px solid #0b1020;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+}
+.fader-input::-moz-range-thumb {
+  width: 100%;
+  height: 12px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  border: 1px solid #0b1020;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+}
+.fader-input:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+/* 轨道上的刻度:每 10 分一道,80 和 90 两道显眼些 —— 它们是常见的档线。 */
+.fader-track {
+  background-image: repeating-linear-gradient(
+    to top,
+    rgb(148 163 184 / 0.22) 0 1px,
+    transparent 1px 10%
+  );
+}

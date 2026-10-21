@@ -11,3 +11,4 @@ tests/e2e/screenshots/*.actual.png
 .vscode/*
 !.vscode/extensions.json
 .idea
+.mutation-backup.ts
