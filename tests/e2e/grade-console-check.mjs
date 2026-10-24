@@ -61,14 +61,26 @@ async function setField(key, value) {
   }, value);
   await page.waitForTimeout(110);
 }
-/** 把一条推子的分数设成某个值(走数字框,和键盘通路等价)。 */
+/** 把一条推子的**得分**设成某个值(走数字框,和键盘通路等价)。 */
 async function setScore(i, value) {
-  await page.$eval(`[data-score="${i}"]`, (el, v) => {
+  await page.$eval(`[data-earned="${i}"]`, (el, v) => {
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     set.call(el, String(v));
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
   await page.waitForTimeout(110);
+}
+
+/**
+ * 把一条推子设成某个**百分比**。
+ *
+ * ⚠️ 分值不再统一之后,"把每一条都设成 70" 和 "把每一条都设成 70%" 是两回事:
+ *   project 是 50 分制,写 70 会被夹到 50,也就是 **100%** —— 均分反而被推高。
+ *   凡是意图为"全部 X%"的检查,都必须走这个函数,而不是直接写分数。
+ */
+async function setPercent(i, pct) {
+  const possible = await page.$eval(`[data-possible="${i}"]`, (el) => Number(el.value));
+  await setScore(i, (pct / 100) * possible);
 }
 async function fresh() {
   // ⚠️ 每一组都从干净状态开始:localStorage 会把上一组的输入带过来。
@@ -99,6 +111,79 @@ if ((await count('[data-strip]')) !== 9) note(`expected 8 channels + master, got
   if (dropped !== 1) note(`expected exactly one dropped channel, got ${dropped}`);
   const muted = await count('[data-strip][data-state="muted"]');
   if (muted !== 1) note(`expected exactly one muted channel, got ${muted}`);
+}
+
+/* ── ①c 分值:得分 / 满分 ───────────────────────────────── */
+/**
+ * ⭐⭐⭐ 整次改动的起因:project 是 50 分制(46/50 = 92%),
+ *   而旧模型默认一切百分制,会把 46 读成 46%。
+ *   这一段把两种平均算法的结果钉死在浏览器里 —— 用的是 Jesse 给的那四个数。
+ */
+{
+  const possible = await page.$$eval('[data-possible]', (els) => els.map((e) => Number(e.value)));
+  if (possible.length !== 8) note(`expected 8 points-possible inputs, got ${possible.length}`);
+  if (possible[4] !== 50) note(`the project should be out of 50, got ${possible[4]}`);
+  const pct = await page.$eval('[data-pct="4"]', (el) => Number(el.dataset.value));
+  if (Math.abs(pct - 92) > 1e-9) note(`46/50 should read 92%, got ${pct}`);
+
+  // ⭐⭐⭐ 丢的必须是 Assess 1(83%),不是卷面分最低的 project(46 分)
+  const dropped = await page.$$eval('[data-strip][data-state="dropped"]', (els) => els.map((e) => e.dataset.strip));
+  if (dropped.join(',') !== '0') {
+    note(`the dropped assessment should be Assess 1 at 83% — got strip(s) [${dropped}]. ` +
+      'Ranking by raw points would wrongly drop the 46-point project.');
+  }
+
+  // 两种算法,各自手算
+  const MOG_MEAN = 532 / 6;
+  const TP_MEAN = (486 / 550) * 100;
+  const needFor = (m) => (89.5 - 0.10 * 100 - 0.65 * m) / 0.25;
+  const expected = {
+    'mean-of-grades': { mean: MOG_MEAN, need: needFor(MOG_MEAN), shown: ['88.7', '87.5'] },
+    'total-points': { mean: TP_MEAN, need: needFor(TP_MEAN), shown: ['88.4', '88.3'] },
+  };
+  for (const m of ['mean-of-grades', 'total-points']) {
+    const mean = await page.$eval(`[data-method-mean="${m}"]`, (el) => Number(el.dataset.value));
+    const need = await page.$eval(`[data-method-need="${m}"]`, (el) => Number(el.dataset.value));
+    const shownMean = await text(`[data-method-mean="${m}"]`);
+    const shownNeed = await text(`[data-method-need="${m}"]`);
+    if (Math.abs(mean - expected[m].mean) > 1e-9) note(`[${m}] mean is ${mean}, hand-computed ${expected[m].mean}`);
+    if (Math.abs(need - expected[m].need) > 1e-9) note(`[${m}] final is ${need}, hand-computed ${expected[m].need}`);
+    if (shownMean !== expected[m].shown[0]) note(`[${m}] shows mean "${shownMean}", expected "${expected[m].shown[0]}"`);
+    if (shownNeed !== expected[m].shown[1]) note(`[${m}] shows final "${shownNeed}", expected "${expected[m].shown[1]}"`);
+  }
+
+  // ⭐ 两种算法必须真的不一样,否则那两格是摆设
+  const mogMean = await page.$eval('[data-method-mean="mean-of-grades"]', (el) => Number(el.dataset.value));
+  const tpMean = await page.$eval('[data-method-mean="total-points"]', (el) => Number(el.dataset.value));
+  if (!(tpMean < mogMean)) note(`total-points (${tpMean}) should sit below mean-of-grades (${mogMean}) here`);
+
+  // 选中哪一种,主读数就跟着谁
+  for (const m of ['total-points', 'mean-of-grades']) {
+    await page.click(`[data-method="${m}"]`);
+    await page.waitForTimeout(160);
+    if ((await attr(`[data-method="${m}"]`, 'data-active')) !== 'yes') note(`[${m}] clicking did not select it`);
+    const main = await val('need');
+    const panel = await page.$eval(`[data-method-need="${m}"]`, (el) => Number(el.dataset.value));
+    if (Math.abs(main - panel) > 1e-9) note(`[${m}] the headline final (${main}) disagrees with the panel (${panel})`);
+  }
+
+  // 差距那句话
+  const spread = await page.$eval('[data-method-spread]', (el) => Number(el.dataset.value));
+  if (Math.abs(spread - Math.abs(needFor(MOG_MEAN) - needFor(TP_MEAN))) > 1e-9) {
+    note(`the stated spread ${spread} is not the difference between the two methods`);
+  }
+
+  // 等分值时两种算法必须重合 —— 把 project 改成 100 分制
+  await page.$eval('[data-possible="4"]', (el) => {
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    set.call(el, '100');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(200);
+  const a = await page.$eval('[data-method-mean="mean-of-grades"]', (el) => Number(el.dataset.value));
+  const b = await page.$eval('[data-method-mean="total-points"]', (el) => Number(el.dataset.value));
+  if (Math.abs(a - b) > 1e-9) note(`with every assessment out of 100 the two methods must agree, got ${a} vs ${b}`);
+  await fresh();
 }
 
 /* ── ①b 三档目标 ────────────────────────────────────────── */
@@ -162,7 +247,7 @@ if ((await count('[data-strip]')) !== 9) note(`expected 8 channels + master, got
 await setField('dropLowest', false).catch(() => {});
 await page.$eval('[data-field="dropLowest"]', (el) => { if (el.checked) el.click(); });
 await page.waitForTimeout(120);
-for (let i = 0; i < 8; i += 1) await setScore(i, 70);
+for (let i = 0; i < 8; i += 1) await setPercent(i, 70);
 // 第 8 条是静音的,取消静音让它也算进去,保证均分干干净净是 70
 await page.$eval('[data-mute="7"]', (el) => { if (el.getAttribute('aria-pressed') === 'true') el.click(); });
 await page.waitForTimeout(150);
@@ -194,7 +279,7 @@ await page.waitForTimeout(150);
 {
   let probed = 0;
   for (const score of [95, 88, 60, 40]) {
-    for (let i = 0; i < 8; i += 1) await setScore(i, score);
+    for (let i = 0; i < 8; i += 1) await setPercent(i, score);
     await page.waitForTimeout(140);
     const mean = await val('mean');
     const need = await val('need');
@@ -220,7 +305,7 @@ async function readVerdict() {
 }
 // unreachable / tight / doable / comfortable:靠均分扫一遍
 for (const score of [40, 84, 88, 97]) {
-  for (let i = 0; i < 8; i += 1) await setScore(i, score);
+  for (let i = 0; i < 8; i += 1) await setPercent(i, score);
   await page.waitForTimeout(140);
   await readVerdict();
 }
@@ -284,18 +369,18 @@ await setScore(0, 42);
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
 {
-  const back = await page.$eval('[data-score="0"]', (el) => Number(el.value));
+  const back = await page.$eval('[data-earned="0"]', (el) => Number(el.value));
   if (back !== 42) note(`a typed score did not survive a reload (got ${back})`);
 }
 
 /* ── ⑧ 键盘能调推子 ─────────────────────────────────────── */
 await fresh();
 {
-  const before = await page.$eval('[data-score="0"]', (el) => Number(el.value));
+  const before = await page.$eval('[data-earned="0"]', (el) => Number(el.value));
   await page.focus('[data-strip="0"] input[type="range"]');
   await page.keyboard.press('ArrowUp');
   await page.waitForTimeout(120);
-  const after = await page.$eval('[data-score="0"]', (el) => Number(el.value));
+  const after = await page.$eval('[data-earned="0"]', (el) => Number(el.value));
   if (after === before) note('the arrow keys do not move a fader — keyboard users are shut out');
 }
 
@@ -331,7 +416,7 @@ await fresh();
 await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForTimeout(250);
 await page.screenshot({ path: join(OUT, 'grade-console-top.png'), clip: { x: 0, y: 0, width: 1280, height: 1000 } });
-for (let i = 0; i < 8; i += 1) await setScore(i, 70);
+for (let i = 0; i < 8; i += 1) await setPercent(i, 70);
 await page.$eval('[data-field="dropLowest"]', (el) => { if (el.checked) el.click(); });
 await page.$eval('[data-mute="7"]', (el) => { if (el.getAttribute('aria-pressed') === 'true') el.click(); });
 await page.waitForTimeout(250);
@@ -351,4 +436,4 @@ if (fail.length) {
   for (const f of fail) console.error('  - ' + f);
   process.exit(1);
 }
-console.log('✓ grade-console:默认数值手算一致、A/B/C 三档手算一致且结论真的不同、够不到时报的是总评差距(9.0 而非 36)、七种结论都可达、权重警告只在该出现时出现、存得住、键盘可调、无 CJK');
+console.log('✓ grade-console:46/50 读作 92%、两种算法 88.7/87.5 与 88.4/88.3 手算一致、丢的是 83% 那条而非 46 分那条、等分值时两法重合、A/B/C 三档手算一致且结论真的不同、够不到时报的是总评差距(9.0 而非 36)、七种结论都可达、权重警告只在该出现时出现、存得住、键盘可调、无 CJK');

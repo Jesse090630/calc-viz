@@ -33,11 +33,59 @@
 export const GOALS = ['A', 'B', 'C'] as const;
 export type Goal = (typeof GOALS)[number];
 
-/** 一条测验通道。`muted` = 这场可能不考,先不算进去。 */
+/**
+ * 测验类目的平均分怎么算。
+ *
+ * ⭐⭐⭐ 两种算法在"每一项满分都一样"的时候**完全等价**;
+ *   一旦有项目不是满分 100(比如 46/50 的 project),它们就分道扬镳:
+ *
+ *   · `mean-of-grades` —— 先把每一项换成百分比,再把百分比平均。
+ *     **每一项权重相等**,和它值多少分无关。46/50 和 92/100 在这里一模一样,
+ *     那个 50 分的分母根本不起作用。教学大纲的原话是 "mean of grades",
+ *     所以这是默认。
+ *
+ *   · `total-points` —— 所有拿到的分加起来,除以所有可能的分加起来。
+ *     **按分值加权**。50 分的 project 只有 100 分测验一半的分量:
+ *     项目考得好,帮助减半;考砸了,伤害也减半。
+ *
+ * ⚠️ 老师到底用哪一种**还没问清楚**。所以页面上两个结果**同时显示**,
+ *   而不是把另一个藏在开关后面 —— 不确定的时候,把范围摆出来比挑一个更诚实。
+ */
+export const METHODS = ['mean-of-grades', 'total-points'] as const;
+export type Method = (typeof METHODS)[number];
+
+export const METHOD_NAME: Readonly<Record<Method, string>> = {
+  'mean-of-grades': 'Mean of grades',
+  'total-points': 'Total points',
+};
+
+export const METHOD_NOTE: Readonly<Record<Method, string>> = {
+  'mean-of-grades':
+    'Every assessment counts the same, whatever it is out of. A 46/50 and a 92/100 are the same thing here.',
+  'total-points':
+    'Points are pooled, so a 50-point project pulls half as hard as a 100-point test — it helps less when it is good and hurts less when it is not.',
+};
+
+/**
+ * 一条测验通道。
+ *
+ * ⚠️ 分数不再是"百分制的一个数",而是**得分 / 满分**两个数。
+ *   起因是 project 在 PowerSchool 里是按 50 分计的(46/50),
+ *   而原来的模型默认一切都是百分制 —— 46 会被当成 46%。
+ *
+ * ⚠️ `possible` 恒 ≥ 1(输入时夹住),所以 `percentOf` 不存在除以 0 的情况。
+ *   与其留一个"满分为 0"的分支再去想页面上怎么显示,不如让它根本不可能出现。
+ */
 export interface Item {
   readonly name: string;
-  readonly score: number;
+  readonly earned: number;
+  readonly possible: number;
   readonly muted: boolean;
+}
+
+/** 一条通道的百分比。 */
+export function percentOf(it: Item): number {
+  return (it.earned / it.possible) * 100;
 }
 
 /** 一门课的规则。权重是百分数(10 表示 10%),不是小数。 */
@@ -52,6 +100,8 @@ export interface Setup {
   readonly targetC: number;
   readonly dropLowest: boolean;
   readonly goal: Goal;
+  /** 测验类目的平均算法。⚠️ 老师用哪一种还没确认,默认按大纲字面的 mean of grades。 */
+  readonly method: Method;
 }
 
 export const SEED_SETUP: Setup = {
@@ -64,21 +114,35 @@ export const SEED_SETUP: Setup = {
   targetC: 69.5,
   dropLowest: true,
   goal: 'A',
+  method: 'mean-of-grades',
 };
 
 export const SEED_ITEMS: readonly Item[] = [
-  { name: 'Assess 1', score: 83, muted: false },
-  { name: 'Assess 2', score: 91, muted: false },
-  { name: 'Assess 3', score: 85, muted: false },
-  { name: 'Assess 4', score: 88, muted: false },
-  { name: 'Project', score: 92, muted: false },
-  { name: 'Assess 5', score: 88, muted: false },
-  { name: 'Assess 6', score: 88, muted: false },
-  { name: 'Assess 7', score: 88, muted: true },
+  { name: 'Assess 1', earned: 83, possible: 100, muted: false },
+  { name: 'Assess 2', earned: 91, possible: 100, muted: false },
+  { name: 'Assess 3', earned: 85, possible: 100, muted: false },
+  { name: 'Assess 4', earned: 88, possible: 100, muted: false },
+  // ⭐ 这一条就是整次改动的起因:它在 PowerSchool 里是 50 分制。
+  { name: 'Project', earned: 46, possible: 50, muted: false },
+  { name: 'Assess 5', earned: 88, possible: 100, muted: false },
+  { name: 'Assess 6', earned: 88, possible: 100, muted: false },
+  { name: 'Assess 7', earned: 88, possible: 100, muted: true },
 ];
 
-export function clampScore(x: number): number {
-  return Math.max(0, Math.min(100, x));
+/** 满分:至少 1 分。夹在这里,`percentOf` 就不可能除以 0。 */
+export function clampPossible(x: number): number {
+  return Number.isFinite(x) ? Math.max(1, x) : 1;
+}
+
+/**
+ * 得分:夹在 0..满分 之间。
+ * ⚠️ 这等于不支持超过满分的加分卷(52/50)。这是个**有意的取舍**:
+ *   它让百分比恒在 0..100,推子的行程也就有确切含义。
+ *   真要记加分,把满分调高即可。
+ */
+export function clampEarned(x: number, possible: number): number {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(clampPossible(possible), x));
 }
 
 /** 某一档的分数线。 */
@@ -123,22 +187,40 @@ export function weightsBalanced(s: Setup): boolean {
 /* ── 均分与丢最低 ──────────────────────────────────────────── */
 
 export interface Counted {
-  /** 没有任何一条计入时是 `null` —— 不是 0,也不是 NaN。 */
+  /** 类目平均分(百分比)。没有任何一条计入时是 `null` —— 不是 0,也不是 NaN。 */
   readonly mean: number | null;
   /** 被丢掉那条的下标;没丢就是 −1。 */
   readonly droppedIndex: number;
   readonly counted: number;
   readonly live: number;
+  /** 计入的那些条,得分合计与满分合计 —— 页面上要把 486 / 550 直接显示出来。 */
+  readonly earned: number;
+  readonly possible: number;
 }
 
 /**
+ * ⭐⭐⭐ 丢最低按**百分比**挑,不是按卷面原始分。
+ *
+ * ⚠️ 这一条不是细节,是正确性问题:按原始分挑的话,46/50 的 project(92%)
+ *   会显得比 83/100 的测验**更低**,于是被错误地丢掉 ——
+ *   学生看到的是"系统帮我丢了考得最好的那一场"。
+ * ⚠️ 两种平均算法都走这一条规则,不随算法改变。
+ *
+ * ⚠️ 顺带记一笔(**不是 bug,是老师的规则**):在 `total-points` 下,
+ *   丢掉"百分比最低"的那条并不一定让类目均分最高 —— 丢一条分值大、
+ *   百分比略高的,有时反而更划算。但该丢哪条由老师的系统决定,不由我们优化。
+ *
  * ⚠️ 只丢**一条**,而且只在还剩别的条的时候丢:
  *   就剩一条还丢掉,均分就没了,页面会从"算得出"变成"算不出" ——
  *   那不是老师的规则,是实现的副作用。
- * ⚠️ 并列最低时取**最靠前**的那条。规则本身无所谓取哪条(分数一样),
+ * ⚠️ 并列最低时取**最靠前**的那条。规则本身无所谓取哪条(百分比一样),
  *   但必须**定死**,否则同样的输入会显示不同的"Dropped"标记。
  */
-export function countedMean(items: readonly Item[], dropLowest: boolean): Counted {
+export function countedMean(
+  items: readonly Item[],
+  dropLowest: boolean,
+  method: Method,
+): Counted {
   const live: number[] = [];
   items.forEach((it, i) => {
     if (!it.muted) live.push(i);
@@ -148,30 +230,108 @@ export function countedMean(items: readonly Item[], dropLowest: boolean): Counte
   if (dropLowest && live.length > 1) {
     let lowest = Infinity;
     for (const i of live) {
-      if (items[i]!.score < lowest) lowest = items[i]!.score;
+      const pct = percentOf(items[i]!);
+      if (pct < lowest) lowest = pct;
     }
     for (const i of live) {
-      if (items[i]!.score === lowest) {
+      if (percentOf(items[i]!) === lowest) {
         droppedIndex = i;
         break;
       }
     }
   }
 
-  let sum = 0;
+  let pctSum = 0;
+  let earned = 0;
+  let possible = 0;
   let counted = 0;
   for (const i of live) {
     if (i !== droppedIndex) {
-      sum += items[i]!.score;
+      const it = items[i]!;
+      pctSum += percentOf(it);
+      earned += it.earned;
+      possible += it.possible;
       counted += 1;
     }
   }
-  return {
-    mean: counted > 0 ? sum / counted : null,
-    droppedIndex,
-    counted,
-    live: live.length,
-  };
+
+  let mean: number | null = null;
+  if (counted > 0) {
+    // ⚠️ 没有 default 分支 —— 以后 `METHODS` 多一种而这里漏了就编译不过。
+    switch (method) {
+      case 'mean-of-grades':
+        mean = pctSum / counted;
+        break;
+      case 'total-points':
+        mean = (earned / possible) * 100;
+        break;
+    }
+  }
+
+  return { mean, droppedIndex, counted, live: live.length, earned, possible };
+}
+
+/**
+ * `total-points` 的**另一条算法**:把每一项的百分比按满分加权平均。
+ *
+ * ⭐ 存在的理由只有验证。Σ得分/Σ满分 和 Σ(百分比×满分)/Σ满分 在代数上恒等,
+ *   但代码路径完全不同(一个根本不碰百分比,一个只碰百分比)。
+ *   两条给不出同一个数,就说明其中一条写错了。
+ */
+export function totalPointsByWeightedMean(
+  items: readonly Item[],
+  dropLowest: boolean,
+): number | null {
+  const c = countedMean(items, dropLowest, 'total-points');
+  if (c.counted === 0) return null;
+  const live: number[] = [];
+  items.forEach((it, i) => {
+    if (!it.muted) live.push(i);
+  });
+  let num = 0;
+  let den = 0;
+  for (const i of live) {
+    if (i !== c.droppedIndex) {
+      const it = items[i]!;
+      num += percentOf(it) * it.possible;
+      den += it.possible;
+    }
+  }
+  return num / den;
+}
+
+/* ── 旧存档迁移 ────────────────────────────────────────────── */
+
+/**
+ * 把一条来历不明的存档记录变成一条合法的 `Item`。
+ *
+ * ⚠️ 这个函数存在是因为**改模型会悄悄弄坏已经存下来的数据**。
+ *   旧版本存的是 `{ name, score, muted }`,`score` 就是百分比;
+ *   新版本是 `{ name, earned, possible, muted }`。什么都不做的话,
+ *   `earned` 读出来是 `undefined` → `NaN` → 页面上整列变成空白,
+ *   而且**不报任何错**。这正是最难发现的那一类故障。
+ *
+ * ⭐ 旧的 `score` 原本就是百分制,所以 `score → earned/100` 是**等价变换**:
+ *   迁移前后百分比一模一样,用户看不出发生过迁移。
+ *
+ * ⚠️ 放在这里而不是组件里,是因为它必须能被单测钉死。
+ */
+export function migrateItem(raw: unknown): Item {
+  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const name = typeof o['name'] === 'string' && o['name'].length > 0 ? o['name'] : 'Item';
+  const muted = Boolean(o['muted']);
+
+  const possibleRaw = Number(o['possible']);
+  const earnedRaw = Number(o['earned']);
+  if (Number.isFinite(possibleRaw) && Number.isFinite(earnedRaw)) {
+    const possible = clampPossible(possibleRaw);
+    return { name, possible, earned: clampEarned(earnedRaw, possible), muted };
+  }
+
+  // 旧格式:只有一个百分制的 `score`
+  const score = Number(o['score']);
+  const pct = Number.isFinite(score) ? score : 0;
+  return { name, possible: 100, earned: clampEarned(pct, 100), muted };
 }
 
 /* ── 正向与反解 ────────────────────────────────────────────── */
@@ -287,6 +447,9 @@ export const HEADLINE = 'Solve the weighted average backwards for the score you 
 
 export const MAIN_IDEA =
   'Your term grade is a weighted average, and the final is the one term still unknown. Set the whole thing equal to the grade you want and solve for that term. Everything on this page is that one equation, read in the other direction.';
+
+export const METHOD_QUESTION =
+  'Assessments are not all out of the same number of points, so how the category average is computed changes the answer. Both ways are shown below; ask which one your gradebook uses.';
 
 export const EQUATION_TEX =
   'w_{\\text{assign}}\\cdot A+w_{\\text{assess}}\\cdot \\bar{x}+w_{\\text{final}}\\cdot F=G';

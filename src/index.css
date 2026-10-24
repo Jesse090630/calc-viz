@@ -815,3 +815,20 @@ body {
     transparent 1px 10%
   );
 }
+
+/* ── Grade console: the earned / possible number pair ─────────────
+   ⚠️ Chrome 给 `input[type=number]` 预留了一块 spinner 的宽度,
+     在 84px 宽的通道里挤掉了第三位数字 —— "100" 被显示成 "10"。
+     学生读到的是 "83 / 10",而这一列的全部意义就是把分母说清楚。
+     把 spinner 去掉,三位数就放得下。箭头没了不影响输入:
+     数字键、方向键、以及下面那根推子都还能改值。 */
+.pts-input::-webkit-outer-spin-button,
+.pts-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.pts-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

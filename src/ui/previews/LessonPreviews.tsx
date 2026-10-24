@@ -35,7 +35,7 @@ import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } fr
 import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
 import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
 import { curveOf as ciCurve, problemOf as ciProblem } from '../../math/chooseIntegral';
-import { SEED_ITEMS as GC_ITEMS, SEED_SETUP as GC_SETUP, countedMean as gcMean, finalNeeded as gcNeed } from '../../math/gradeTarget';
+import { SEED_ITEMS as GC_ITEMS, SEED_SETUP as GC_SETUP, countedMean as gcMean, finalNeeded as gcNeed, percentOf as gcPct } from '../../math/gradeTarget';
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
@@ -1714,7 +1714,7 @@ export function ChooseIntegralPreview({ phase }: { phase: number }) {
  */
 export function GradeConsolePreview({ phase }: { phase: number }) {
   const live = GC_ITEMS.filter((it) => !it.muted);
-  const c = gcMean(GC_ITEMS, GC_SETUP.dropLowest);
+  const c = gcMean(GC_ITEMS, GC_SETUP.dropLowest, GC_SETUP.method);
   // 让均分在真实值上下小幅摆动,主表跟着动 —— 演示的是两者的联动。
   const wobble = (pingPong(phase) - 0.5) * 8;
   const mean = (c.mean ?? 85) + wobble;
@@ -1734,7 +1734,8 @@ export function GradeConsolePreview({ phase }: { phase: number }) {
           <g key={i}>
             <rect x={x} y={pad} width={barW} height={trackH} rx={2}
               fill="none" stroke={COLOR.axis} strokeWidth={0.8} opacity={0.5} />
-            <rect x={x} y={yOf(it.score)} width={barW} height={pad + trackH - yOf(it.score)} rx={2}
+            {/* ⚠️ 高度用百分比,不是卷面分 —— 46/50 的那条是 92% 高,不是 46% 高。 */}
+            <rect x={x} y={yOf(gcPct(it))} width={barW} height={pad + trackH - yOf(gcPct(it))} rx={2}
               fill={dropped ? COLOR.radius : COLOR.introduce} opacity={dropped ? 0.35 : 0.7} />
           </g>
         );

@@ -23,10 +23,11 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  EQUATION_TEX, GOALS, HEADLINE, MAIN_IDEA, SEED_ITEMS, SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
-  type Item, type Setup, type Verdict,
-  clampScore, countedMean, cutoffOf, finalNeeded, gradeWith, lockedGrade, missBy, spareBy,
-  targetOf, verdictOf, weightSum, weightsBalanced,
+  EQUATION_TEX, GOALS, HEADLINE, MAIN_IDEA, METHODS, METHOD_NAME, METHOD_NOTE, METHOD_QUESTION,
+  SEED_ITEMS, SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
+  type Item, type Method, type Setup, type Verdict,
+  clampEarned, clampPossible, countedMean, cutoffOf, finalNeeded, gradeWith, lockedGrade,
+  migrateItem, missBy, percentOf, spareBy, targetOf, verdictOf, weightSum, weightsBalanced,
 } from '../../math/gradeTarget';
 import { LAB } from '../shared/theme';
 import { Tex } from '../shared/Tex';
@@ -57,11 +58,8 @@ function restore(): Saved | null {
     if (!o.setup || !Array.isArray(o.items) || o.items.length === 0) return null;
     return {
       setup: { ...SEED_SETUP, ...o.setup },
-      items: o.items.map((it) => ({
-        name: String(it.name ?? 'Item'),
-        score: clampScore(Number(it.score) || 0),
-        muted: Boolean(it.muted),
-      })),
+      // ⚠️ 走 `migrateItem`:旧存档只有百分制的 `score`,直接读 `earned` 会是 NaN。
+      items: o.items.map(migrateItem),
     };
   } catch {
     return null;
@@ -115,7 +113,21 @@ export function GradeConsoleLab() {
     }
   }, [setup, items, ready]);
 
-  const counted = useMemo(() => countedMean(items, setup.dropLowest), [items, setup.dropLowest]);
+  const counted = useMemo(
+    () => countedMean(items, setup.dropLowest, setup.method),
+    [items, setup.dropLowest, setup.method],
+  );
+  /**
+   * ⭐⭐⭐ 另一种算法下的结果。
+   *   老师用哪一种还没确认,所以两个都算出来摆在一起 ——
+   *   把范围给出来,比挑一个然后装作确定要诚实。
+   */
+  const otherMethod: Method = setup.method === 'mean-of-grades' ? 'total-points' : 'mean-of-grades';
+  const otherCounted = useMemo(
+    () => countedMean(items, setup.dropLowest, otherMethod),
+    [items, setup.dropLowest, otherMethod],
+  );
+  const otherNeed = finalNeeded({ ...setup, method: otherMethod }, otherCounted.mean);
   const need = finalNeeded(setup, counted.mean);
   const verdict = verdictOf(setup, counted.mean);
   const miss = missBy(setup, counted.mean);
@@ -207,36 +219,121 @@ export function GradeConsoleLab() {
         </div>
       </section>
 
+      {/* ── ⭐⭐⭐ 两种算法并排:老师用哪一种还没确认 ──────────── */}
+      <section data-panel="method" className="mt-4 rounded-2xl border border-slate-700 bg-slate-900/40 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          How the assessment average is computed
+        </p>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-slate-400">{METHOD_QUESTION}</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {METHODS.map((m) => {
+            const c = m === setup.method ? counted : otherCounted;
+            const n = m === setup.method ? need : otherNeed;
+            const on = m === setup.method;
+            return (
+              <button
+                key={m} type="button" data-method={m} data-active={on ? 'yes' : 'no'}
+                onClick={() => patch({ method: m })}
+                className={
+                  'rounded-xl border px-3 py-2.5 text-left transition ' +
+                  (on ? 'border-amber-400/60 bg-amber-400/10' : 'border-slate-700 hover:border-slate-500')
+                }
+              >
+                <span className={'block font-mono text-[11px] ' + (on ? 'text-amber-200' : 'text-slate-400')}>
+                  <span aria-hidden>{on ? '● ' : '○ '}</span>{METHOD_NAME[m]}
+                </span>
+                <span className="mt-1.5 flex items-baseline gap-3">
+                  <span data-method-mean={m} data-value={c.mean ?? ''} className="font-mono text-lg" style={{ color: LAB.x1 }}>
+                    {c.mean === null ? '—' : c.mean.toFixed(1)}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500">mean</span>
+                  <span data-method-need={m} data-value={n ?? ''} className="font-mono text-lg" style={{ color: LAB.x2 }}>
+                    {n === null ? '—' : n.toFixed(1)}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500">final</span>
+                </span>
+                <span className="mt-1.5 block text-[11px] leading-relaxed text-slate-500">
+                  {METHOD_NOTE[m]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {/*
+          ⭐⭐ 把"差多少"直接算出来。不确定用哪一种的时候,真正有用的信息
+            不是两个数,而是**它们差得多不多** —— 差不到一分就不必纠结。
+          ⚠️ 只在两边都算得出来的时候显示。
+        */}
+        {need !== null && otherNeed !== null && (
+          <p data-method-spread data-value={Math.abs(need - otherNeed)}
+            className="mt-2.5 border-t border-slate-800 pt-2.5 text-[12px] leading-relaxed text-slate-300">
+            {Math.abs(need - otherNeed) < 0.05
+              ? 'Both methods give the same answer here, so which one your teacher uses does not matter yet.'
+              : <>The two methods differ by <b>{Math.abs(need - otherNeed).toFixed(1)}</b> points on the
+                final ({Math.min(need, otherNeed).toFixed(1)} versus {Math.max(need, otherNeed).toFixed(1)}).</>}
+          </p>
+        )}
+        <p className="mt-1.5 font-mono text-[10px] text-slate-500">
+          Counted points: {show(counted.earned)} earned of {show(counted.possible)} possible.
+        </p>
+      </section>
+
       {/* ── 推子 ────────────────────────────────────────────── */}
       <section data-panel="strips" className="mt-4 overflow-x-auto rounded-2xl border border-slate-700 bg-slate-900/40 p-4">
-        <div className="flex items-end gap-2" style={{ minWidth: `${(items.length + 1) * 72}px` }}>
+        <div className="flex items-end gap-2" style={{ minWidth: `${(items.length + 1) * 96}px` }}>
           {items.map((it, i) => {
             const dropped = i === counted.droppedIndex;
             const state = it.muted ? 'Muted' : dropped ? 'Dropped' : 'Counted';
             const symbol = it.muted ? '·' : dropped ? '×' : '✓';
             const color = it.muted ? LAB.muted : dropped ? LAB.fail : LAB.pass;
+            const pct = percentOf(it);
+            /** ⚠️ 不是满分 100 的那几条标出来 —— 整次改动就是为了它们。 */
+            const odd = it.possible !== 100;
             return (
               <div key={i} data-strip={i} data-state={state.toLowerCase()}
-                className={'w-[68px] shrink-0 ' + (it.muted ? 'opacity-45' : '')}>
-                <input
-                  type="number" min={0} max={100} step={1} value={it.score}
-                  data-score={i} aria-label={`${it.name} score`}
-                  onChange={(e) => setItem(i, { score: clampScore(num(e.target.value, it.score)) })}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-1 py-1 text-center font-mono text-[13px] text-slate-100"
-                />
-                <div className="fader-track relative mt-2 h-44 rounded-md border border-slate-800 bg-slate-950/70">
-                  {/* 填充条:高度 = 分数 */}
+                className={'w-[92px] shrink-0 ' + (it.muted ? 'opacity-45' : '')}>
+                {/* 得分 / 满分 —— 两个数,不再假设是百分制 */}
+                <div className="flex items-center gap-0.5">
+                  <input
+                    type="number" min={0} max={it.possible} step={1} value={it.earned}
+                    data-earned={i} aria-label={`${it.name} points earned`}
+                    onChange={(e) => setItem(i, { earned: clampEarned(num(e.target.value, it.earned), it.possible) })}
+                    className="pts-input w-full min-w-0 rounded-md border border-slate-700 bg-slate-950 px-0.5 py-1 text-center font-mono text-[12px] text-slate-100"
+                  />
+                  <span aria-hidden className="font-mono text-[11px] text-slate-500">/</span>
+                  <input
+                    type="number" min={1} step={1} value={it.possible}
+                    data-possible={i} aria-label={`${it.name} points possible`}
+                    onChange={(e) => {
+                      const possible = clampPossible(num(e.target.value, it.possible));
+                      // ⚠️ 满分调小的时候,得分要跟着夹住,否则会出现 88/50 这种 176%。
+                      setItem(i, { possible, earned: clampEarned(it.earned, possible) });
+                    }}
+                    className={
+                      'pts-input w-full min-w-0 rounded-md border bg-slate-950 px-0.5 py-1 text-center font-mono text-[12px] ' +
+                      (odd ? 'border-amber-400/60 text-amber-200' : 'border-slate-800 text-slate-400')
+                    }
+                  />
+                </div>
+                {/* ⭐ 百分比单独显示:它才是进均分的那个数 */}
+                <p data-pct={i} data-value={pct}
+                  className="mt-1 text-center font-mono text-[11px]" style={{ color }}>
+                  {pct.toFixed(1)}%
+                </p>
+                <div className="fader-track relative mt-1 h-40 rounded-md border border-slate-800 bg-slate-950/70">
+                  {/* ⚠️ 填充高度用**百分比**,不是得分 —— 46 分在 50 分制里是 92%,不是 46%。 */}
                   <div
                     className="absolute inset-x-1 bottom-0 rounded-b-md"
-                    style={{ height: `${it.score}%`, background: color, opacity: 0.22 }}
+                    style={{ height: `${pct}%`, background: color, opacity: 0.22 }}
                   />
                   {/* 80 / 90 两道常见档线 */}
                   <div className="absolute inset-x-0 border-t border-dashed border-slate-600/70" style={{ bottom: '80%' }} />
                   <div className="absolute inset-x-0 border-t border-dashed border-emerald-500/50" style={{ bottom: '90%' }} />
+                  {/* ⚠️ 推子的行程是 0..满分,拖的是**得分**;刻度线是百分比。 */}
                   <input
-                    type="range" min={0} max={100} step={1} value={it.score}
-                    aria-label={`${it.name} score slider`}
-                    onChange={(e) => setItem(i, { score: clampScore(num(e.target.value, it.score)) })}
+                    type="range" min={0} max={it.possible} step={1} value={it.earned}
+                    aria-label={`${it.name} points earned, out of ${it.possible}`}
+                    onChange={(e) => setItem(i, { earned: clampEarned(num(e.target.value, it.earned), it.possible) })}
                     className="fader-input absolute inset-0"
                   />
                 </div>
@@ -310,7 +407,10 @@ export function GradeConsoleLab() {
         </p>
         {counted.droppedIndex >= 0 && (
           <p data-dropnote className="mt-1.5 font-mono text-[11px] text-slate-500">
-            Dropping {items[counted.droppedIndex]!.name} at {show(items[counted.droppedIndex]!.score)}.
+            Dropping {items[counted.droppedIndex]!.name} — the lowest percentage at{' '}
+            {percentOf(items[counted.droppedIndex]!).toFixed(1)}%
+            {' '}({show(items[counted.droppedIndex]!.earned)}/{show(items[counted.droppedIndex]!.possible)}),
+            {' '}not the lowest raw points.
           </p>
         )}
       </section>
@@ -361,7 +461,7 @@ export function GradeConsoleLab() {
 
         <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-800 pt-3">
           <button type="button" data-action="add"
-            onClick={() => setItems((l) => [...l, { name: `Assess ${l.length + 1}`, score: 88, muted: false }])}
+            onClick={() => setItems((l) => [...l, { name: `Assess ${l.length + 1}`, earned: 88, possible: 100, muted: false }])}
             className="rounded-lg border border-slate-700 px-2.5 py-1 font-mono text-[11px] text-slate-300 hover:border-slate-500">
             Add assessment
           </button>
@@ -376,7 +476,7 @@ export function GradeConsoleLab() {
             Reset
           </button>
           <button type="button" data-action="clear"
-            onClick={() => setItems((l) => l.map((it) => ({ ...it, score: 0 })))}
+            onClick={() => setItems((l) => l.map((it) => ({ ...it, earned: 0 })))}
             className="rounded-lg border border-slate-700 px-2.5 py-1 font-mono text-[11px] text-slate-300 hover:border-slate-500">
             Clear scores
           </button>
