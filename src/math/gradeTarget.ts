@@ -34,37 +34,15 @@ export const GOALS = ['A', 'B', 'C'] as const;
 export type Goal = (typeof GOALS)[number];
 
 /**
- * 测验类目的平均分怎么算。
+ * ⚠️ 这里曾经有两套平均算法(`mean-of-grades` / `total-points`)并排摆着,
+ *   因为当时还不知道老师用哪一种。现在定了:**按总分**。
+ *   另一套连同那块对比面板一起删掉了 —— 留着一个界面上走不到的分支,
+ *   就是这个项目一直在清的那种"死代码"。
  *
- * ⭐⭐⭐ 两种算法在"每一项满分都一样"的时候**完全等价**;
- *   一旦有项目不是满分 100(比如 46/50 的 project),它们就分道扬镳:
- *
- *   · `mean-of-grades` —— 先把每一项换成百分比,再把百分比平均。
- *     **每一项权重相等**,和它值多少分无关。46/50 和 92/100 在这里一模一样,
- *     那个 50 分的分母根本不起作用。教学大纲的原话是 "mean of grades",
- *     所以这是默认。
- *
- *   · `total-points` —— 所有拿到的分加起来,除以所有可能的分加起来。
- *     **按分值加权**。50 分的 project 只有 100 分测验一半的分量:
- *     项目考得好,帮助减半;考砸了,伤害也减半。
- *
- * ⚠️ 老师到底用哪一种**还没问清楚**。所以页面上两个结果**同时显示**,
- *   而不是把另一个藏在开关后面 —— 不确定的时候,把范围摆出来比挑一个更诚实。
+ * ⭐ 而且加分只能长在这个模型上:"额外加 46 分"要加到**分子**上,
+ *   这件事只有在"Σ得分 / Σ满分"里才说得通;
+ *   按项平均的模型里没有一个"总得分"可以让它加进去。
  */
-export const METHODS = ['mean-of-grades', 'total-points'] as const;
-export type Method = (typeof METHODS)[number];
-
-export const METHOD_NAME: Readonly<Record<Method, string>> = {
-  'mean-of-grades': 'Mean of grades',
-  'total-points': 'Total points',
-};
-
-export const METHOD_NOTE: Readonly<Record<Method, string>> = {
-  'mean-of-grades':
-    'Every assessment counts the same, whatever it is out of. A 46/50 and a 92/100 are the same thing here.',
-  'total-points':
-    'Points are pooled, so a 50-point project pulls half as hard as a 100-point test — it helps less when it is good and hurts less when it is not.',
-};
 
 /**
  * 一条测验通道。
@@ -100,8 +78,15 @@ export interface Setup {
   readonly targetC: number;
   readonly dropLowest: boolean;
   readonly goal: Goal;
-  /** 测验类目的平均算法。⚠️ 老师用哪一种还没确认,默认按大纲字面的 mean of grades。 */
-  readonly method: Method;
+  /**
+   * 加分拿到的分数。
+   * ⚠️⚠️ 它**只加到分子上**,`ecPossible` 不进分母 —— 这正是"加分"的意思:
+   *   它能把类目均分顶到 100% 以上。要是连分母一起加,那就只是一道普通的
+   *   50 分测验,和原来的 Project 一模一样,这个字段也就没有存在的必要了。
+   */
+  readonly ecEarned: number;
+  /** 加分满分。只用来限制输入上限和显示 "46 / 50",**不进分母**。 */
+  readonly ecPossible: number;
 }
 
 export const SEED_SETUP: Setup = {
@@ -114,7 +99,9 @@ export const SEED_SETUP: Setup = {
   targetC: 69.5,
   dropLowest: true,
   goal: 'A',
-  method: 'mean-of-grades',
+  // ⚠️ 默认 0:页面一打开不替用户假设他拿了多少加分,让他自己填。
+  ecEarned: 0,
+  ecPossible: 50,
 };
 
 export const SEED_ITEMS: readonly Item[] = [
@@ -122,8 +109,6 @@ export const SEED_ITEMS: readonly Item[] = [
   { name: 'Assess 2', earned: 91, possible: 100, muted: false },
   { name: 'Assess 3', earned: 85, possible: 100, muted: false },
   { name: 'Assess 4', earned: 88, possible: 100, muted: false },
-  // ⭐ 这一条就是整次改动的起因:它在 PowerSchool 里是 50 分制。
-  { name: 'Project', earned: 46, possible: 50, muted: false },
   { name: 'Assess 5', earned: 88, possible: 100, muted: false },
   { name: 'Assess 6', earned: 88, possible: 100, muted: false },
   { name: 'Assess 7', earned: 88, possible: 100, muted: true },
@@ -143,6 +128,12 @@ export function clampPossible(x: number): number {
 export function clampEarned(x: number, possible: number): number {
   if (!Number.isFinite(x)) return 0;
   return Math.max(0, Math.min(clampPossible(possible), x));
+}
+
+/** 加分:夹在 0..加分满分 之间。 */
+export function clampBonus(x: number, ecPossible: number): number {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(clampPossible(ecPossible), x));
 }
 
 /** 某一档的分数线。 */
@@ -193,9 +184,11 @@ export interface Counted {
   readonly droppedIndex: number;
   readonly counted: number;
   readonly live: number;
-  /** 计入的那些条,得分合计与满分合计 —— 页面上要把 486 / 550 直接显示出来。 */
+  /** 计入的那些条,得分合计与满分合计(**不含加分**)。 */
   readonly earned: number;
   readonly possible: number;
+  /** 加进分子的加分。 */
+  readonly bonus: number;
 }
 
 /**
@@ -219,7 +212,7 @@ export interface Counted {
 export function countedMean(
   items: readonly Item[],
   dropLowest: boolean,
-  method: Method,
+  bonus = 0,
 ): Counted {
   const live: number[] = [];
   items.forEach((it, i) => {
@@ -241,49 +234,47 @@ export function countedMean(
     }
   }
 
-  let pctSum = 0;
   let earned = 0;
   let possible = 0;
   let counted = 0;
   for (const i of live) {
     if (i !== droppedIndex) {
       const it = items[i]!;
-      pctSum += percentOf(it);
       earned += it.earned;
       possible += it.possible;
       counted += 1;
     }
   }
 
-  let mean: number | null = null;
-  if (counted > 0) {
-    // ⚠️ 没有 default 分支 —— 以后 `METHODS` 多一种而这里漏了就编译不过。
-    switch (method) {
-      case 'mean-of-grades':
-        mean = pctSum / counted;
-        break;
-      case 'total-points':
-        mean = (earned / possible) * 100;
-        break;
-    }
-  }
+  // ⚠️ 加分只进分子。`possible` 一个点都不加 —— 见 `Setup.ecEarned` 的说明。
+  const withBonus = earned + bonus;
 
-  return { mean, droppedIndex, counted, live: live.length, earned, possible };
+  return {
+    mean: possible > 0 ? (withBonus / possible) * 100 : null,
+    droppedIndex,
+    counted,
+    live: live.length,
+    earned,
+    possible,
+    bonus,
+  };
 }
 
 /**
- * `total-points` 的**另一条算法**:把每一项的百分比按满分加权平均。
+ * **另一条算法**:把每一项的百分比按满分加权平均,再把加分折成百分点加进去。
  *
- * ⭐ 存在的理由只有验证。Σ得分/Σ满分 和 Σ(百分比×满分)/Σ满分 在代数上恒等,
- *   但代码路径完全不同(一个根本不碰百分比,一个只碰百分比)。
- *   两条给不出同一个数,就说明其中一条写错了。
+ * ⭐ 存在的理由只有验证。代数上
+ *     Σ(百分比ᵢ × 满分ᵢ) = Σ(得分ᵢ/满分ᵢ × 100 × 满分ᵢ) = 100 × Σ得分ᵢ
+ *   所以这条和 `(Σ得分 + 加分)/Σ满分` 恒等 —— 但一条只碰百分比,
+ *   一条只碰原始分,代码路径完全不同。两条给不出同一个数就是有一条写错了。
  */
 export function totalPointsByWeightedMean(
   items: readonly Item[],
   dropLowest: boolean,
+  bonus = 0,
 ): number | null {
-  const c = countedMean(items, dropLowest, 'total-points');
-  if (c.counted === 0) return null;
+  const c = countedMean(items, dropLowest, bonus);
+  if (c.possible <= 0) return null;
   const live: number[] = [];
   items.forEach((it, i) => {
     if (!it.muted) live.push(i);
@@ -297,7 +288,7 @@ export function totalPointsByWeightedMean(
       den += it.possible;
     }
   }
-  return num / den;
+  return (num + 100 * bonus) / den;
 }
 
 /* ── 旧存档迁移 ────────────────────────────────────────────── */
@@ -445,11 +436,9 @@ export function lockedGrade(s: Setup, mean: number | null): number | null {
 
 export const HEADLINE = 'Solve the weighted average backwards for the score you still need';
 
-export const MAIN_IDEA =
-  'Your term grade is a weighted average, and the final is the one term still unknown. Set the whole thing equal to the grade you want and solve for that term. Everything on this page is that one equation, read in the other direction.';
-
-export const METHOD_QUESTION =
-  'Assessments are not all out of the same number of points, so how the category average is computed changes the answer. Both ways are shown below; ask which one your gradebook uses.';
+/** 类目均分那一项的展开式 —— 加分加在分子上,分母不动。 */
+export const AVERAGE_TEX =
+  '\\bar{x}=\\frac{\\sum \\text{earned}+\\text{EC}}{\\sum \\text{possible}}\\times 100';
 
 export const EQUATION_TEX =
   'w_{\\text{assign}}\\cdot A+w_{\\text{assess}}\\cdot \\bar{x}+w_{\\text{final}}\\cdot F=G';

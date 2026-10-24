@@ -40,7 +40,7 @@ for (const [name, width, height] of [['desktop', 1440, 1200], ['mobile', 430, 14
   await page.waitForTimeout(1000);
 
   const cards = await page.locator('[data-lesson-card]').count();
-  if (cards !== 56) errors.push(`[${name}] expected 56 cards, got ${cards}`);
+  if (cards !== 55) errors.push(`[${name}] expected 55 cards, got ${cards}`);
   if (await page.locator('canvas').count() !== 0) errors.push(`[${name}] a canvas started on the landing page`);
   if (await page.locator('[data-concept-card]').count() !== 0) errors.push(`[${name}] the parked catalogue is back`);
 
@@ -292,7 +292,7 @@ await chainPage.close();
   // ⚠️ 这个数字写死了两处(断言里一处、消息里一处),而且**已经漂了**:
   //   代码查的是 13,消息却说 11。错的时候报一个错的期望值比不报还糟。
   //   现在只留一个常量,消息从它来。
-  const WANT_FILTERS = 14; // All + 预备 + 十个单元 + 定理 + 工具
+  const WANT_FILTERS = 13; // All + 预备 + 十个单元 + 定理(工具那一节已撤,只留首屏横幅)
   const count = await pf.evaluate(() => document.querySelectorAll('.home-filters button').length);
   if (count !== WANT_FILTERS) errors.push(`[mobile] expected ${WANT_FILTERS} filter buttons, got ${count}`);
 
@@ -317,7 +317,11 @@ await chainPage.close();
   if (bands.pageOverflow) errors.push('[mobile] the home page scrolls sideways at 390px');
   if (bands.clipped.length) errors.push(`[mobile] these band parts sit off-screen at 390px: ${bands.clipped.join(' | ')}`);
 
-  /** ⭐ 工具横幅必须**整条**落在首屏里 —— 它排在这儿就是为了不用滚就能看见。 */
+  /**
+   * ⭐ 工具横幅必须**整条**落在首屏里 —— 它排在这儿就是为了不用滚就能看见。
+   * ⚠️ 而且现在它是进成绩台的**唯一**入口(Tools 分节和那张卡片已撤),
+   *   所以这一条从"锦上添花"变成了"断了就进不去"。
+   */
   const band = await pf.evaluate(() => {
     const el = document.querySelector('[data-tool-band]');
     if (!el) return null;

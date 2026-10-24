@@ -35,7 +35,6 @@ import { CASES as SUB_CASES, slices as subSlices, integrand as subIntegrand } fr
 import { INTEGRANDS as FTC_FNS, areaByAntiderivative as ftcArea, sampleF as ftcSampleF } from '../../math/ftc';
 import { CASES as BP_CASES, split as bpSplit, originalDegree as bpDegree } from '../../math/byParts';
 import { curveOf as ciCurve, problemOf as ciProblem } from '../../math/chooseIntegral';
-import { SEED_ITEMS as GC_ITEMS, SEED_SETUP as GC_SETUP, countedMean as gcMean, finalNeeded as gcNeed, percentOf as gcPct } from '../../math/gradeTarget';
 import { curveOf as impCurve, pointOn as impPoint, tangentAt as impTangent, sampleBranch as impBranch } from '../../math/implicit';
 import { scenarioOf as rrScenario } from '../../math/relatedRates';
 import { optimumByDerivative, scenarioOf as optScenario } from '../../math/optimization';
@@ -1706,54 +1705,6 @@ export function ChooseIntegralPreview({ phase }: { phase: number }) {
 }
 
 
-/**
- * 成绩台:一排推子汇到右边一个主表,主表的指针随期末要求上下走。
- *
- * ⭐ 动的是**主表**,不是推子 —— 这张卡要说的是"所有这些加起来,期末要多少",
- *   而不是"这里有一堆滑块"。推子画成静态的高度条,主表那根线在动。
- */
-export function GradeConsolePreview({ phase }: { phase: number }) {
-  const live = GC_ITEMS.filter((it) => !it.muted);
-  const c = gcMean(GC_ITEMS, GC_SETUP.dropLowest, GC_SETUP.method);
-  // 让均分在真实值上下小幅摆动,主表跟着动 —— 演示的是两者的联动。
-  const wobble = (pingPong(phase) - 0.5) * 8;
-  const mean = (c.mean ?? 85) + wobble;
-  const need = gcNeed(GC_SETUP, mean) ?? 0;
-  const pad = 9;
-  const trackH = H - pad * 2;
-  const slotW = (W - pad * 2) / (live.length + 2);
-  const barW = Math.min(16, slotW * 0.58);
-  const yOf = (v: number) => pad + trackH * (1 - Math.max(0, Math.min(100, v)) / 100);
-  const masterX = pad + slotW * (live.length + 0.9);
-  return (
-    <Frame label="A row of score faders feeding one master meter showing the final exam score still needed">
-      {live.map((it, i) => {
-        const x = pad + slotW * (i + 0.5) - barW / 2;
-        const dropped = GC_ITEMS.indexOf(it) === c.droppedIndex;
-        return (
-          <g key={i}>
-            <rect x={x} y={pad} width={barW} height={trackH} rx={2}
-              fill="none" stroke={COLOR.axis} strokeWidth={0.8} opacity={0.5} />
-            {/* ⚠️ 高度用百分比,不是卷面分 —— 46/50 的那条是 92% 高,不是 46% 高。 */}
-            <rect x={x} y={yOf(gcPct(it))} width={barW} height={pad + trackH - yOf(gcPct(it))} rx={2}
-              fill={dropped ? COLOR.radius : COLOR.introduce} opacity={dropped ? 0.35 : 0.7} />
-          </g>
-        );
-      })}
-      {/* 主表 */}
-      <rect x={masterX} y={pad} width={barW + 6} height={trackH} rx={2}
-        fill="none" stroke={COLOR.hero} strokeWidth={1} opacity={0.75} />
-      <rect x={masterX} y={yOf(need)} width={barW + 6} height={pad + trackH - yOf(need)} rx={2}
-        fill={COLOR.hero} opacity={0.3} />
-      <line x1={masterX - 4} y1={yOf(need)} x2={masterX + barW + 10} y2={yOf(need)}
-        stroke={COLOR.hero} strokeWidth={2} />
-      {/* 90 分档线,横贯全宽 */}
-      <line x1={pad} y1={yOf(90)} x2={W - pad} y2={yOf(90)}
-        stroke={COLOR.result} strokeWidth={0.8} strokeDasharray="3 3" opacity={0.6} />
-    </Frame>
-  );
-}
-
 export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => React.ReactElement>> = {
   mvt: MvtPreview,
   'rotating-disks': RotatingDisksPreview,
@@ -1799,7 +1750,6 @@ export const PREVIEWS: Readonly<Record<string, (props: { phase: number }) => Rea
   ftc: FtcPreview,
   'by-parts': ByPartsPreview,
   'choose-integral': ChooseIntegralPreview,
-  'grade-console': GradeConsolePreview,
   implicit: ImplicitPreview,
   'related-rates': RelatedRatesPreview,
   optimization: OptimizationPreview,
