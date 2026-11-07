@@ -1,118 +1,72 @@
 /**
- * MATH — 加权学期成绩:倒着解出期末要考多少。
+ * MATH — AP Calculus BC 的学期成绩:倒着解出期末要考多少。
  *
- * ⭐⭐⭐ 整个模型只有一条式子:
- *   成绩 = w_assign · 平时分 + w_assess · 测验均分 + w_final · 期末
- *   把它对期末反解,就得到"要拿到目标分,期末至少要多少"。
- *   页面上所有的数都从这一条来,没有第二套算法。
+ * ⭐⭐⭐ 整个模型就是教学大纲上那一条式子(原文照抄):
+ *     overall = 0.10 × (mean of grades in assignments)
+ *             + 0.65 × (mean of grades in assessments)
+ *             + 0.25 × (final exam grade)
+ *   页面上每个数都从这一条来,没有第二套算法。
  *
- * ⭐⭐ 三条互不相干的验证路径(项目规矩),而且第二条就是最朴素的验算:
+ * ⭐⭐ 三条互不相干的验证路径(项目规矩):
  *   ① `finalNeeded` —— 闭式反解。
  *   ② `gradeWith(…, finalNeeded(…))` 必须**正好落在目标上**。正向代回去。
- *   ③ `finalNeededByBisection` —— 对正向函数做二分,完全不碰那条反解公式。
- *   三条都给同一个数才算对。
+ *   ③ `finalNeededByBisection` —— 对正向函数二分,完全不碰那条反解公式。
  *
- * ⚠️⚠️ **这里修掉了原稿的一处真算错。**
- *   原稿在"目标够不到"的时候写:
- *       "a perfect final still lands (need − 100) points short"
- *   可 `need` 是**期末卷面**的分,而"差多少"问的是**学期总评**的分。
- *   两者差一个期末权重:总评差 = w_final × (need − 100)。
- *   期末占 25% 时,原稿把差距**夸大了整整四倍** ——
- *   一个其实只差 9 分的人,会被告知差了 36 分。
- *   这不是小数点问题:它会让人直接放弃。见 `missBy`。
- *
- * ⚠️ 分数一律夹在 0..100;权重用百分数存(和输入框一致),算的时候才除以 100。
+ * ⚠️ 两件**尚未向老师确认**的事,都做成了开关,默认按最可能的那一侧:
+ *   · 丢最低分:老师课上说过,但大纲里没有(`Setup.dropLowest`,默认开)。
+ *   · 类目平均用 mean-of-grades 还是 total-points:大纲原文写的是
+ *     "mean of grades",所以默认它;但目前每场测验都是 100 分制,
+ *     两种算法给出的数**完全一样**,所以现有成绩分不出来 —— 开关留着。
  */
 
+/* ── 目标档位 ──────────────────────────────────────────────── */
+
 /**
- * 可以瞄的目标。
- * ⭐ 用一个数组 + `typeof GOALS[number]` 推类型,而不是手写联合:
- *   页面上的按钮直接遍历它,以后再加一档(D 之类)只改这一行,
- *   `targetOf` 的 switch 会**编译不过**,逼着你把该改的地方都改掉。
+ * ⭐ 用数组 + `typeof GOALS[number]` 推类型,而不是手写联合:
+ *   页面上的按钮直接遍历它,以后加一档只改这一行,
+ *   `cutoffOf` 的 switch 会**编译不过**,逼着你把该改的地方都改掉。
  */
 export const GOALS = ['A', 'B', 'C'] as const;
 export type Goal = (typeof GOALS)[number];
 
-/**
- * ⚠️ 这里曾经有两套平均算法(`mean-of-grades` / `total-points`)并排摆着,
- *   因为当时还不知道老师用哪一种。现在定了:**按总分**。
- *   另一套连同那块对比面板一起删掉了 —— 留着一个界面上走不到的分支,
- *   就是这个项目一直在清的那种"死代码"。
- *
- * ⭐ 而且加分只能长在这个模型上:"额外加 46 分"要加到**分子**上,
- *   这件事只有在"Σ得分 / Σ满分"里才说得通;
- *   按项平均的模型里没有一个"总得分"可以让它加进去。
- */
+/* ── 类目平均算法 ──────────────────────────────────────────── */
 
 /**
- * 一条测验通道。
+ * · `mean-of-grades` —— 先把每一项换成百分比,再把百分比平均。
+ *   **每一项权重相等**,和它值多少分无关。大纲原文就是这个,所以是默认。
+ * · `total-points` —— Σ得分 / Σ满分,按分值加权。
  *
- * ⚠️ 分数不再是"百分制的一个数",而是**得分 / 满分**两个数。
- *   起因是 project 在 PowerSchool 里是按 50 分计的(46/50),
- *   而原来的模型默认一切都是百分制 —— 46 会被当成 46%。
- *
- * ⚠️ `possible` 恒 ≥ 1(输入时夹住),所以 `percentOf` 不存在除以 0 的情况。
- *   与其留一个"满分为 0"的分支再去想页面上怎么显示,不如让它根本不可能出现。
+ * ⚠️ 每一项满分都一样的时候,两者**完全等价**(分母相同 ⇒ 比值的平均 = 和的比值)。
+ *   目前所有测验都是 100 分制,所以这个开关现在**不影响任何数字** ——
+ *   它要等到出现一个不是 100 分的项目时才有意义。
+ */
+export const METHODS = ['mean-of-grades', 'total-points'] as const;
+export type Method = (typeof METHODS)[number];
+
+export const METHOD_NAME: Readonly<Record<Method, string>> = {
+  'mean-of-grades': 'Mean of grades',
+  'total-points': 'Total points',
+};
+
+/* ── 一条测验 ──────────────────────────────────────────────── */
+
+/**
+ * ⚠️ 分数存成**得分 / 满分**两个数,而不是一个百分数。
+ *   目前每场都是 100 分制,但只要出现一个 46/50 这样的,
+ *   "百分比"和"卷面分"就会分道扬镳,而上面那个开关也才开始有意义。
+ * ⚠️ `possible` 恒 ≥ 1(输入时夹住),所以 `percentOf` 不存在除以 0。
  */
 export interface Item {
   readonly name: string;
   readonly earned: number;
   readonly possible: number;
+  /** 这场可能不考(比如还没发生的测验),先不算进去。 */
   readonly muted: boolean;
 }
 
-/** 一条通道的百分比。 */
 export function percentOf(it: Item): number {
   return (it.earned / it.possible) * 100;
 }
-
-/** 一门课的规则。权重是百分数(10 表示 10%),不是小数。 */
-export interface Setup {
-  readonly wAssign: number;
-  readonly wAssess: number;
-  readonly wFinal: number;
-  /** 平时分already拿到的分数 —— 通常是满分。 */
-  readonly assignScore: number;
-  readonly targetA: number;
-  readonly targetB: number;
-  readonly targetC: number;
-  readonly dropLowest: boolean;
-  readonly goal: Goal;
-  /**
-   * 加分拿到的分数。
-   * ⚠️⚠️ 它**只加到分子上**,`ecPossible` 不进分母 —— 这正是"加分"的意思:
-   *   它能把类目均分顶到 100% 以上。要是连分母一起加,那就只是一道普通的
-   *   50 分测验,和原来的 Project 一模一样,这个字段也就没有存在的必要了。
-   */
-  readonly ecEarned: number;
-  /** 加分满分。只用来限制输入上限和显示 "46 / 50",**不进分母**。 */
-  readonly ecPossible: number;
-}
-
-export const SEED_SETUP: Setup = {
-  wAssign: 10,
-  wAssess: 65,
-  wFinal: 25,
-  assignScore: 100,
-  targetA: 89.5,
-  targetB: 79.5,
-  targetC: 69.5,
-  dropLowest: true,
-  goal: 'A',
-  // ⚠️ 默认 0:页面一打开不替用户假设他拿了多少加分,让他自己填。
-  ecEarned: 0,
-  ecPossible: 50,
-};
-
-export const SEED_ITEMS: readonly Item[] = [
-  { name: 'Assess 1', earned: 83, possible: 100, muted: false },
-  { name: 'Assess 2', earned: 91, possible: 100, muted: false },
-  { name: 'Assess 3', earned: 85, possible: 100, muted: false },
-  { name: 'Assess 4', earned: 88, possible: 100, muted: false },
-  { name: 'Assess 5', earned: 88, possible: 100, muted: false },
-  { name: 'Assess 6', earned: 88, possible: 100, muted: false },
-  { name: 'Assess 7', earned: 88, possible: 100, muted: true },
-];
 
 /** 满分:至少 1 分。夹在这里,`percentOf` 就不可能除以 0。 */
 export function clampPossible(x: number): number {
@@ -121,26 +75,281 @@ export function clampPossible(x: number): number {
 
 /**
  * 得分:夹在 0..满分 之间。
- * ⚠️ 这等于不支持超过满分的加分卷(52/50)。这是个**有意的取舍**:
- *   它让百分比恒在 0..100,推子的行程也就有确切含义。
- *   真要记加分,把满分调高即可。
+ * ⚠️ 这等于不支持超过满分的加分卷(52/50)。有意的取舍:
+ *   它让百分比恒在 0..100,推子的行程也就有确切含义。真要记,把满分调高。
  */
 export function clampEarned(x: number, possible: number): number {
   if (!Number.isFinite(x)) return 0;
   return Math.max(0, Math.min(clampPossible(possible), x));
 }
 
-/** 加分:夹在 0..加分满分 之间。 */
-export function clampBonus(x: number, ecPossible: number): number {
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(clampPossible(ecPossible), x));
+/* ── 项目 ──────────────────────────────────────────────────── */
+
+export type GuidelineKey = 'ownWork' | 'noWords' | 'beautiful' | 'paper' | 'safe';
+
+/**
+ * "The Art of Calculus (Without Words)" —— 自愿项目。
+ *
+ * ⭐⭐⭐ 计分方式很特别,值得把式子抄在这里:
+ *     points = 5 × (五条准则的**乘积**) × SCORE − 50
+ *   五条准则每条 0 或 1,所以**任何一条没做到,整个乘积就是 0,项目直接 −50**。
+ *   SCORE = Mathematics(0/4/8/12) + Artistic(0/2/4/6) + Explanation(0/2),满分 20。
+ *
+ * ⭐ 三个分项都是偶数 ⇒ SCORE 恒为偶数 ⇒ **points 恒为 10 的倍数**,
+ *   范围 −50 到 +50。没有"38 分"这种东西。
+ *
+ * ⚠️ 这些点数是加到**某一场测验的百分比**上的(自己选哪一场,12/04 前定),
+ *   **上限 100%**,可以是负的。加完之后再重新算丢哪一场。
+ */
+export const GUIDELINES: readonly { readonly key: GuidelineKey; readonly text: string }[] = [
+  { key: 'ownWork', text: 'Made and performed entirely by the group, with no technology of any kind' },
+  { key: 'noWords', text: 'No words written or spoken, no math symbols, no graphs' },
+  { key: 'beautiful', text: 'Beautiful and visibly effortful' },
+  { key: 'paper', text: 'Comes with a hand-written paper explaining the math' },
+  { key: 'safe', text: 'No money spent, nothing dangerous, nothing against school policy' },
+];
+
+/** 三个分项各自允许的取值。⚠️ 全是偶数,这正是 points 恒为 10 的倍数的原因。 */
+export const MATH_SCORES = [0, 4, 8, 12] as const;
+export const ARTISTIC_SCORES = [0, 2, 4, 6] as const;
+export const EXPLANATION_SCORES = [0, 2] as const;
+
+export interface Project {
+  /** 做不做。不做的时候,下面的字段一概不影响任何结果。 */
+  readonly doing: boolean;
+  readonly met: Readonly<Record<GuidelineKey, boolean>>;
+  readonly math: number;
+  readonly artistic: number;
+  readonly explanation: number;
+  /**
+   * 点数加到哪一场测验上。
+   * `'auto'` = 让工具挑最划算的那一场 —— 最优解同时取决于项目点数和
+   * 那场还没考的测验分数,手推容易推错,交给代码。
+   */
+  readonly target: 'auto' | number;
 }
 
-/** 某一档的分数线。 */
+export function guidelinesAllMet(p: Project): boolean {
+  return GUIDELINES.every((g) => p.met[g.key]);
+}
+
+export function projectScore(p: Project): number {
+  return p.math + p.artistic + p.explanation;
+}
+
+/**
+ * 项目最终折算成多少个百分点。
+ * ⚠️ 不做项目时是 0(而不是 −50)—— "没交"和"交了但违规"是两回事。
+ */
+export function projectPoints(p: Project): number {
+  if (!p.doing) return 0;
+  const product = guidelinesAllMet(p) ? 1 : 0;
+  return 5 * product * projectScore(p) - 50;
+}
+
+/** 达到某个点数所需的最低 SCORE。⭐ +20 对应 SCORE 14,这是实际要瞄的线。 */
+export function scoreNeededFor(points: number): number {
+  return (points + 50) / 5;
+}
+
+/* ── 类目均分与丢最低 ──────────────────────────────────────── */
+
+export interface Counted {
+  /** 类目平均(百分比)。一条都没计入时是 `null` —— 不是 0,也不是 NaN。 */
+  readonly mean: number | null;
+  /** 被丢掉那一场的下标;没丢就是 −1。 */
+  readonly droppedIndex: number;
+  readonly counted: number;
+  readonly live: number;
+}
+
+/**
+ * ⭐⭐⭐ 丢最低按**百分比**挑,不是按卷面原始分。
+ *   按原始分挑的话,46/50 的项目(92%)会显得比 83/100 的测验**更低**而被丢掉 ——
+ *   学生看到的是"系统帮我丢了考得最好的那场"。这是正确性问题,不是细节。
+ * ⚠️ 丢的判断用的是**加完项目之后**的百分比 —— 这正是加分会把丢弃对象推到
+ *   另一场上的原因,而那件事会改变最终答案。
+ *
+ * ⚠️ 只丢**一条**,而且只在还剩别的条时才丢:就剩一条还丢,均分就没了,
+ *   页面会从"算得出"变成"算不出" —— 那不是老师的规则,是实现的副作用。
+ * ⚠️ 并列最低时取**最靠前**的那条,必须定死,否则同样的输入会显示不同的标记。
+ */
+export function meanOf(
+  items: readonly Item[],
+  percents: readonly number[],
+  dropLowest: boolean,
+  method: Method,
+): Counted {
+  const live: number[] = [];
+  items.forEach((it, i) => {
+    if (!it.muted) live.push(i);
+  });
+
+  let droppedIndex = -1;
+  if (dropLowest && live.length > 1) {
+    let lowest = Infinity;
+    for (const i of live) {
+      if (percents[i]! < lowest) lowest = percents[i]!;
+    }
+    for (const i of live) {
+      if (percents[i] === lowest) {
+        droppedIndex = i;
+        break;
+      }
+    }
+  }
+
+  let pctSum = 0;
+  let weighted = 0;
+  let possible = 0;
+  let counted = 0;
+  for (const i of live) {
+    if (i !== droppedIndex) {
+      pctSum += percents[i]!;
+      weighted += percents[i]! * items[i]!.possible;
+      possible += items[i]!.possible;
+      counted += 1;
+    }
+  }
+
+  let mean: number | null = null;
+  if (counted > 0) {
+    // ⚠️ 没有 default 分支 —— 以后多一种算法而这里漏了就编译不过。
+    switch (method) {
+      case 'mean-of-grades':
+        mean = pctSum / counted;
+        break;
+      case 'total-points':
+        mean = weighted / possible;
+        break;
+    }
+  }
+  return { mean, droppedIndex, counted, live: live.length };
+}
+
+/* ── 把项目点数贴到某一场上 ─────────────────────────────────── */
+
+export interface Applied {
+  /** 每一场**加完项目之后**的百分比,和 `items` 一一对应。 */
+  readonly percents: readonly number[];
+  /** 点数实际加在了哪一场上;没有加则为 −1。 */
+  readonly targetIndex: number;
+  readonly points: number;
+  /**
+   * 和 `targetIndex` 结果**完全相同**的其他选择。
+   * ⭐ 这个字段存在是因为它回答了一个真问题:"加在 83 还是 85 上?"
+   *   点数够大(封顶)时两者一模一样,点数小的时候不是。
+   */
+  readonly ties: readonly number[];
+}
+
+/** 把 `points` 个百分点加到第 `i` 场上,夹在 0..100。 */
+function boosted(items: readonly Item[], i: number, points: number): number[] {
+  return items.map((it, k) =>
+    (k === i ? Math.max(0, Math.min(100, percentOf(it) + points)) : percentOf(it)));
+}
+
+export function applyProject(
+  items: readonly Item[],
+  project: Project,
+  dropLowest: boolean,
+  method: Method,
+): Applied {
+  const points = projectPoints(project);
+  const plain = items.map(percentOf);
+  if (points === 0) return { percents: plain, targetIndex: -1, points: 0, ties: [] };
+
+  const live: number[] = [];
+  items.forEach((it, i) => {
+    if (!it.muted) live.push(i);
+  });
+  if (live.length === 0) return { percents: plain, targetIndex: -1, points, ties: [] };
+
+  if (project.target !== 'auto' && live.includes(project.target)) {
+    const i = project.target;
+    return { percents: boosted(items, i, points), targetIndex: i, points, ties: [] };
+  }
+
+  /**
+   * ⭐⭐⭐ 自动挑:把每一场都试一遍,取**类目均分最高**的那个。
+   *   为什么不能手推:加在最低的那场上会把"被丢掉的"换成另一场,
+   *   而封顶又会吃掉一部分点数 —— 最优解同时取决于点数大小和每场的分数。
+   *   (实测:+20 时加在 83 或 85 上完全一样,+10 时加在 85 上更好,
+   *    而当还没考的那场低于 85、自己成为被丢的那条时,又变成加在 83 上更好。)
+   *   试一遍只有几条,代码试比人推可靠。
+   */
+  let bestIndex = live[0]!;
+  let bestMean = -Infinity;
+  for (const i of live) {
+    const m = meanOf(items, boosted(items, i, points), dropLowest, method).mean;
+    if (m !== null && m > bestMean) {
+      bestMean = m;
+      bestIndex = i;
+    }
+  }
+  const ties = live.filter((i) => {
+    if (i === bestIndex) return false;
+    const m = meanOf(items, boosted(items, i, points), dropLowest, method).mean;
+    return m !== null && Math.abs(m - bestMean) < 1e-9;
+  });
+  return { percents: boosted(items, bestIndex, points), targetIndex: bestIndex, points, ties };
+}
+
+/* ── 课程设置 ──────────────────────────────────────────────── */
+
+export interface Setup {
+  readonly wAssign: number;
+  readonly wAssess: number;
+  readonly wFinal: number;
+  /** 作业类目的平均分。⚠️ 目前每一项都是 100/100,所以这里是 100。 */
+  readonly assignScore: number;
+  readonly targetA: number;
+  readonly targetB: number;
+  readonly targetC: number;
+  /** ⚠️ 老师课上说过要丢最低,但**大纲里没有**。还没确认。 */
+  readonly dropLowest: boolean;
+  readonly goal: Goal;
+  /** ⚠️ 大纲原文是 "mean of grades";还没向老师确认 gradebook 是不是真这么算。 */
+  readonly method: Method;
+}
+
+export const SEED_SETUP: Setup = {
+  wAssign: 10,
+  wAssess: 65,
+  wFinal: 25,
+  assignScore: 100,
+  // ⚠️ 89.5 才是真正的目标:成绩四舍五入到整数,89.5 进位成 A。
+  targetA: 89.5,
+  targetB: 79.5,
+  targetC: 69.5,
+  dropLowest: true,
+  goal: 'A',
+  method: 'mean-of-grades',
+};
+
+/** 2026–27 S1 的真实成绩。最后一场还没考,先静音。 */
+export const SEED_ITEMS: readonly Item[] = [
+  { name: 'Precalc', earned: 83, possible: 100, muted: false },
+  { name: 'Limits', earned: 91, possible: 100, muted: false },
+  { name: 'Deriv apps', earned: 85, possible: 100, muted: false },
+  { name: 'Related rates', earned: 90, possible: 100, muted: false },
+  // 反导数那场大约 11/20 —— 还没发生,默认静音
+  { name: 'Antiderivs', earned: 90, possible: 100, muted: true },
+];
+
+export const SEED_PROJECT: Project = {
+  // ⚠️ 默认不做:页面一打开显示的应该是**当前真实处境**,而不是一个计划。
+  doing: false,
+  met: { ownWork: true, noWords: true, beautiful: true, paper: true, safe: true },
+  // 推荐线:SCORE 14 → +20,刚好把最低的那场顶到 100%
+  math: 8,
+  artistic: 4,
+  explanation: 2,
+  target: 'auto',
+};
+
 export function cutoffOf(s: Setup, goal: Goal): number {
-  // ⚠️ 故意不写 `default` —— 没有 default 的 switch 在 strict 下会做穷尽性检查,
-  //   以后 `GOALS` 里多一档而这里漏了,就是一个编译错误,而不是一个悄悄返回
-  //   undefined 的运行时 bug。
+  // ⚠️ 故意不写 default —— 没有 default 的 switch 在 strict 下会做穷尽性检查。
   switch (goal) {
     case 'A':
       return s.targetA;
@@ -151,7 +360,6 @@ export function cutoffOf(s: Setup, goal: Goal): number {
   }
 }
 
-/** 当前瞄的那一档的分数线。 */
 export function targetOf(s: Setup): number {
   return cutoffOf(s, s.goal);
 }
@@ -175,192 +383,65 @@ export function weightsBalanced(s: Setup): boolean {
   return Math.abs(weightSum(s) - 100) <= WEIGHT_SLOP;
 }
 
-/* ── 均分与丢最低 ──────────────────────────────────────────── */
-
-export interface Counted {
-  /** 类目平均分(百分比)。没有任何一条计入时是 `null` —— 不是 0,也不是 NaN。 */
-  readonly mean: number | null;
-  /** 被丢掉那条的下标;没丢就是 −1。 */
-  readonly droppedIndex: number;
-  readonly counted: number;
-  readonly live: number;
-  /** 计入的那些条,得分合计与满分合计(**不含加分**)。 */
-  readonly earned: number;
-  readonly possible: number;
-  /** 加进分子的加分。 */
-  readonly bonus: number;
-}
-
-/**
- * ⭐⭐⭐ 丢最低按**百分比**挑,不是按卷面原始分。
- *
- * ⚠️ 这一条不是细节,是正确性问题:按原始分挑的话,46/50 的 project(92%)
- *   会显得比 83/100 的测验**更低**,于是被错误地丢掉 ——
- *   学生看到的是"系统帮我丢了考得最好的那一场"。
- * ⚠️ 两种平均算法都走这一条规则,不随算法改变。
- *
- * ⚠️ 顺带记一笔(**不是 bug,是老师的规则**):在 `total-points` 下,
- *   丢掉"百分比最低"的那条并不一定让类目均分最高 —— 丢一条分值大、
- *   百分比略高的,有时反而更划算。但该丢哪条由老师的系统决定,不由我们优化。
- *
- * ⚠️ 只丢**一条**,而且只在还剩别的条的时候丢:
- *   就剩一条还丢掉,均分就没了,页面会从"算得出"变成"算不出" ——
- *   那不是老师的规则,是实现的副作用。
- * ⚠️ 并列最低时取**最靠前**的那条。规则本身无所谓取哪条(百分比一样),
- *   但必须**定死**,否则同样的输入会显示不同的"Dropped"标记。
- */
-export function countedMean(
-  items: readonly Item[],
-  dropLowest: boolean,
-  bonus = 0,
-): Counted {
-  const live: number[] = [];
-  items.forEach((it, i) => {
-    if (!it.muted) live.push(i);
-  });
-
-  let droppedIndex = -1;
-  if (dropLowest && live.length > 1) {
-    let lowest = Infinity;
-    for (const i of live) {
-      const pct = percentOf(items[i]!);
-      if (pct < lowest) lowest = pct;
-    }
-    for (const i of live) {
-      if (percentOf(items[i]!) === lowest) {
-        droppedIndex = i;
-        break;
-      }
-    }
-  }
-
-  let earned = 0;
-  let possible = 0;
-  let counted = 0;
-  for (const i of live) {
-    if (i !== droppedIndex) {
-      const it = items[i]!;
-      earned += it.earned;
-      possible += it.possible;
-      counted += 1;
-    }
-  }
-
-  // ⚠️ 加分只进分子。`possible` 一个点都不加 —— 见 `Setup.ecEarned` 的说明。
-  const withBonus = earned + bonus;
-
-  return {
-    mean: possible > 0 ? (withBonus / possible) * 100 : null,
-    droppedIndex,
-    counted,
-    live: live.length,
-    earned,
-    possible,
-    bonus,
-  };
-}
-
-/**
- * **另一条算法**:把每一项的百分比按满分加权平均,再把加分折成百分点加进去。
- *
- * ⭐ 存在的理由只有验证。代数上
- *     Σ(百分比ᵢ × 满分ᵢ) = Σ(得分ᵢ/满分ᵢ × 100 × 满分ᵢ) = 100 × Σ得分ᵢ
- *   所以这条和 `(Σ得分 + 加分)/Σ满分` 恒等 —— 但一条只碰百分比,
- *   一条只碰原始分,代码路径完全不同。两条给不出同一个数就是有一条写错了。
- */
-export function totalPointsByWeightedMean(
-  items: readonly Item[],
-  dropLowest: boolean,
-  bonus = 0,
-): number | null {
-  const c = countedMean(items, dropLowest, bonus);
-  if (c.possible <= 0) return null;
-  const live: number[] = [];
-  items.forEach((it, i) => {
-    if (!it.muted) live.push(i);
-  });
-  let num = 0;
-  let den = 0;
-  for (const i of live) {
-    if (i !== c.droppedIndex) {
-      const it = items[i]!;
-      num += percentOf(it) * it.possible;
-      den += it.possible;
-    }
-  }
-  return (num + 100 * bonus) / den;
-}
-
-/* ── 旧存档迁移 ────────────────────────────────────────────── */
-
-/**
- * 把一条来历不明的存档记录变成一条合法的 `Item`。
- *
- * ⚠️ 这个函数存在是因为**改模型会悄悄弄坏已经存下来的数据**。
- *   旧版本存的是 `{ name, score, muted }`,`score` 就是百分比;
- *   新版本是 `{ name, earned, possible, muted }`。什么都不做的话,
- *   `earned` 读出来是 `undefined` → `NaN` → 页面上整列变成空白,
- *   而且**不报任何错**。这正是最难发现的那一类故障。
- *
- * ⭐ 旧的 `score` 原本就是百分制,所以 `score → earned/100` 是**等价变换**:
- *   迁移前后百分比一模一样,用户看不出发生过迁移。
- *
- * ⚠️ 放在这里而不是组件里,是因为它必须能被单测钉死。
- */
-export function migrateItem(raw: unknown): Item {
-  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
-  const name = typeof o['name'] === 'string' && o['name'].length > 0 ? o['name'] : 'Item';
-  const muted = Boolean(o['muted']);
-
-  const possibleRaw = Number(o['possible']);
-  const earnedRaw = Number(o['earned']);
-  if (Number.isFinite(possibleRaw) && Number.isFinite(earnedRaw)) {
-    const possible = clampPossible(possibleRaw);
-    return { name, possible, earned: clampEarned(earnedRaw, possible), muted };
-  }
-
-  // 旧格式:只有一个百分制的 `score`
-  const score = Number(o['score']);
-  const pct = Number.isFinite(score) ? score : 0;
-  return { name, possible: 100, earned: clampEarned(pct, 100), muted };
-}
-
 /* ── 正向与反解 ────────────────────────────────────────────── */
 
 /** 正向:给定测验均分和期末分,学期总评是多少。 */
-export function gradeWith(s: Setup, mean: number, final: number): number {
+export function gradeWith(s: Setup, assessMean: number, final: number): number {
   const w = weightsOf(s);
-  return w.assign * s.assignScore + w.assess * mean + w.final * final;
+  return w.assign * s.assignScore + w.assess * assessMean + w.final * final;
+}
+
+/**
+ * ⭐⭐ PowerSchool 在**期末还不存在**的时候显示的那个数。
+ *   它会把现有的类目重新归一化:
+ *       shown = (w_assign × 作业 + w_assess × 测验) / (w_assign + w_assess)
+ *   ⚠️ 不要写死 0.75 —— 用权重算出来,改权重时才不会悄悄错。
+ *   (这个公式已经和真实的 PowerSchool 显示对照过三次。)
+ */
+export function inProgressDisplay(s: Setup, assessMean: number | null): number | null {
+  if (assessMean === null) return null;
+  const denom = s.wAssign + s.wAssess;
+  if (denom <= 0) return null;
+  return (s.wAssign * s.assignScore + s.wAssess * assessMean) / denom;
+}
+
+/** 成绩按四舍五入到整数来判档,所以 89.5 就是 A。 */
+export function roundedPercent(x: number): number {
+  return Math.round(x);
+}
+
+export function letterFor(overall: number): string {
+  const r = roundedPercent(overall);
+  if (r >= 90) return 'A';
+  if (r >= 80) return 'B';
+  if (r >= 70) return 'C';
+  if (r >= 60) return 'D';
+  return 'F';
 }
 
 /**
  * 反解:要落在目标上,期末得考多少。
- * ⚠️ 期末权重为 0 时**解不出来** —— 期末考多少都不改变总评。
- *   返回 `null`,由调用方去说那句话,而不是在这里返回一个假的数。
+ * ⚠️ 期末权重为 0 时解不出来 —— 返回 `null`,由调用方去说那句话。
  */
-export function finalNeeded(s: Setup, mean: number | null): number | null {
+export function finalNeeded(s: Setup, assessMean: number | null): number | null {
   const w = weightsOf(s);
-  if (mean === null || w.final <= 0) return null;
-  return (targetOf(s) - w.assign * s.assignScore - w.assess * mean) / w.final;
+  if (assessMean === null || w.final <= 0) return null;
+  return (targetOf(s) - w.assign * s.assignScore - w.assess * assessMean) / w.final;
 }
 
 /**
  * 第三条路径:对**正向**函数二分,根本不碰上面那条反解公式。
- *
- * ⭐ 它存在的唯一理由是验证,不是效率。正向成绩关于期末分是严格单调递增的
- *   (斜率就是 w_final > 0),所以二分一定收敛到同一个根。
- * ⚠️ 搜索区间要**超出** 0..100:够不到的目标对应的根就在 100 以上,
- *   夹在 0..100 里会得到一个错的"根",而且错得看不出来。
+ * ⚠️ 搜索区间要**超出** 0..100:够不到的目标对应的根就在 100 以上。
  */
-export function finalNeededByBisection(s: Setup, mean: number | null): number | null {
+export function finalNeededByBisection(s: Setup, assessMean: number | null): number | null {
   const w = weightsOf(s);
-  if (mean === null || w.final <= 0) return null;
+  if (assessMean === null || w.final <= 0) return null;
   const goal = targetOf(s);
   let lo = -1000;
   let hi = 1000;
   for (let i = 0; i < 200; i += 1) {
     const mid = (lo + hi) / 2;
-    if (gradeWith(s, mean, mid) < goal) lo = mid;
+    if (gradeWith(s, assessMean, mid) < goal) lo = mid;
     else hi = mid;
   }
   return (lo + hi) / 2;
@@ -380,17 +461,15 @@ export type Verdict =
 /**
  * 分档的两个界。
  * ⚠️ 这两个数没有数学上的来历,它们是**措辞**的界,不是计算的界 ——
- *   所以它们只影响那个词和颜色,一个数字都不影响。
- *   92 以上叫"紧",是因为那已经高过大多数人的平时水平;
- *   75 以下叫"宽松",是因为那低于及格线一大截。
+ *   只影响那个词和颜色,一个数字都不影响。
  */
 export const TIGHT_ABOVE = 92;
 export const COMFORTABLE_BELOW = 75;
 
-export function verdictOf(s: Setup, mean: number | null): Verdict {
-  if (mean === null) return 'no-data';
+export function verdictOf(s: Setup, assessMean: number | null): Verdict {
+  if (assessMean === null) return 'no-data';
   if (weightsOf(s).final <= 0) return 'final-does-not-count';
-  const need = finalNeeded(s, mean);
+  const need = finalNeeded(s, assessMean);
   if (need === null) return 'no-data';
   if (need <= 0) return 'locked';
   if (need > 100) return 'unreachable';
@@ -398,53 +477,6 @@ export function verdictOf(s: Setup, mean: number | null): Verdict {
   if (need < COMFORTABLE_BELOW) return 'comfortable';
   return 'doable';
 }
-
-/**
- * ⭐⭐⭐ 够不到的时候,**学期总评**还差多少分。
- *
- * ⚠️ 这就是原稿算错的那个数。原稿印的是 `need − 100`,那是**期末卷面**的差距;
- *   要的是总评的差距,两者差一个 w_final。期末占 25% 时差四倍。
- *   定义上它就是:目标 − (期末考满分时的总评)。这么写就不可能再错。
- *
- * 够得到时返回 `null` —— 没有"差多少"这回事。
- */
-export function missBy(s: Setup, mean: number | null): number | null {
-  if (mean === null || weightsOf(s).final <= 0) return null;
-  const best = gradeWith(s, mean, 100);
-  const gap = targetOf(s) - best;
-  return gap > 0 ? gap : null;
-}
-
-/**
- * 已经稳了的时候,**学期总评**还富余多少分(期末交白卷也够)。
- * 对称地,这也是按定义写的:期末 0 分时的总评 − 目标。
- */
-export function spareBy(s: Setup, mean: number | null): number | null {
-  if (mean === null || weightsOf(s).final <= 0) return null;
-  const worst = gradeWith(s, mean, 0);
-  const spare = worst - targetOf(s);
-  return spare > 0 ? spare : null;
-}
-
-/** 期末不计分时,成绩已经定死了是多少。 */
-export function lockedGrade(s: Setup, mean: number | null): number | null {
-  if (mean === null || weightsOf(s).final > 0) return null;
-  return gradeWith(s, mean, 0);
-}
-
-/* ── 页面上的字 ────────────────────────────────────────────── */
-
-export const HEADLINE = 'Solve the weighted average backwards for the score you still need';
-
-/** 类目均分那一项的展开式 —— 加分加在分子上,分母不动。 */
-export const AVERAGE_TEX =
-  '\\bar{x}=\\frac{\\sum \\text{earned}+\\text{EC}}{\\sum \\text{possible}}\\times 100';
-
-export const EQUATION_TEX =
-  'w_{\\text{assign}}\\cdot A+w_{\\text{assess}}\\cdot \\bar{x}+w_{\\text{final}}\\cdot F=G';
-
-export const SOLVED_TEX =
-  'F=\\frac{G-w_{\\text{assign}}\\cdot A-w_{\\text{assess}}\\cdot \\bar{x}}{w_{\\text{final}}}';
 
 export const VERDICT_WORD: Readonly<Record<Verdict, string>> = {
   'no-data': 'Nothing counted',
@@ -455,3 +487,66 @@ export const VERDICT_WORD: Readonly<Record<Verdict, string>> = {
   tight: 'Tight',
   unreachable: 'Out of reach',
 };
+
+/**
+ * ⭐⭐⭐ 够不到的时候,**学期总评**还差多少分。
+ * ⚠️ 按定义写:目标 − (期末考满分时的总评)。
+ *   曾经这里印的是 `need − 100`,那是**期末卷面**的差距,被当成了总评的差距,
+ *   期末占 25% 时夸大四倍 —— 只差 9 分的人会被告知差 36 分。
+ */
+export function missBy(s: Setup, assessMean: number | null): number | null {
+  if (assessMean === null || weightsOf(s).final <= 0) return null;
+  const gap = targetOf(s) - gradeWith(s, assessMean, 100);
+  return gap > 0 ? gap : null;
+}
+
+/** 已经稳了的时候,总评还富余多少分(期末交白卷也够)。 */
+export function spareBy(s: Setup, assessMean: number | null): number | null {
+  if (assessMean === null || weightsOf(s).final <= 0) return null;
+  const spare = gradeWith(s, assessMean, 0) - targetOf(s);
+  return spare > 0 ? spare : null;
+}
+
+/** 期末不计分时,成绩已经定死了是多少。 */
+export function lockedGrade(s: Setup, assessMean: number | null): number | null {
+  if (assessMean === null || weightsOf(s).final > 0) return null;
+  return gradeWith(s, assessMean, 0);
+}
+
+/* ── 旧存档迁移 ────────────────────────────────────────────── */
+
+/**
+ * 把一条来历不明的存档记录变成一条合法的 `Item`。
+ * ⚠️ 改模型会**悄悄弄坏已经存下来的数据**:更早的版本存的是
+ *   `{ name, score, muted }`(百分制),`earned` 读出来会是 undefined → NaN
+ *   → 整列空白,而且不报任何错。这正是最难发现的那一类故障。
+ */
+export function migrateItem(raw: unknown): Item {
+  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const name = typeof o['name'] === 'string' && o['name'].length > 0 ? o['name'] : 'Item';
+  const muted = Boolean(o['muted']);
+
+  const possibleRaw = Number(o['possible']);
+  const earnedRaw = Number(o['earned']);
+  if (Number.isFinite(possibleRaw) && Number.isFinite(earnedRaw)) {
+    const possible = clampPossible(possibleRaw);
+    return { name, possible, earned: clampEarned(earnedRaw, possible), muted };
+  }
+  const score = Number(o['score']);
+  const pct = Number.isFinite(score) ? score : 0;
+  return { name, possible: 100, earned: clampEarned(pct, 100), muted };
+}
+
+/* ── 页面上的字 ────────────────────────────────────────────── */
+
+export const HEADLINE = 'Solve the weighted average backwards for the score you still need';
+
+export const EQUATION_TEX = '0.10\\,A+0.65\\,\\bar{x}+0.25\\,F=G';
+
+export const SOLVED_TEX = 'F=\\dfrac{G-0.10\\,A-0.65\\,\\bar{x}}{0.25}';
+
+/** PowerSchool 在期末之前显示的那个数。 */
+export const IN_PROGRESS_TEX = '\\text{shown}=\\dfrac{0.10\\,A+0.65\\,\\bar{x}}{0.75}';
+
+/** 项目的计分式。⭐ 那个乘积是整条式子的要害。 */
+export const PROJECT_TEX = '5\\left(\\prod_{i=1}^{5}g_i\\right)\\cdot S-50';

@@ -1,15 +1,11 @@
 /**
- * 「Grade Console」的浏览器专项检查。
+ * 「Grade Console」的浏览器专项检查 —— 对着**真实课程**的数。
  *
- * ⭐⭐⭐ 核心一问:**页面上那个"差多少"是总评的分,还是期末卷面的分?**
- *   原稿在这里算错了:它印的是 `need − 100`(卷面),却说成总评。
- *   期末占 25% 时夸大四倍 —— 只差 9 分的人会被告知差 36 分,足以让人直接放弃。
- *   这一条把修好的行为钉死在**浏览器里**,而不只是单元测试里。
+ * ⭐⭐⭐ 这一页会被拿来做真决定(要不要做项目、期末要拼到什么程度),
+ *   所以每个期望值都在这个文件里**独立手算**,一个都不从页面上抄。
  *
- * ⭐⭐ 第二问:拖动一条推子,所有读数是不是真的跟着联动、而且仍然自洽?
- *   均分、期末要求、结论三者必须始终满足那一条加权平均式。
- *
- * ⚠️ 期望值全部**在这个文件里独立手算**,不从页面上抄。
+ * ⚠️ 交接文档里那张规划表的中间几行是错的(斜率用成了 0.26/分,
+ *   四项计分时真实斜率是 0.65/分)。这里钉的是**算对之后**的数。
  */
 import { chromium } from 'playwright-core';
 import { mkdirSync, readFileSync, existsSync, statSync } from 'node:fs';
@@ -36,7 +32,7 @@ const server = await new Promise((resolve) => {
 
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 1250 } });
+const page = await browser.newPage({ viewport: { width: 1280, height: 1500 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e).slice(0, 160)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
@@ -45,394 +41,293 @@ const fail = [];
 const note = (m) => fail.push(m);
 const count = (sel) => page.$$eval(sel, (els) => els.length);
 /** ⚠️ 读 `data-value` 上的原始数,不读渲染出来的字符串。 */
-const val = (k) => page.$eval(`[data-read="${k}"]`, (el) => {
-  const v = el.dataset.value;
-  return v === '' ? null : Number(v);
-});
+const val = (k) => page.$eval(`[data-read="${k}"]`, (el) => (el.dataset.value === '' ? null : Number(el.dataset.value)));
+const attr = (sel, n) => page.$eval(sel, (el, a) => el.getAttribute(a), n);
 const text = (sel) => page.$eval(sel, (el) => el.textContent.replace(/\s+/g, ' ').trim()).catch(() => null);
-const attr = (sel, name) => page.$eval(sel, (el, n) => el.getAttribute(n), name);
+const has = async (sel) => (await count(sel)) > 0;
 
-/** 在设置面板里写一个数。 */
 async function setField(key, value) {
   await page.$eval(`[data-field="${key}"]`, (el, v) => {
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     set.call(el, String(v));
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
-  await page.waitForTimeout(110);
+  await page.waitForTimeout(120);
 }
-/** 把一条推子的**得分**设成某个值(走数字框,和键盘通路等价)。 */
-async function setScore(i, value) {
+async function setEarned(i, value) {
   await page.$eval(`[data-earned="${i}"]`, (el, v) => {
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     set.call(el, String(v));
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
-  await page.waitForTimeout(110);
+  await page.waitForTimeout(120);
 }
-
-/**
- * 把一条推子设成某个**百分比**。
- *
- * ⚠️ 分值不再统一之后,"把每一条都设成 70" 和 "把每一条都设成 70%" 是两回事:
- *   project 是 50 分制,写 70 会被夹到 50,也就是 **100%** —— 均分反而被推高。
- *   凡是意图为"全部 X%"的检查,都必须走这个函数,而不是直接写分数。
- */
-async function setPercent(i, pct) {
-  const possible = await page.$eval(`[data-possible="${i}"]`, (el) => Number(el.value));
-  await setScore(i, (pct / 100) * possible);
+async function toggle(sel, want) {
+  const on = await page.$eval(sel, (el) => el.checked ?? el.getAttribute('aria-pressed') === 'true');
+  if (on !== want) { await page.click(sel); await page.waitForTimeout(140); }
 }
 async function fresh() {
-  // ⚠️ 每一组都从干净状态开始:localStorage 会把上一组的输入带过来。
   await page.goto(`http://localhost:${PORT}/#/grade-console`, { waitUntil: 'networkidle' });
   await page.evaluate(() => { try { localStorage.clear(); } catch {} });
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(400);
 }
+
+/* ── 手算的参照值,全部写在这里 ─────────────────────────────── */
+const ASSIGN = 100;
+const A = 89.5;
+const needFor = (m) => (A - 0.10 * ASSIGN - 0.65 * m) / 0.25;
+const shownFor = (m) => (0.10 * ASSIGN + 0.65 * m) / 0.75;
 
 await fresh();
 
-/* ── ① 默认数据:手算一遍 ────────────────────────────────── */
-/**
- * 未静音的七条:83, 91, 85, 88, 92, 88, 88。丢掉最低的 83。
- * 剩六条和 = 532,均分 = 532/6 = 88.666…
- * 期末 = (89.5 − 0.10×100 − 0.65×(532/6)) / 0.25 = 87.4666…
- */
-const SEED_MEAN = 88; // 440 / 500
-const SEED_NEED = (89.5 - 10 - 0.65 * SEED_MEAN) / 0.25;
-
-if ((await count('[data-strip]')) !== 8) note(`expected 7 channels + master, got ${await count('[data-strip]')}`);
+/* ── ① 当前真实处境 ──────────────────────────────────────── */
 {
+  if ((await count('[data-strip]')) !== 6) note(`expected 5 assessments + master, got ${await count('[data-strip]')}`);
+  const earned = await page.$$eval('[data-earned]', (els) => els.map((e) => Number(e.value)));
+  if (JSON.stringify(earned) !== JSON.stringify([83, 91, 85, 90, 90])) {
+    note(`seeded scores should be 83, 91, 85, 90 plus a muted 90 — got [${earned}]`);
+  }
+  const muted = await count('[data-strip][data-state="muted"]');
+  if (muted !== 1) note(`the antiderivative test should start muted — ${muted} muted strips`);
+
+  // 丢最低成立 → 丢 83 → (91+85+90)/3 = 88.6667
+  const mean = await val('mean');
+  if (Math.abs(mean - 266 / 3) > 1e-9) note(`assessments mean is ${mean}, hand-computed ${266 / 3}`);
+  const dropped = await page.$$eval('[data-strip][data-state="dropped"]', (e) => e.map((x) => x.dataset.strip));
+  if (dropped.join(',') !== '0') note(`should drop the 83 (strip 0), got [${dropped}]`);
+
+  const shown = await val('shown');
+  if (Math.abs(shown - shownFor(266 / 3)) > 1e-9) note(`PowerSchool figure is ${shown}, hand-computed ${shownFor(266 / 3)}`);
+  if (Math.abs(shown - 90.18) > 0.01) note(`with the drop PowerSchool should read 90.18, got ${shown}`);
+
+  const need = await val('need');
+  if (Math.abs(need - needFor(266 / 3)) > 1e-9) note(`final needed is ${need}, hand-computed ${needFor(266 / 3)}`);
+  if (Math.abs(need - 87.4667) > 1e-3) note(`final needed should be 87.47, got ${need}`);
+}
+
+/* ── ② 关掉丢最低 → 这是没有那条规则时的真实处境 ───────────── */
+{
+  await toggle('[data-field="dropLowest"]', false);
+  const mean = await val('mean');
+  const shown = await val('shown');
+  if (Math.abs(mean - 87.25) > 1e-9) note(`without the drop the mean should be 87.25, got ${mean}`);
+  if (Math.abs(shown - 88.95) > 1e-9) note(`without the drop PowerSchool should read 88.95, got ${shown}`);
+  // 这正是他现在屏幕上看到的 89 (B)
+  const line = (await text('[data-read="shown"]')) ?? '';
+  if (line !== '89') note(`the PowerSchool readout should show exactly "89" — got "${line}"`);
+  const detail = (await text('[data-panel="master"]')) ?? '';
+  if (!/88\.95 · B/.test(detail)) note(`the detail line should read "88.95 · B" — got "${detail}"`);
+  await toggle('[data-field="dropLowest"]', true);
+}
+
+/* ── ③ 项目:准则是乘积,一条不合格就 −50 ─────────────────── */
+{
+  await toggle('[data-field="doing"]', true);
+  if ((await count('[data-guideline]')) !== 5) note(`expected 5 guideline checkboxes, got ${await count('[data-guideline]')}`);
+
+  // 种子是 SCORE 14 → +20
+  const pts = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
+  if (pts !== 20) note(`the seeded project should be worth +20, got ${pts}`);
+
+  // ⭐⭐⭐ 取消任意一条准则 → −50,而且要有醒目的警告
+  for (const key of ['ownWork', 'noWords', 'beautiful', 'paper', 'safe']) {
+    await toggle(`[data-guideline="${key}"]`, false);
+    const p = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
+    if (p !== -50) note(`unchecking "${key}" should make the project -50, got ${p}`);
+    if (!(await has('[data-guideline-warn]'))) note(`unchecking "${key}" shows no warning`);
+    await toggle(`[data-guideline="${key}"]`, true);
+  }
+  if (await has('[data-guideline-warn]')) note('the guideline warning stays up when all five are met');
+
+  // 满分作品
+  await page.click('[data-score="math-12"]');
+  await page.click('[data-score="artistic-6"]');
+  await page.waitForTimeout(140);
+  const best = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
+  if (best !== 50) note(`a perfect project should be +50, got ${best}`);
+  await page.click('[data-score="math-8"]');
+  await page.click('[data-score="artistic-4"]');
+  await page.waitForTimeout(140);
+}
+
+/* ── ④⭐⭐⭐ 饱和:+20 之后再高也一样 ────────────────────── */
+{
+  // 反导数那场设成 90 并取消静音 —— 这是规划表的基准情形
+  await toggle('[data-mute="4"]', false);
+  await setEarned(4, 90);
+
+  const needAt = async (math, artistic, explanation) => {
+    await page.click(`[data-score="math-${math}"]`);
+    await page.click(`[data-score="artistic-${artistic}"]`);
+    await page.click(`[data-score="explanation-${explanation}"]`);
+    await page.waitForTimeout(170);
+    return val('need');
+  };
+  const twenty = await needAt(8, 4, 2);   // SCORE 14 → +20
+  const thirty = await needAt(12, 4, 2);  // SCORE 18 → +40
+  const fifty = await needAt(12, 6, 2);   // SCORE 20 → +50
+  const ten = await needAt(8, 2, 2);      // SCORE 12 → +10
+
+  if (Math.abs(twenty - thirty) > 1e-9) note(`+40 should be identical to +20 (${thirty} vs ${twenty})`);
+  if (Math.abs(twenty - fifty) > 1e-9) note(`+50 should be identical to +20 (${fifty} vs ${twenty})`);
+  if (!(ten > twenty + 0.5)) note(`+10 should be strictly worse than +20 (${ten} vs ${twenty}) — otherwise the saturation claim is vacuous`);
+
+  // ⭐ 手算:+20 把 83 顶到 100,计分集 {100, 91, 90, 90} → 92.75 → 期末 76.85
+  await needAt(8, 4, 2);
   const mean = await val('mean');
   const need = await val('need');
-  if (Math.abs(mean - SEED_MEAN) > 1e-9) note(`seed mean is ${mean}, hand-computed ${SEED_MEAN}`);
-  if (Math.abs(need - SEED_NEED) > 1e-9) note(`seed need is ${need}, hand-computed ${SEED_NEED}`);
-  const dropped = await count('[data-strip][data-state="dropped"]');
-  if (dropped !== 1) note(`expected exactly one dropped channel, got ${dropped}`);
-  const muted = await count('[data-strip][data-state="muted"]');
-  if (muted !== 1) note(`expected exactly one muted channel, got ${muted}`);
+  if (Math.abs(mean - 371 / 4) > 1e-9) note(`with +20 and T=90 the mean should be ${371 / 4}, got ${mean}`);
+  if (Math.abs(need - needFor(371 / 4)) > 1e-9) note(`final needed is ${need}, hand-computed ${needFor(371 / 4)}`);
+  if (Math.abs(need - 76.85) > 0.01) note(`with +20 and T=90 the final should need 76.85, got ${need}`);
+  // ⚠️ 交接文档这一格写的是 72.9 —— 钉死它不会被写回去
+  if (Math.abs(need - 72.9) < 0.5) note('REGRESSION: the optimistic 72.9 figure is back');
 }
 
-/* ── ①c 分值与加分 ──────────────────────────────────────── */
-/**
- * ⭐⭐⭐ 加分**只加分子**。连分母一起加的话它就只是一道普通的 50 分测验。
- *   这一段把那件事钉死在浏览器里,期望值全部在这里手算。
- */
+/* ── ⑤⭐⭐⭐ 加在哪一场:三种情形三种答案 ───────────────── */
 {
-  // 去掉 Project 之后:七条通道(第七条静音),全部百分制
-  const possible = await page.$$eval('[data-possible]', (els) => els.map((e) => Number(e.value)));
-  if (possible.length !== 7) note(`expected 7 assessment channels, got ${possible.length}`);
-  if (!possible.every((p) => p === 100)) note(`every seeded assessment should be out of 100, got [${possible}]`);
-  const names = await page.$$eval('[data-name]', (els) => els.map((e) => e.value));
-  if (names.some((n) => /project/i.test(n))) note(`the Project channel should be gone, found [${names}]`);
-
-  // 丢的是 83% 那条
-  const dropped = await page.$$eval('[data-strip][data-state="dropped"]', (els) => els.map((e) => e.dataset.strip));
-  if (dropped.join(',') !== '0') note(`expected Assess 1 (83%) to be dropped, got [${dropped}]`);
-
-  // 手算:440 / 500 = 88.0% → 期末 (89.5 − 10 − 0.65×88)/0.25 = 89.2
-  const needFor = (m) => (89.5 - 0.10 * 100 - 0.65 * m) / 0.25;
-  {
-    const mean = await val('mean');
-    const need = await val('need');
-    if (Math.abs(mean - 88) > 1e-9) note(`baseline mean is ${mean}, hand-computed 88`);
-    if (Math.abs(need - needFor(88)) > 1e-9) note(`baseline final is ${need}, hand-computed ${needFor(88)}`);
-    if (Math.abs(need - 89.2) > 1e-9) note(`baseline final should be 89.2, got ${need}`);
+  const appliedName = async () => {
+    const t = await text('[data-applied]');
+    return t ?? '';
+  };
+  // T = 90,+20:83 和 85 封顶后一样 → 必须报出并列
+  const tied = await appliedName();
+  if (!/identical if applied to/.test(tied)) {
+    note(`with +20 the tie between the 83 and the 85 is not reported: "${tied}"`);
   }
 
-  // ⭐⭐⭐ 填 46 分加分:(440 + 46) / 500 = 97.2%,分母**不变**
-  await setField('ecEarned', 46);
-  await page.waitForTimeout(160);
-  {
-    const mean = await val('mean');
-    const need = await val('need');
-    if (Math.abs(mean - 97.2) > 1e-9) note(`with 46 EC the mean should be 97.2, got ${mean}`);
-    if (Math.abs(need - needFor(97.2)) > 1e-9) note(`with 46 EC the final should be ${needFor(97.2)}, got ${need}`);
-    if (Math.abs(need - 65.28) > 1e-8) note(`with 46 EC the final should be 65.28, got ${need}`);
+  // +10:加在 85 上严格更好
+  await page.click('[data-score="artistic-2"]');
+  await page.waitForTimeout(170);
+  const atTen = await appliedName();
+  // ⚠️ 这里**确实有并列**,而且是对的:+10 加在 85 上得 95,加在某个 90 上封顶到 100,
+  //   两种都让计分集之和变成 366。要钉的是"不许落在 83 上",不是"没有并列"。
+  if (/Precalc/.test(atTen)) note(`at +10 the points must not go on the 83 (Precalc) — got "${atTen}"`);
+  const tenNeed = await val('need');
+  // 手算:+10 的最优落点给出计分集 {91, 95, 90, 90} = 366 → 均分 91.5 → 期末 80.1
+  if (Math.abs(tenNeed - needFor(91.5)) > 1e-9) note(`at +10 the final should need ${needFor(91.5)}, got ${tenNeed}`);
+  await page.click('[data-score="artistic-4"]');
+  await page.waitForTimeout(150);
 
-    // 那一行账必须自洽地写着 440 + 46 / 500
-    const line = (await text('[data-points]')) ?? '';
-    for (const want of ['440', '46', '500', '97.2']) {
-      if (!line.includes(want)) note(`the points line is missing "${want}": "${line}"`);
-    }
-    // ⚠️ 分母绝不能变成 550
-    if (line.includes('550')) note(`the EC points are being added to the denominator too: "${line}"`);
-  }
+  // 反导数考砸(70):它自己被丢掉,这时该加在 83 上,而且没有并列
+  await setEarned(4, 70);
+  const atLow = await appliedName();
+  if (!/Precalc/.test(atLow)) note(`when the test is dropped the points should go on the 83 (Precalc) — got "${atLow}"`);
+  if (/identical if applied to/.test(atLow)) note(`there should be no tie when the test is dropped: "${atLow}"`);
+  const needLow = await val('need');
+  if (Math.abs(needLow - 80.1) > 0.05) note(`with T=70 and +20 the final should need 80.1, got ${needLow}`);
 
-  // 加分单调:填得越多,期末要求越低
-  let last = Infinity;
-  for (const ec of [0, 10, 25, 46, 50]) {
-    await setField('ecEarned', ec);
-    await page.waitForTimeout(140);
-    const need = await val('need');
-    if (!(need < last)) note(`EC ${ec} should lower the final needed (was ${last}, now ${need})`);
-    last = need;
+  // ⭐ 曲线在 T ≤ 85 处变平,不是 70
+  for (const T of [85, 80, 50, 0]) {
+    await setEarned(4, T);
+    const n = await val('need');
+    if (Math.abs(n - 80.1) > 0.05) note(`T=${T} should still need 80.1 (the test is simply dropped), got ${n}`);
   }
-
-  // 加分夹在 0..满分
-  await setField('ecEarned', 999);
-  await page.waitForTimeout(140);
-  {
-    const got = await page.$eval('[data-field="ecEarned"]', (el) => Number(el.value));
-    if (got !== 50) note(`EC should clamp to its 50-point maximum, got ${got}`);
-  }
-  // 加分满分可改,得分跟着夹住
-  await setField('ecPossible', 20);
-  await page.waitForTimeout(160);
-  {
-    const got = await page.$eval('[data-field="ecEarned"]', (el) => Number(el.value));
-    if (got !== 20) note(`lowering the EC maximum should clamp the earned value, got ${got}`);
-  }
-  await fresh();
-
-  // 加分为 0 时,那一项不出现在账上(死界面自查的反面:它只在该出现时出现)
-  {
-    const line = (await text('[data-points]')) ?? '';
-    if (/\+/.test(line)) note(`with no extra credit the points line should not show a "+": "${line}"`);
-  }
+  await setEarned(4, 86);
+  const n86 = await val('need');
+  if (!(n86 < 79.6)) note(`T=86 should already be below the flat 80.1, got ${n86}`);
+  await setEarned(4, 90);
 }
 
-/* ── ①d 一排表要真的对齐 ────────────────────────────────── */
-/**
- * ⭐ 这是台"调音台",一排推子没对齐就是坏的。
- *   第一版用了 `items-end`:各列按整列底边对齐,而测验列轨道下面还有
- *   名字 / 状态 / Mute 三样,主表下面只有 "Final" —— 主表轨道整整沉了 50px。
- *   眼睛能看出来,但量一下才确定是 50 不是 5。
- */
+/* ── ⑥ 项目到底值多少 ───────────────────────────────────── */
+{
+  const worth = await page.$eval('[data-project-worth]', (el) => Number(el.dataset.value));
+  // T=90:不做 86.6,做 +20 则 76.85 → 值 9.75
+  if (Math.abs(worth - (86.6 - 76.85)) > 0.05) note(`the project should be worth about 9.75 points here, page says ${worth}`);
+
+  // ⭐⭐⭐ 违规 −50:丢最低成立时,和"根本不做"结果完全一样
+  await toggle('[data-guideline="beautiful"]', false);
+  const failedNeed = await val('need');
+  await toggle('[data-field="doing"]', false);
+  const noneNeed = await val('need');
+  if (Math.abs(failedNeed - noneNeed) > 1e-9) {
+    note(`with the drop on, a failed guideline should cost nothing versus not doing it (${failedNeed} vs ${noneNeed})`);
+  }
+  // 而丢最低关掉时,同样的违规要多考 26 分
+  await toggle('[data-field="doing"]', true);
+  await toggle('[data-field="dropLowest"]', false);
+  const failedNoDrop = await val('need');
+  await toggle('[data-field="doing"]', false);
+  const noneNoDrop = await val('need');
+  if (Math.abs((failedNoDrop - noneNoDrop) - 26) > 0.05) {
+    note(`without the drop a failed guideline should cost 26 points on the final, got ${failedNoDrop - noneNoDrop}`);
+  }
+  await toggle('[data-field="dropLowest"]', true);
+}
+
+/* ── ⑦ 两件没确认的事都标出来了 ─────────────────────────── */
+{
+  await fresh();
+  if (!(await has('[data-unconfirmed="drop"]'))) note('the drop rule is not marked unconfirmed');
+  if (!(await has('[data-unconfirmed="method"]'))) note('the averaging method is not marked unconfirmed');
+  // 目前两种算法必须给出完全一样的数(所有测验都是 100 分制)
+  const a = await val('need');
+  await page.click('[data-method="total-points"]');
+  await page.waitForTimeout(160);
+  const b = await val('need');
+  if (Math.abs(a - b) > 1e-9) note(`while every assessment is out of 100 the two methods must agree (${a} vs ${b})`);
+  // 但换一个分值之后就该分开 —— 否则那个开关是摆设
+  await page.$eval('[data-possible="0"]', (el) => {
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    set.call(el, '50'); el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(200);
+  const c = await val('need');
+  await page.click('[data-method="mean-of-grades"]');
+  await page.waitForTimeout(160);
+  const d = await val('need');
+  if (Math.abs(c - d) < 1e-9) note('with a 50-point assessment the two methods should differ');
+  await fresh();
+}
+
+/* ── ⑧ 一排表要真的对齐 ─────────────────────────────────── */
 {
   const tracks = await page.$$eval('[data-strip]', (els) => els.map((st) => {
     const r = st.querySelector('.fader-track').getBoundingClientRect();
-    return { id: st.dataset.strip, top: Math.round(r.top), h: Math.round(r.height) };
+    return { top: Math.round(r.top), h: Math.round(r.height) };
   }));
-  if (tracks.length < 2) note('could not find the fader tracks');
-  const tops = [...new Set(tracks.map((t) => t.top))];
-  const heights = [...new Set(tracks.map((t) => t.h))];
-  if (tops.length !== 1) note(`the fader tracks do not line up — tops at ${tops.join(', ')}px`);
-  if (heights.length !== 1) note(`the fader tracks are different heights — ${heights.join(', ')}px`);
+  if ([...new Set(tracks.map((t) => t.top))].length !== 1) {
+    note(`the fader tracks do not line up — tops at ${[...new Set(tracks.map((t) => t.top))].join(', ')}px`);
+  }
+  if ([...new Set(tracks.map((t) => t.h))].length !== 1) note('the fader tracks are different heights');
 }
 
-/* ── ①b 三档目标 ────────────────────────────────────────── */
-/**
- * ⭐⭐ 三个按钮 A / B / C,分数线 89.5 / 79.5 / 69.5。
- *   并且切到 C 之后,**结论必须真的变**(默认数据下 A 是 Doable、C 是 Comfortable)——
- *   加一个选项却看不出任何区别,等于没加。
- */
+/* ── ⑨ 存得住、键盘能用、没有 CJK ────────────────────────── */
 {
-  const goals = await page.$$eval('[data-goal]', (els) => els.map((e) => e.dataset.goal));
-  if (goals.join(',') !== 'A,B,C') note(`expected goal buttons A,B,C — got ${goals.join(',')}`);
-
-  const CUTOFF = { A: 89.5, B: 79.5, C: 69.5 };
-  for (const g of ['A', 'B', 'C']) {
-    await page.click(`[data-goal="${g}"]`);
-    await page.waitForTimeout(140);
-    if ((await attr(`[data-goal="${g}"]`, 'data-active')) !== 'yes') note(`[${g}] clicking the goal did not select it`);
-    // 手算同一条式子,用这一档的分数线
-    const want = (CUTOFF[g] - 0.1 * 100 - 0.65 * SEED_MEAN) / 0.25;
-    const got = await val('need');
-    if (Math.abs(got - want) > 1e-9) note(`[goal ${g}] the page says ${got}, hand-computed ${want}`);
-  }
-  // 三档严格递减
-  const needs = [];
-  for (const g of ['A', 'B', 'C']) {
-    await page.click(`[data-goal="${g}"]`);
-    await page.waitForTimeout(130);
-    needs.push(await val('need'));
-  }
-  if (!(needs[0] > needs[1] && needs[1] > needs[2])) note(`the three targets do not decrease: ${needs.join(' > ')}`);
-
-  // ⭐ C 档确实走到了另一个结论
-  await page.click('[data-goal="C"]');
-  await page.waitForTimeout(150);
-  const cVerdict = await page.$eval('[data-panel="verdict"]', (el) => el.dataset.verdict);
-  await page.click('[data-goal="A"]');
-  await page.waitForTimeout(150);
-  const aVerdict = await page.$eval('[data-panel="verdict"]', (el) => el.dataset.verdict);
-  if (cVerdict === aVerdict) note(`switching to C changes nothing visible (both read "${aVerdict}")`);
-
-  // C 的分数线自己也能改
-  await setField('targetC', 65);
-  const afterEdit = await val('need');
-  if (Math.abs(afterEdit - (89.5 - 10 - 0.65 * SEED_MEAN) / 0.25) > 1e-9) {
-    note('editing the C cutoff changed the A result');
-  }
-  await page.click('[data-goal="C"]');
-  await page.waitForTimeout(140);
-  const cAfter = await val('need');
-  if (Math.abs(cAfter - (65 - 10 - 0.65 * SEED_MEAN) / 0.25) > 1e-9) note(`the edited C cutoff is not being used (got ${cAfter})`);
+  await setEarned(0, 77);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(450);
+  if ((await page.$eval('[data-earned="0"]', (el) => Number(el.value))) !== 77) note('a typed score did not survive a reload');
   await fresh();
-}
 
-/* ── ②⭐⭐⭐ 够不到时,"差多少"必须是总评的分 ──────────────── */
-/**
- * 把所有未静音的分数都设成 70,关掉丢最低:
- *   均分 70 ⇒ 期末要 (89.5 − 10 − 45.5)/0.25 = 136(卷面)
- *   期末满分时总评 = 10 + 45.5 + 25 = 80.5 ⇒ 差 89.5 − 80.5 = **9.0**
- * 原稿会印 36.0(= 136 − 100)。两个数必须分得清楚。
- */
-await setField('dropLowest', false).catch(() => {});
-await page.$eval('[data-field="dropLowest"]', (el) => { if (el.checked) el.click(); });
-await page.waitForTimeout(120);
-for (let i = 0; i < 7; i += 1) await setPercent(i, 70);
-// 第 8 条是静音的,取消静音让它也算进去,保证均分干干净净是 70
-await page.$eval('[data-mute="6"]', (el) => { if (el.getAttribute('aria-pressed') === 'true') el.click(); });
-await page.waitForTimeout(150);
-
-{
-  const mean = await val('mean');
-  const need = await val('need');
-  if (Math.abs(mean - 70) > 1e-9) note(`expected a mean of exactly 70, got ${mean}`);
-  if (Math.abs(need - 136) > 1e-9) note(`expected the final to need 136, got ${need}`);
-
-  const verdict = await page.$eval('[data-panel="verdict"]', (el) => el.dataset.verdict);
-  if (verdict !== 'unreachable') note(`expected the verdict "unreachable", got "${verdict}"`);
-
-  const said = await text('[data-panel="verdict"]');
-  // ⭐⭐⭐ 必须出现 9.0(总评差距),绝不能出现 36(卷面差距冒充总评差距)
-  if (!said || !/\b9\.0\b/.test(said)) {
-    note(`the out-of-reach sentence does not state the 9.0-point shortfall: "${said}"`);
-  }
-  if (said && /short of [^.]*\b36(\.0)?\b/.test(said)) {
-    note(`REGRESSION: the shortfall is being reported in final-exam points (36) not course points (9): "${said}"`);
-  }
-  // 它也该把 80.5 这个"考满分能到哪"说出来 —— 那是 9.0 的来历
-  if (!said || !/\b80\.5\b/.test(said)) {
-    note(`the sentence never says what a perfect final would actually give: "${said}"`);
-  }
-}
-
-/* ── ③ 联动自洽:三个读数随时满足那条式子 ────────────────── */
-{
-  let probed = 0;
-  for (const score of [95, 88, 60, 40]) {
-    for (let i = 0; i < 7; i += 1) await setPercent(i, score);
-    await page.waitForTimeout(140);
-    const mean = await val('mean');
-    const need = await val('need');
-    if (Math.abs(mean - score) > 1e-9) { note(`all channels at ${score} should mean exactly ${score}, got ${mean}`); continue; }
-    if (need === null) { note(`no final needed shown at mean ${score}`); continue; }
-    // 手算同一条式子
-    const want = (89.5 - 0.1 * 100 - 0.65 * score) / 0.25;
-    if (Math.abs(need - want) > 1e-9) note(`at mean ${score} the page says ${need}, hand-computed ${want}`);
-    // 代回去必须落在目标上
-    const back = 0.1 * 100 + 0.65 * mean + 0.25 * need;
-    if (Math.abs(back - 89.5) > 1e-9) note(`substituting back at mean ${score} gives ${back}, not 89.5`);
-    probed += 1;
-  }
-  if (probed !== 4) note(`only ${probed} of 4 linkage probes ran`);
-}
-
-/* ── ④ 七种结论都够得着,而且该出现的句子才出现 ──────────── */
-const SEEN = new Set();
-async function readVerdict() {
-  const v = await page.$eval('[data-panel="verdict"]', (el) => el.dataset.verdict);
-  SEEN.add(v);
-  return v;
-}
-// unreachable / tight / doable / comfortable:靠均分扫一遍
-for (const score of [40, 84, 88, 97]) {
-  for (let i = 0; i < 7; i += 1) await setPercent(i, score);
-  await page.waitForTimeout(140);
-  await readVerdict();
-}
-// locked:目标调低
-await setField('targetA', 50);
-await page.waitForTimeout(140);
-if ((await readVerdict()) !== 'locked') note('a very low target should read as locked in');
-{
-  const said = await text('[data-panel="verdict"]');
-  if (!said || !/spare/i.test(said)) note(`the locked-in sentence does not say how much is to spare: "${said}"`);
-}
-await setField('targetA', 89.5);
-// final-does-not-count:期末 0 权重
-await setField('wFinal', 0);
-await page.waitForTimeout(140);
-if ((await readVerdict()) !== 'final-does-not-count') note('a zero-weight final should say the final cannot change anything');
-if ((await val('need')) !== null) note('with a zero-weight final there is no "final needed" to show');
-await setField('wFinal', 25);
-// no-data:全部静音
-for (let i = 0; i < 7; i += 1) {
-  await page.$eval(`[data-mute="${i}"]`, (el) => { if (el.getAttribute('aria-pressed') !== 'true') el.click(); });
-}
-await page.waitForTimeout(200);
-if ((await readVerdict()) !== 'no-data') note('muting everything should say nothing is counted');
-if ((await val('mean')) !== null) note('with nothing counted the mean must be blank, not 0');
-
-const WANT = ['comfortable', 'doable', 'final-does-not-count', 'locked', 'no-data', 'tight', 'unreachable'];
-for (const v of WANT) if (!SEEN.has(v)) note(`the verdict "${v}" is never reachable from the interface — dead UI`);
-
-/* ── ⑤ 权重警告只在真不平的时候出现 ─────────────────────── */
-await fresh();
-if ((await count('[data-weightwarn]')) !== 0) note('the weight warning shows even when the weights are balanced');
-await setField('wAssess', 60);
-if ((await count('[data-weightwarn]')) !== 1) note('weights summing to 95% should raise a warning');
-{
-  const said = await text('[data-weightwarn]');
-  if (!said || !/95/.test(said)) note(`the weight warning does not say what they add up to: "${said}"`);
-}
-await setField('wAssess', 65);
-if ((await count('[data-weightwarn]')) !== 0) note('the weight warning does not clear once the weights balance');
-
-/* ── ⑥ 丢最低:标记只落在真被丢掉的那条上 ───────────────── */
-await fresh();
-{
-  await setScore(0, 40);
-  await page.waitForTimeout(150);
-  const dropped = await page.$$eval('[data-strip][data-state="dropped"]', (els) => els.map((e) => e.dataset.strip));
-  if (dropped.length !== 1 || dropped[0] !== '0') note(`the lowest channel should be the dropped one, got [${dropped}]`);
-  const beforeMean = await val('mean');
-  // 关掉丢最低 ⇒ 40 分被算进去 ⇒ 均分必须下降
-  await page.$eval('[data-field="dropLowest"]', (el) => el.click());
-  await page.waitForTimeout(160);
-  const afterMean = await val('mean');
-  if (!(afterMean < beforeMean)) note(`counting the dropped 40 should lower the mean (${beforeMean} → ${afterMean})`);
-  if ((await count('[data-strip][data-state="dropped"]')) !== 0) note('nothing should be marked dropped once the rule is off');
-}
-
-/* ── ⑦ 存得住 ───────────────────────────────────────────── */
-await fresh();
-await setScore(0, 42);
-await page.reload({ waitUntil: 'networkidle' });
-await page.waitForTimeout(400);
-{
-  const back = await page.$eval('[data-earned="0"]', (el) => Number(el.value));
-  if (back !== 42) note(`a typed score did not survive a reload (got ${back})`);
-}
-
-/* ── ⑧ 键盘能调推子 ─────────────────────────────────────── */
-await fresh();
-{
   const before = await page.$eval('[data-earned="0"]', (el) => Number(el.value));
   await page.focus('[data-strip="0"] input[type="range"]');
   await page.keyboard.press('ArrowUp');
-  await page.waitForTimeout(120);
-  const after = await page.$eval('[data-earned="0"]', (el) => Number(el.value));
-  if (after === before) note('the arrow keys do not move a fader — keyboard users are shut out');
-}
+  await page.waitForTimeout(130);
+  if ((await page.$eval('[data-earned="0"]', (el) => Number(el.value))) === before) {
+    note('the arrow keys do not move a fader — keyboard users are shut out');
+  }
+  await fresh();
 
-/* ── ⑨ 用户看到的字里不许有中日韩字符 ───────────────────── */
-{
   const cjk = await page.evaluate(() => {
-    // ⚠️ innerText 而不是 textContent:KaTeX 把原始 TeX 藏在 <annotation> 里。
+    // ⚠️ innerText,不是 textContent:KaTeX 把原始 TeX 藏在隐藏的 <annotation> 里。
     const m = document.body.innerText.match(/[　-〿぀-ヿ㐀-䶿一-鿿豈-﫿]/g);
     return m ? [...new Set(m)].join('') : '';
   });
   if (cjk) note(`Chinese or Japanese characters are visible to the user: ${cjk}`);
 }
 
-/* ── ⑩ 首页进得来 ───────────────────────────────────────── */
-await page.goto(`http://localhost:${PORT}/#/`, { waitUntil: 'networkidle' });
-await page.waitForTimeout(300);
+/* ── ⑩ 首页横幅进得来 ───────────────────────────────────── */
 {
-  const card = await page.$('a[href="#/grade-console"]');
-  if (!card) note('there is no card linking to the grade console from the home page');
+  await page.goto(`http://localhost:${PORT}/#/`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(300);
+  const band = await page.$('[data-tool-band]');
+  if (!band) note('the Grade Console band is gone from the home page');
   else {
-    await card.hover();
-    await page.waitForTimeout(200);
-    if ((await page.$eval('#root', (el) => el.children.length)) === 0) note('hovering the card empties the page');
-    await card.click();
+    await band.click();
     await page.waitForTimeout(450);
-    if (!page.url().includes('grade-console')) note('clicking the card did not navigate');
-    if ((await count('[data-panel="strips"]')) !== 1) note('the tool did not render after clicking the card');
+    if (!page.url().includes('grade-console')) note('the band did not navigate');
+    if (!(await has('[data-panel="strips"]'))) note('the tool did not render after clicking the band');
   }
 }
 
@@ -441,13 +336,12 @@ await fresh();
 await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForTimeout(250);
 await page.screenshot({ path: join(OUT, 'grade-console-top.png'), clip: { x: 0, y: 0, width: 1280, height: 1000 } });
-for (let i = 0; i < 7; i += 1) await setPercent(i, 70);
-await page.$eval('[data-field="dropLowest"]', (el) => { if (el.checked) el.click(); });
-await page.$eval('[data-mute="6"]', (el) => { if (el.getAttribute('aria-pressed') === 'true') el.click(); });
+await toggle('[data-field="doing"]', true);
+await toggle('[data-mute="4"]', false);
 await page.waitForTimeout(250);
 await page.evaluate(() => window.scrollTo(0, 0));
-await page.screenshot({ path: join(OUT, 'grade-console-unreachable.png'), clip: { x: 0, y: 0, width: 1280, height: 1000 } });
-await page.evaluate(() => window.scrollTo(0, 700));
+await page.screenshot({ path: join(OUT, 'grade-console-project.png'), clip: { x: 0, y: 0, width: 1280, height: 1000 } });
+await page.evaluate(() => window.scrollTo(0, 620));
 await page.waitForTimeout(250);
 await page.screenshot({ path: join(OUT, 'grade-console-lower.png') });
 
@@ -461,4 +355,5 @@ if (fail.length) {
   for (const f of fail) console.error('  - ' + f);
   process.exit(1);
 }
-console.log('✓ grade-console:440/500 = 88.0% 与期末 89.2 手算一致、加分只进分子(+46 → 97.2%、期末 65.28、分母仍是 500)、丢的是 83% 那条、A/B/C 三档手算一致且结论真的不同、够不到时报的是总评差距(9.0 而非 36)、七种结论都可达、权重警告只在该出现时出现、存得住、键盘可调、无 CJK');
+console.log('✓ grade-console:87.25 / 88.95 / 88.67 / 90.18 / 87.47 全部手算一致、项目准则是乘积(任一不合格 −50)、+20 之后饱和、'
+  + '加分落点三种情形三种答案、T ≤ 85 时曲线变平(不是 70)、丢最低成立时违规代价为 0、两处 unconfirmed 已标注、无 CJK');

@@ -1,713 +1,677 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AVERAGE_TEX, COMFORTABLE_BELOW, EQUATION_TEX, GOALS, HEADLINE, SEED_ITEMS, SEED_SETUP,
-  SOLVED_TEX, TIGHT_ABOVE, VERDICT_WORD, WEIGHT_SLOP,
-  clampBonus, clampEarned, clampPossible, countedMean, cutoffOf, finalNeeded,
-  finalNeededByBisection, gradeWith, lockedGrade, migrateItem, missBy, percentOf, spareBy,
-  targetOf, totalPointsByWeightedMean, verdictOf, weightSum, weightsBalanced, weightsOf,
-  type Item, type Setup,
+  ARTISTIC_SCORES, COMFORTABLE_BELOW, EQUATION_TEX, EXPLANATION_SCORES, GOALS, GUIDELINES,
+  HEADLINE, IN_PROGRESS_TEX, MATH_SCORES, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS,
+  SEED_PROJECT, SEED_SETUP, SOLVED_TEX, TIGHT_ABOVE, VERDICT_WORD, WEIGHT_SLOP,
+  type Goal, type Item, type Project, type Setup,
+  applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, finalNeededByBisection,
+  gradeWith, guidelinesAllMet, inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem,
+  missBy, percentOf, projectPoints, projectScore, roundedPercent, scoreNeededFor, spareBy,
+  targetOf, verdictOf, weightSum, weightsBalanced, weightsOf,
 } from './gradeTarget';
 
 const S = SEED_SETUP;
-/** 改一两个字段,别的照抄。 */
 const withS = (o: Partial<Setup>): Setup => ({ ...S, ...o });
-const item = (score: number, muted = false): Item =>
-  ({ name: 'x', earned: score, possible: 100, muted });
-/** 带分值的一条,用来测两种算法分道扬镳的情形。 */
-const pts = (earned: number, possible: number, muted = false): Item =>
+const withP = (o: Partial<Project>): Project => ({ ...SEED_PROJECT, ...o });
+const pts = (earned: number, possible = 100, muted = false): Item =>
   ({ name: `${earned}/${possible}`, earned, possible, muted });
-/** 老的调用点默认按 mean-of-grades 读 —— 等分值时两种算法等价,原有断言照样成立。 */
-const counted = (items: readonly Item[], dropLowest: boolean) =>
-  countedMean(items, dropLowest);
 
-describe('the one equation, both directions', () => {
-  /**
-   * ⭐⭐⭐ 路径② —— 最朴素也最有力的验算:
-   *   把解出来的期末分**代回正向公式**,必须正好落在目标上。
-   *   反解公式写错一个符号、漏一个权重,这一条立刻红。
-   */
-  it('⭐⭐⭐ 解出来的期末分代回去,正好等于目标', () => {
+/** 常用快捷方式:没有项目时,直接按百分比算类目均分。 */
+const plainMean = (items: readonly Item[], dropLowest = true, method = S.method) =>
+  meanOf(items, items.map(percentOf), dropLowest, method);
+
+/** 一整套走下来:项目 → 百分比 → 丢最低 → 均分 → 期末要多少。 */
+function pipeline(items: readonly Item[], setup: Setup, project: Project) {
+  const applied = applyProject(items, project, setup.dropLowest, setup.method);
+  const counted = meanOf(items, applied.percents, setup.dropLowest, setup.method);
+  return { applied, counted, need: finalNeeded(setup, counted.mean) };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   教学大纲那条式子,两个方向
+   ════════════════════════════════════════════════════════════════ */
+
+describe('the syllabus formula, both directions', () => {
+  it('⭐⭐⭐ 路径②:解出来的期末分代回去,正好等于目标', () => {
     let checked = 0;
     for (const goal of GOALS) {
       for (const wFinal of [5, 20, 25, 40, 60]) {
-        for (const mean of [0, 55, 72.5, 88.6667, 100]) {
+        for (const m of [0, 55, 87.25, 95.25, 100]) {
           const s = withS({ goal, wFinal, wAssess: 100 - 10 - wFinal });
-          const need = finalNeeded(s, mean);
+          const need = finalNeeded(s, m);
           expect(need, `wFinal=${wFinal}`).not.toBeNull();
-          expect(gradeWith(s, mean, need!)).toBeCloseTo(targetOf(s), 10);
+          expect(gradeWith(s, m, need!)).toBeCloseTo(targetOf(s), 10);
           checked += 1;
         }
       }
     }
-    expect(checked).toBe(GOALS.length * 5 * 5); // 空转防护:循环真的跑满了
+    expect(checked).toBe(GOALS.length * 5 * 5);
   });
 
-  /** ⭐⭐⭐ 路径③ —— 二分正向函数,完全不碰反解公式。 */
-  it('⭐⭐⭐ 二分法给出同一个答案', () => {
+  it('⭐⭐⭐ 路径③:二分正向函数,给出同一个答案', () => {
     let checked = 0;
     for (const wFinal of [5, 25, 50]) {
-      for (const mean of [40, 70, 88.6667, 99]) {
+      for (const m of [40, 70, 87.25, 99]) {
         const s = withS({ wFinal, wAssess: 100 - 10 - wFinal });
-        const closed = finalNeeded(s, mean)!;
-        const searched = finalNeededByBisection(s, mean)!;
-        expect(searched, `wFinal=${wFinal} mean=${mean}`).toBeCloseTo(closed, 8);
+        expect(finalNeededByBisection(s, m)!).toBeCloseTo(finalNeeded(s, m)!, 8);
         checked += 1;
       }
     }
     expect(checked).toBe(12);
   });
 
-  it('⚠️ 两条路径确实是两套算法 —— 二分法只用 gradeWith', () => {
-    // 如果二分法内部偷偷调了 finalNeeded,它就不是独立路径了。
-    // 这里用一个**反解公式会出错但正向不会**的场景间接验证:
-    // 目标高到期末 150 分才够,二分区间必须能跑出 100 以外。
-    const s = withS({ wFinal: 25, wAssess: 65, targetA: 89.5 });
-    const need = finalNeededByBisection(s, 60)!;
-    expect(need).toBeGreaterThan(100);
-    expect(gradeWith(s, 60, need)).toBeCloseTo(89.5, 8);
+  it('⚠️ 权重就是 10 / 65 / 25,作业按 100 分算', () => {
+    expect(S.wAssign).toBe(10);
+    expect(S.wAssess).toBe(65);
+    expect(S.wFinal).toBe(25);
+    expect(S.assignScore).toBe(100);
+    expect(weightsBalanced(S)).toBe(true);
   });
 
-  it('正向公式就是加权平均', () => {
-    // 三项都满分,总评就是满分(前提是权重加起来 100)
-    expect(gradeWith(S, 100, 100)).toBeCloseTo(100, 10);
-    // 三项都 0 分,总评 0
-    expect(gradeWith(withS({ assignScore: 0 }), 0, 0)).toBeCloseTo(0, 10);
-    // 只有期末满分
-    expect(gradeWith(withS({ assignScore: 0 }), 0, 100)).toBeCloseTo(25, 10);
+  it('⚠️ A 线是 89.5,不是 90 —— 成绩四舍五入到整数', () => {
+    expect(S.targetA).toBe(89.5);
+    expect(roundedPercent(89.5)).toBe(90);
+    expect(letterFor(89.5)).toBe('A');
+    expect(letterFor(89.49)).toBe('B');
   });
 });
 
-describe('the seed numbers', () => {
+/* ════════════════════════════════════════════════════════════════
+   当前真实处境 —— 交接文档里的数,全部手算核对
+   ════════════════════════════════════════════════════════════════ */
+
+describe('⭐⭐⭐ where the grade actually stands', () => {
   /**
    * ⚠️ 期望值在这里**手算一遍**,不是从实现里抄的:
-   *   未静音的七条是 83, 91, 85, 88, 92, 88, 88;丢掉最低的 83;
-   *   剩下六条和 = 91+85+88+92+88+88 = 532,均分 532/6 = 88.6667。
-   *   期末 = (89.5 − 0.10×100 − 0.65×88.6667) / 0.25
-   *        = (89.5 − 10 − 57.6333) / 0.25 = 21.8667 / 0.25 = 87.4667
+   *   四场测验 83, 91, 85, 90 → (83+91+85+90)/4 = 349/4 = 87.25
    */
-  /**
-   * ⚠️ 期望值在这里**手算一遍**,不是从实现里抄的:
-   *   去掉 Project 之后,未静音的六条是 83, 91, 85, 88, 88, 88(第七条静音);
-   *   丢掉最低的 83;剩五条 85+88+88+88+91 = 440,满分 500 → 88.0%。
-   *   期末 = (89.5 − 0.10×100 − 0.65×88) / 0.25 = (89.5 − 10 − 57.2) / 0.25 = 89.2
-   */
-  it('⭐⭐ 默认数据:丢掉 83,440/500 = 88.0%,期末要 89.2', () => {
-    const c = counted(SEED_ITEMS, true);
-    expect(c.live).toBe(6);
-    expect(c.counted).toBe(5);
-    expect(percentOf(SEED_ITEMS[c.droppedIndex]!)).toBe(83);
-    expect(c.earned).toBe(440);
-    expect(c.possible).toBe(500);
-    expect(c.mean).toBeCloseTo(88, 10);
-    expect(finalNeeded(S, c.mean)).toBeCloseTo((89.5 - 10 - 0.65 * 88) / 0.25, 10);
-    expect(finalNeeded(S, c.mean)).toBeCloseTo(89.2, 8);
+  it('⭐⭐ 四场测验的均分是 87.25', () => {
+    const live = SEED_ITEMS.filter((i) => !i.muted);
+    expect(live).toHaveLength(4);
+    expect(live.map((i) => i.earned)).toEqual([83, 91, 85, 90]);
+    expect(plainMean(SEED_ITEMS, false).mean).toBeCloseTo(349 / 4, 10);
+    expect(plainMean(SEED_ITEMS, false).mean).toBeCloseTo(87.25, 10);
   });
 
-  it('⚠️ 不丢最低的话,期末要得更多', () => {
-    const kept = counted(SEED_ITEMS, false);
-    expect(kept.counted).toBe(6);
-    expect(kept.earned).toBe(523);
-    expect(kept.possible).toBe(600);
-    expect(kept.mean).toBeCloseTo((523 / 600) * 100, 10);
-    // 均分低了,期末自然要高 —— 方向必须对
-    expect(finalNeeded(S, kept.mean)!).toBeGreaterThan(finalNeeded(S, counted(SEED_ITEMS, true).mean)!);
+  it('⭐⭐ PowerSchool 现在显示 88.95 → 89.0(B)', () => {
+    // (0.10×100 + 0.65×87.25) / 0.75 = (10 + 56.7125) / 0.75 = 88.95
+    const shown = inProgressDisplay(S, 87.25)!;
+    expect(shown).toBeCloseTo(88.95, 10);
+    expect(roundedPercent(shown)).toBe(89);
+    expect(letterFor(shown)).toBe('B');
+  });
+
+  it('⚠️ 那个 0.75 是算出来的,不是写死的', () => {
+    // 改权重时它必须跟着变,否则就会悄悄给出错的数
+    const odd = withS({ wAssign: 20, wAssess: 55 });
+    expect(inProgressDisplay(odd, 87.25)).toBeCloseTo((20 * 100 + 55 * 87.25) / 75, 10);
+    const other = withS({ wAssign: 30, wAssess: 30, wFinal: 40 });
+    expect(inProgressDisplay(other, 80)).toBeCloseTo((30 * 100 + 30 * 80) / 60, 10);
+  });
+
+  it('⭐⭐ 丢掉最低之后是 88.67,显示 90.2(A)', () => {
+    // 丢 83 → (91+85+90)/3 = 266/3 = 88.6667
+    const c = plainMean(SEED_ITEMS, true);
+    expect(SEED_ITEMS[c.droppedIndex]!.earned).toBe(83);
+    expect(c.mean).toBeCloseTo(266 / 3, 10);
+    expect(c.mean).toBeCloseTo(88.6667, 4);
+    const shown = inProgressDisplay(S, c.mean)!;
+    expect(shown).toBeCloseTo(90.18, 2);
+    expect(roundedPercent(shown)).toBe(90);
+    expect(letterFor(shown)).toBe('A');
+  });
+
+  it('⭐ 丢最低现在值 1.2 个点', () => {
+    const without = inProgressDisplay(S, plainMean(SEED_ITEMS, false).mean)!;
+    const withDrop = inProgressDisplay(S, plainMean(SEED_ITEMS, true).mean)!;
+    expect(withDrop - without).toBeCloseTo(1.23, 2);
+  });
+
+  it('⭐ 不做项目、丢最低成立时,期末要 87.5', () => {
+    // (89.5 − 10 − 0.65×88.6667) / 0.25 = 21.8667 / 0.25 = 87.4667
+    const need = finalNeeded(S, plainMean(SEED_ITEMS, true).mean)!;
+    expect(need).toBeCloseTo(87.4667, 4);
   });
 });
 
-describe('⭐⭐⭐ the bug this page was built to fix', () => {
-  /**
-   * 原稿在"够不到"的时候印的是 `need − 100`,那是**期末卷面**的差距;
-   * 问的却是**学期总评**差多少。两者差一个 w_final。
-   * 期末占 25% 时,原稿把差距夸大四倍 —— 只差 9 分会被说成差 36 分。
-   */
-  it('⭐⭐⭐ 差多少算的是总评的分,不是期末卷面的分', () => {
-    const s = withS({ wFinal: 25, wAssess: 65, targetA: 89.5 });
-    for (const mean of [81.92, 78, 70, 60]) {
-      const need = finalNeeded(s, mean)!;
-      expect(need).toBeGreaterThan(100); // 前提:确实够不到
+/* ════════════════════════════════════════════════════════════════
+   项目
+   ════════════════════════════════════════════════════════════════ */
 
-      const gap = missBy(s, mean)!;
-      // 定义:目标 − 期末满分时的总评
-      expect(gap).toBeCloseTo(targetOf(s) - gradeWith(s, mean, 100), 10);
-      // 等价写法:权重 × 卷面差距
-      expect(gap).toBeCloseTo(0.25 * (need - 100), 10);
-      // ⚠️ 而**原稿那个数**正好是它的四倍 —— 这一条把错法本身钉死,
-      //    以后谁再写回去,这里就会红。
-      expect(need - 100).toBeCloseTo(gap / 0.25, 8);
-      expect(need - 100).not.toBeCloseTo(gap, 2);
+describe('⭐⭐⭐ the project', () => {
+  it('⭐⭐⭐ 任何一条准则没做到 → 整个乘积是 0 → 直接 −50', () => {
+    const good = withP({ doing: true, math: 12, artistic: 6, explanation: 2 });
+    expect(projectScore(good)).toBe(20);
+    expect(projectPoints(good)).toBe(50);
+    // 满分的作品,只要有一条准则没做到,就从 +50 掉到 −50
+    for (const g of GUIDELINES) {
+      const failed = withP({ ...good, met: { ...good.met, [g.key]: false } });
+      expect(guidelinesAllMet(failed), g.key).toBe(false);
+      expect(projectPoints(failed), g.key).toBe(-50);
     }
   });
 
-  it('⭐⭐ 手算的一组:均分 70 时差 9.0 分,不是 36 分', () => {
-    const s = withS({ wFinal: 25, wAssess: 65, targetA: 89.5 });
-    // 0.10×100 + 0.65×70 + 0.25×100 = 10 + 45.5 + 25 = 80.5;89.5 − 80.5 = 9.0
-    expect(gradeWith(s, 70, 100)).toBeCloseTo(80.5, 10);
-    expect(missBy(s, 70)).toBeCloseTo(9.0, 10);
-    expect(finalNeeded(s, 70)).toBeCloseTo(136, 10);
-  });
-
-  it('⚠️ 期末权重越小,同样的卷面差距对总评的影响越小', () => {
-    // 这是"为什么不能直接用卷面差"的根本原因,单独钉一条。
-    const small = withS({ wFinal: 10, wAssess: 80 });
-    const big = withS({ wFinal: 50, wAssess: 40 });
-    const gapSmall = missBy(small, 50);
-    const gapBig = missBy(big, 50);
-    expect(gapSmall).not.toBeNull();
-    expect(gapBig).not.toBeNull();
-    // 期末占比小 ⇒ 期末救不了你 ⇒ 差得更多
-    expect(gapSmall!).toBeGreaterThan(gapBig!);
-  });
-
-  it('够得到的时候没有"差多少"这回事', () => {
-    expect(missBy(S, 88.6667)).toBeNull();
-    expect(missBy(S, 100)).toBeNull();
-  });
-
-  it('⭐ 稳了的时候,富余也按总评算', () => {
-    const s = withS({ targetA: 60 });
-    const spare = spareBy(s, 95)!;
-    // 定义:期末 0 分时的总评 − 目标
-    expect(spare).toBeCloseTo(gradeWith(s, 95, 0) - 60, 10);
-    expect(gradeWith(s, 95, 0)).toBeCloseTo(10 + 0.65 * 95, 10);
-    expect(spare).toBeCloseTo(10 + 61.75 - 60, 10);
-    // 没稳的时候是 null
-    expect(spareBy(S, 88.6667)).toBeNull();
-  });
-});
-
-describe('⭐⭐⭐ points earned over points possible', () => {
-  /**
-   * 起因:project 在 PowerSchool 里按 50 分计(46/50),而原来的模型
-   * 默认一切都是百分制 —— 46 会被读成 46%,而它其实是 92%。
-   */
-  it('⭐⭐⭐ 百分比是 得分 ÷ 满分,不是卷面分', () => {
-    expect(percentOf(pts(46, 50))).toBe(92);
-    expect(percentOf(pts(92, 100))).toBe(92);
-    // 这两条在"百分比"这件事上完全一样 —— mean-of-grades 分不出它们
-    expect(percentOf(pts(46, 50))).toBe(percentOf(pts(92, 100)));
-  });
-
-  /**
-   * ⭐⭐⭐ 丢最低按**百分比**挑。
-   *   按卷面原始分挑的话,46 分的 project 会显得比 83 分的测验还低,
-   *   于是把考得最好的那一场丢掉 —— 这是正确性问题,不是细节。
-   */
-  it('⭐⭐⭐ 丢的是百分比最低的那条,不是卷面分最低的那条', () => {
-    const items = [pts(83, 100), pts(46, 50), pts(91, 100)];
-    const c = countedMean(items, true);
-    expect(c.droppedIndex, 'should drop the 83%, not the 46-point project at 92%').toBe(0);
-    // 负向对照:如果按卷面分挑,丢的会是第 1 条(46 分)
-    const byRawPoints = items.reduce((lo, it, i) => (it.earned < items[lo]!.earned ? i : lo), 0);
-    expect(byRawPoints).toBe(1);
-    expect(c.droppedIndex).not.toBe(byRawPoints);
-  });
-
-  /**
-   * ⭐⭐⭐ 变异测试逼出来的:只要所有题都是满分 100,
-   *   "百分比"和"卷面分"在数值上**恰好相等**,于是按哪个排都看不出区别 ——
-   *   把挑选逻辑改成按卷面分,测试照样全绿。
-   *   这一组故意让最低百分比(75%)**不等于任何一条的卷面分**,
-   *   按卷面分找就会一条都匹配不上,漏洞立刻现形。
-   */
-  it('⭐⭐⭐ 最低百分比不等于任何卷面分时,照样挑得对', () => {
-    //  46/50 = 92% · 30/40 = 75% · 90/100 = 90%  → 最低是 75%,而没有哪条的卷面分是 75
-    const items = [pts(46, 50), pts(30, 40), pts(90, 100)];
-    expect(items.some((it) => it.earned === 75)).toBe(false);
-    const c = countedMean(items, true);
-    expect(c.droppedIndex).toBe(1);
-    expect(c.counted).toBe(2);
-    // 按总分:(46 + 90) / (50 + 100) = 136/150 = 90.6667%
-    expect(c.mean).toBeCloseTo((136 / 150) * 100, 10);
-  });
-
-  it('⭐⭐ 46/50 这种分值在总分模型里按它的分量计入', () => {
-    // 一道 50 分的 92% 和一道 100 分的 92%,对总分的贡献不一样
-    const small = countedMean([pts(46, 50), pts(80, 100)], false);
-    const big = countedMean([pts(92, 100), pts(80, 100)], false);
-    expect(small.mean).toBeCloseTo((126 / 150) * 100, 10); // 84.0
-    expect(big.mean).toBeCloseTo((172 / 200) * 100, 10);   // 86.0
-    // 小分值的高分拉得少
-    expect(small.mean!).toBeLessThan(big.mean!);
-  });
-
-  /**
-   * ⭐⭐⭐ 独立路径①:**每一项满分都相同时,两种算法必须给出完全一样的数。**
-   *   这是个真的代数恒等式(分母相同 ⇒ 比值的平均 = 和的比值),
-   *   而两边的代码路径完全不同 —— 一个只碰百分比,一个只碰原始分。
-   *   任何一边写错,这一条立刻红。
-   */
-  it('⭐⭐⭐ 等分值时两种算法逐位相同', () => {
-    const sets: Item[][] = [
-      [pts(83, 100), pts(91, 100), pts(85, 100)],
-      [pts(7, 20), pts(13, 20), pts(19, 20), pts(20, 20)],
-      [pts(0, 50), pts(50, 50)],
-      [pts(3, 7), pts(5, 7), pts(7, 7), pts(1, 7)],
-    ];
-    let checked = 0;
-    for (const items of sets) {
-      for (const drop of [true, false]) {
-        const a = countedMean(items, drop).mean!;
-        const b = countedMean(items, drop).mean!;
-        expect(b).toBeCloseTo(a, 12);
-        checked += 1;
-      }
-    }
-    expect(checked).toBe(8);
-  });
-
-  /**
-   * ⭐⭐⭐ 独立路径②:`total-points` 等于**按满分加权的百分比平均**。
-   *   Σ得分/Σ满分 和 Σ(百分比×满分)/Σ满分 代数上恒等,代码路径不同。
-   */
-  it('⭐⭐⭐ total-points 等于按分值加权的百分比平均', () => {
-    const sets: Item[][] = [
-      SEED_ITEMS as Item[],
-      [pts(46, 50), pts(83, 100), pts(19, 20)],
-      [pts(1, 3), pts(97, 100), pts(40, 40), pts(0, 10)],
-    ];
-    let checked = 0;
-    for (const items of sets) {
-      for (const drop of [true, false]) {
-        const direct = countedMean(items, drop).mean!;
-        const weighted = totalPointsByWeightedMean(items, drop)!;
-        expect(weighted).toBeCloseTo(direct, 10);
-        checked += 1;
-      }
-    }
-    expect(checked).toBe(6);
-  });
-
-  it('⚠️ 得分/满分合计只算计入的那些条', () => {
-    // 去掉 Project 之后:未静音六条 83 91 85 88 88 88,丢掉 83,
-    // 剩 85+88+88+88+91 = 440,满分 5×100 = 500。
-    const c = countedMean(SEED_ITEMS, true);
-    expect(c.earned).toBe(440);
-    expect(c.possible).toBe(500);
-    expect(c.bonus).toBe(0);
-    expect(c.mean).toBeCloseTo(88, 10);
-  });
-
-  it('⚠️ 全静音时 earned / possible 是 0,mean 是 null', () => {
-    const c = countedMean([pts(46, 50, true)], true);
-    expect(c.mean).toBeNull();
-    expect(c.earned).toBe(0);
-    expect(c.possible).toBe(0);
-    // ⚠️ 0/0 会是 NaN —— 必须被 counted===0 那一支拦住
-    expect(Number.isNaN(c.mean as unknown as number)).toBe(false);
-  });
-
-  /**
-   * ⭐⭐⭐ 加分:**只加分子**。
-   *   连分母一起加的话,它就只是一道普通的 50 分测验 ——
-   *   和被删掉的 Project 一模一样,这个概念也就不必存在。
-   */
-  it('⭐⭐⭐ 加分加在得分上,满分一点不动', () => {
-    const base = countedMean(SEED_ITEMS, true);
-    const withEc = countedMean(SEED_ITEMS, true, 46);
-    expect(withEc.possible).toBe(base.possible); // 分母纹丝不动
-    expect(withEc.earned).toBe(base.earned);     // 原始得分合计也不动
-    expect(withEc.bonus).toBe(46);
-    // 均分 = (440 + 46) / 500 = 97.2%
-    expect(withEc.mean).toBeCloseTo(97.2, 10);
-    // 手算期末:(89.5 − 10 − 0.65×97.2) / 0.25 = 65.28
-    expect(finalNeeded(S, withEc.mean)).toBeCloseTo(65.28, 8);
-  });
-
-  it('⭐⭐ 加分能把类目均分顶到 100% 以上 —— 那正是它的意义', () => {
-    const items = [pts(100, 100)];
-    const c = countedMean(items, false, 20);
-    expect(c.mean).toBeCloseTo(120, 10);
-    // ⚠️ 顶过 100 之后别的量也不许崩
-    // 手算:(89.5 − 10 − 0.65×120) / 0.25 = 1.5 / 0.25 = 6.0
-    expect(finalNeeded(S, c.mean)).toBeCloseTo(6, 10);
-    expect(verdictOf(S, c.mean)).toBe('comfortable');
-  });
-
-  it('⭐⭐ 加分 0 时和没有加分完全一样', () => {
-    const a = countedMean(SEED_ITEMS, true);
-    const b = countedMean(SEED_ITEMS, true, 0);
-    expect(b).toEqual(a);
-  });
-
-  it('⭐⭐ 加分单调:填得越多,期末要求越低', () => {
-    let last = Infinity;
-    for (const ec of [0, 10, 25, 46, 50]) {
-      const m = countedMean(SEED_ITEMS, true, ec).mean!;
-      const f = finalNeeded(S, m)!;
-      expect(f).toBeLessThan(last);
-      last = f;
-    }
-  });
-
-  it('⭐⭐⭐ 独立路径:加权百分比平均 + 加分,给同一个数', () => {
-    let checked = 0;
-    for (const items of [SEED_ITEMS as Item[], [pts(46, 50), pts(83, 100), pts(19, 20)]]) {
-      for (const drop of [true, false]) {
-        for (const ec of [0, 17, 50]) {
-          const direct = countedMean(items, drop, ec).mean!;
-          const weighted = totalPointsByWeightedMean(items, drop, ec)!;
-          expect(weighted).toBeCloseTo(direct, 10);
-          checked += 1;
+  it('⭐⭐⭐ 点数恒为 10 的倍数,范围 −50..+50 —— 没有"38 分"', () => {
+    const seen = new Set<number>();
+    for (const math of MATH_SCORES) {
+      for (const artistic of ARTISTIC_SCORES) {
+        for (const explanation of EXPLANATION_SCORES) {
+          const p = withP({ doing: true, math, artistic, explanation });
+          const pt = projectPoints(p);
+          // ⚠️ `-50 % 10` 在 JS 里是 `-0`,Object.is 下不等于 0 —— 取绝对值。
+          expect(Math.abs(pt % 10), `${math}+${artistic}+${explanation}`).toBe(0);
+          expect(pt).toBeGreaterThanOrEqual(-50);
+          expect(pt).toBeLessThanOrEqual(50);
+          seen.add(pt);
         }
       }
     }
-    expect(checked).toBe(12);
+    // 三个分项全是偶数 ⇒ SCORE 偶数 ⇒ 5×SCORE 是 10 的倍数
+    expect([...seen].sort((a, b) => a - b)).toEqual([-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]);
   });
 
-  it('⚠️ 加分夹在 0..加分满分 之间', () => {
-    expect(clampBonus(-5, 50)).toBe(0);
-    expect(clampBonus(60, 50)).toBe(50);
-    expect(clampBonus(46, 50)).toBe(46);
-    expect(clampBonus(Number.NaN, 50)).toBe(0);
-    // 加分满分本身也至少是 1
-    expect(clampBonus(5, 0)).toBe(1);
-  });
-
-  it('⚠️ 全静音时加分也无处可加 —— 不许凭空算出一个均分', () => {
-    const c = countedMean([pts(46, 50, true)], true, 46);
-    expect(c.possible).toBe(0);
-    expect(c.mean).toBeNull();
-    expect(Number.isFinite(c.mean as unknown as number)).toBe(false);
-  });
-
-  it('⚠️ 默认不替用户假设拿了多少加分', () => {
-    expect(SEED_SETUP.ecEarned).toBe(0);
-    expect(SEED_SETUP.ecPossible).toBe(50);
-  });
-
-  it('⚠️ 种子里不再有 Project', () => {
-    expect(SEED_ITEMS.some((i) => i.name === 'Project')).toBe(false);
-    expect(SEED_ITEMS).toHaveLength(7);
-    expect(SEED_ITEMS.filter((i) => !i.muted)).toHaveLength(6);
-    // 全部都是百分制了
-    expect(SEED_ITEMS.every((i) => i.possible === 100)).toBe(true);
-  });
-});
-
-describe('⚠️ migrating saved data', () => {
-  /**
-   * 改模型会悄悄弄坏已经存下来的数据。旧存档只有百分制的 `score`,
-   * 不迁移的话 `earned` 读出来是 undefined → NaN → 整列空白,而且不报错。
-   */
-  it('⭐⭐ 旧格式 { score } 变成 { earned, possible: 100 },百分比不变', () => {
-    const old = migrateItem({ name: 'Assess 1', score: 83, muted: false });
-    expect(old).toEqual({ name: 'Assess 1', earned: 83, possible: 100, muted: false });
-    expect(percentOf(old)).toBe(83);
-  });
-
-  it('⭐ 新格式原样通过', () => {
-    const now = migrateItem({ name: 'Project', earned: 46, possible: 50, muted: false });
-    expect(now).toEqual({ name: 'Project', earned: 46, possible: 50, muted: false });
-    expect(percentOf(now)).toBe(92);
+  it('⭐⭐ +20 需要 SCORE 14(math 8 + art 4 + paper 2)', () => {
+    expect(scoreNeededFor(20)).toBe(14);
+    const aim = withP({ doing: true, math: 8, artistic: 4, explanation: 2 });
+    expect(projectScore(aim)).toBe(14);
+    expect(projectPoints(aim)).toBe(20);
+    // 种子就是这条推荐线
+    expect(projectScore(SEED_PROJECT)).toBe(14);
   });
 
   /**
-   * ⭐⭐ 也是变异测试逼出来的:`possible` 是个**有限但非法**的数(0 或负数)时,
-   *   会走"新格式"那一支,而不是回退到旧格式 —— 不夹住就会算出 Infinity%。
-   *   原来的垃圾输入清单里全是 NaN,刚好绕过了这一支。
+   * ⭐⭐ 变异测试逼出来的:去掉 `points === 0` 的提前返回之后,
+   *   百分比一个都没变(加 0 等于没加),所以数值断言全过 ——
+   *   但 `targetIndex` 会被设成某一场,页面于是会写出
+   *   "Applied to Precalc",而用户**根本没在做这个项目**。
    */
-  it('⭐⭐ possible 是 0 或负数时夹到 1,不许算出 Infinity', () => {
-    for (const bad of [0, -5, -0.2]) {
-      const it = migrateItem({ name: 'x', earned: 5, possible: bad, muted: false });
-      expect(it.possible, `possible=${bad}`).toBe(1);
-      expect(Number.isFinite(percentOf(it))).toBe(true);
-      // 得分也跟着夹到新的满分
-      expect(it.earned).toBe(1);
-      expect(percentOf(it)).toBe(100);
-    }
+  it('⭐⭐ 不做项目时,不许声称把点数加在了哪一场上', () => {
+    const a = applyProject(SEED_ITEMS, withP({ doing: false }), true, S.method);
+    expect(a.points).toBe(0);
+    expect(a.targetIndex).toBe(-1);
+    expect(a.ties).toEqual([]);
+    expect(a.percents).toEqual(SEED_ITEMS.map(percentOf));
   });
 
-  it('⚠️ 垃圾输入不许变成 NaN', () => {
-    for (const junk of [null, undefined, 42, 'nope', {}, { name: 5 }, { earned: 'x', possible: 'y' }]) {
-      const it = migrateItem(junk);
-      expect(Number.isFinite(it.earned), JSON.stringify(junk)).toBe(true);
-      expect(Number.isFinite(it.possible), JSON.stringify(junk)).toBe(true);
-      expect(it.possible).toBeGreaterThanOrEqual(1);
-      expect(Number.isFinite(percentOf(it))).toBe(true);
-      expect(typeof it.name).toBe('string');
-      expect(it.name.length).toBeGreaterThan(0);
-    }
+  it('⚠️ 不做项目是 0,不是 −50 —— "没交"和"交了但违规"是两回事', () => {
+    expect(projectPoints(withP({ doing: false }))).toBe(0);
+    expect(projectPoints(withP({ doing: false, met: { ...SEED_PROJECT.met, paper: false } }))).toBe(0);
+    expect(SEED_PROJECT.doing).toBe(false);
   });
 
-  it('⚠️ 迁移出来的条目直接能进 countedMean', () => {
-    const migrated = [
-      { name: 'a', score: 83, muted: false },
-      { name: 'b', score: 91, muted: false },
-      { name: 'c', earned: 46, possible: 50, muted: false },
-    ].map(migrateItem);
-    const c = countedMean(migrated, true);
-    expect(c.droppedIndex).toBe(0);
-    // 按总分:(91 + 46) / (100 + 50) = 137/150 = 91.3333%
-    expect(c.mean).toBeCloseTo((137 / 150) * 100, 10);
+  it('⭐⭐⭐ 点数加到某一场的**百分比**上,封顶 100', () => {
+    const items = [pts(83), pts(91)];
+    const p = withP({ doing: true, math: 12, artistic: 6, explanation: 2, target: 0 }); // +50
+    const a = applyProject(items, p, false, S.method);
+    expect(a.points).toBe(50);
+    expect(a.targetIndex).toBe(0);
+    expect(a.percents[0]).toBe(100); // 83 + 50 = 133 → 封到 100
+    expect(a.percents[1]).toBe(91);  // 别的场不动
+  });
+
+  it('⚠️ 负点数会把分数压下去,但不低于 0', () => {
+    const items = [pts(83), pts(91)];
+    const failed = withP({ doing: true, met: { ...SEED_PROJECT.met, noWords: false }, target: 0 });
+    const a = applyProject(items, failed, false, S.method);
+    expect(a.points).toBe(-50);
+    expect(a.percents[0]).toBe(33); // 83 − 50
+    const tiny = applyProject([pts(20)], failed, false, S.method);
+    expect(tiny.percents[0]).toBe(0); // 20 − 50 → 夹到 0,不是 −30
+  });
+
+  /**
+   * ⭐⭐⭐ 饱和:最低的那场是 83,离 100% 只差 17 分。
+   *   点数是 10 的倍数,所以 +20 一步就顶满 —— 再往上一分钱都买不到东西。
+   */
+  /**
+   * ⭐⭐⭐ 饱和:最低的那场是 83,离 100% 只差 17 分。
+   *   点数是 10 的倍数,所以 +20 一步就顶满 —— 再往上一分钱都买不到东西。
+   */
+  it('⭐⭐⭐ +20 之后就饱和了:+20 / +30 / +40 / +50 结果完全一样', () => {
+    /** 造一个**恰好**值这么多点数的项目。 */
+    const worth = (points: number): Project => {
+      const score = (points + 50) / 5;
+      const math = Math.min(12, Math.floor(score / 4) * 4);
+      const rest = score - math;
+      const artistic = Math.min(6, Math.floor(rest / 2) * 2);
+      const explanation = rest - artistic >= 2 ? 2 : 0;
+      const p = withP({ doing: true, math, artistic, explanation, target: 'auto' });
+      expect(projectPoints(p), `could not build a project worth ${points}`).toBe(points);
+      return p;
+    };
+    const need = (points: number) => pipeline(SEED_ITEMS, S, worth(points)).need!;
+
+    const twenty = need(20);
+    for (const more of [30, 40, 50]) {
+      expect(need(more), `+${more} should be identical to +20`).toBeCloseTo(twenty, 10);
+    }
+    // ⚠️ 而 +10 **不**一样 —— 否则上面那条断言是空转的
+    expect(need(10)).toBeGreaterThan(twenty + 0.5);
   });
 });
 
-describe('countedMean', () => {
+/* ════════════════════════════════════════════════════════════════
+   点数加到哪一场 —— 交接文档里推错的地方
+   ════════════════════════════════════════════════════════════════ */
+
+describe('⭐⭐⭐ which assessment to put the points on', () => {
+  const projectWorth = (points: number, target: Project['target'] = 'auto'): Project => {
+    const score = (points + 50) / 5;
+    const math = Math.min(12, Math.floor(score / 4) * 4);
+    const rest = score - math;
+    const artistic = Math.min(6, Math.floor(rest / 2) * 2);
+    const explanation = rest - artistic >= 2 ? 2 : 0;
+    const p = withP({ doing: true, math, artistic, explanation, target });
+    expect(projectPoints(p)).toBe(points);
+    return p;
+  };
+
+  it('⭐⭐ +20 时,加在 83 还是 85 上完全一样(两者都封顶到 100)', () => {
+    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it)); // 反导数 90
+    const a = pipeline(items, S, projectWorth(20, 0)).need!;
+    const b = pipeline(items, S, projectWorth(20, 2)).need!;
+    expect(b).toBeCloseTo(a, 10);
+    // 自动挑出来的也必须是这个最优值,并且把并列的那个报出来
+    const auto = applyProject(items, projectWorth(20), S.dropLowest, S.method);
+    expect([0, 2]).toContain(auto.targetIndex);
+    expect(auto.ties.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * ⭐⭐⭐ 但这只在**封顶**时成立。
+   *   +10 的时候:83→93 会把"被丢的"换成 85(丢 85,留 93);
+   *               85→95 则仍然丢 83,留 95、91、90。后者更好。
+   */
+  it('⭐⭐⭐ +10 时,加在 85 上严格更好 —— "两者一样"只在封顶时成立', () => {
+    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it));
+    const on83 = pipeline(items, S, projectWorth(10, 0)).need!;
+    const on85 = pipeline(items, S, projectWorth(10, 2)).need!;
+    expect(on85).toBeLessThan(on83);
+    // 自动挑的时候不能挑错
+    const auto = applyProject(items, projectWorth(10), S.dropLowest, S.method);
+    const autoNeed = finalNeeded(S, meanOf(items, auto.percents, S.dropLowest, S.method).mean)!;
+    expect(autoNeed).toBeCloseTo(on85, 10);
+  });
+
+  /**
+   * ⭐⭐⭐ 而当还没考的那场**自己成了被丢的那条**时,又反过来:
+   *   这时候 83 留在计分集里,把它顶到 100 才划算。
+   */
+  it('⭐⭐⭐ 反导数考砸(70)时,+20 要加在 83 上,不是 85 上', () => {
+    const items = SEED_ITEMS.map((it, i) =>
+      (i === 4 ? { ...it, earned: 70, muted: false } : it));
+    const on83 = pipeline(items, S, projectWorth(20, 0)).need!;
+    const on85 = pipeline(items, S, projectWorth(20, 2)).need!;
+    expect(on83).toBeLessThan(on85);
+    expect(on83).toBeCloseTo(80.1, 1);
+    const auto = applyProject(items, projectWorth(20), S.dropLowest, S.method);
+    expect(auto.targetIndex).toBe(0);
+    expect(auto.ties).toEqual([]);
+  });
+
+  it('⚠️ 加在 90 或 91 上永远更差', () => {
+    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it));
+    const best = pipeline(items, S, projectWorth(20)).need!;
+    for (const bad of [1, 3]) {
+      expect(pipeline(items, S, projectWorth(20, bad)).need!).toBeGreaterThan(best);
+    }
+  });
+
+  it('⚠️ 自动挑永远不比任何一个手选的差', () => {
+    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it));
+    for (const points of [10, 20, 30, 50, -50]) {
+      const auto = pipeline(items, S, projectWorth(points)).need!;
+      for (let i = 0; i < items.length; i += 1) {
+        const manual = pipeline(items, S, projectWorth(points, i)).need!;
+        expect(auto, `points=${points} target=${i}`).toBeLessThanOrEqual(manual + 1e-9);
+      }
+    }
+  });
+
+  it('⚠️ 指到一场静音的测验上时,退回自动,而不是算出个错的', () => {
+    // 第 5 项默认静音
+    const a = applyProject(SEED_ITEMS, projectWorth(20, 4), S.dropLowest, S.method);
+    expect(a.targetIndex).not.toBe(4);
+    expect(SEED_ITEMS[a.targetIndex]!.muted).toBe(false);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════
+   规划表 —— 交接文档里中间几行是错的
+   ════════════════════════════════════════════════════════════════ */
+
+describe('⭐⭐⭐ the planning table', () => {
+  const projectTwenty = withP({ doing: true, math: 8, artistic: 4, explanation: 2, target: 'auto' });
+  const withTest = (T: number) =>
+    SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, earned: T, muted: false } : it));
+
+  /**
+   * ⚠️ 期望值全部手算:项目 +20 把 83 顶到 100,
+   *   计分集随 T 变化,期末 = (89.5 − 10 − 0.65×均分) / 0.25。
+   *
+   * ⭐ 交接文档里这张表的**中间几行偏乐观**(最多少算 5.9 分),
+   *   斜率用成了 0.26/分,而四项计分时真实斜率是 0.65/分。
+   */
+  it('⭐⭐⭐ T=100 → 70.3', () => {
+    // 计分集 {100, 91, 90, 100} → 381/4 = 95.25
+    const { counted, need } = pipeline(withTest(100), S, projectTwenty);
+    expect(counted.mean).toBeCloseTo(381 / 4, 10);
+    expect(need).toBeCloseTo(70.35, 2);
+  });
+
+  it('⭐⭐⭐ T=95 → 73.6(交接文档写的是 71.6)', () => {
+    // 计分集 {100, 91, 90, 95} → 376/4 = 94
+    const { counted, need } = pipeline(withTest(95), S, projectTwenty);
+    expect(counted.mean).toBeCloseTo(94, 10);
+    expect(need).toBeCloseTo(73.6, 2);
+    expect(need).not.toBeCloseTo(71.6, 1);
+  });
+
+  it('⭐⭐⭐ T=90 → 76.8(交接文档写的是 72.9)', () => {
+    // 计分集 {100, 91, 90, 90} → 371/4 = 92.75
+    const { counted, need } = pipeline(withTest(90), S, projectTwenty);
+    expect(counted.mean).toBeCloseTo(371 / 4, 10);
+    expect(need).toBeCloseTo(76.85, 2);
+    expect(need).not.toBeCloseTo(72.9, 1);
+  });
+
+  /**
+   * ⭐⭐⭐ 曲线在 **T ≤ 85** 处就变平了,不是交接文档说的 T ≤ 70。
+   *   低于 85 时,那场自己成了被丢掉的一条,再低也不影响结果。
+   */
+  it('⭐⭐⭐ T ≤ 85 时结果完全不变,都是 80.1', () => {
+    const flat = [85, 80, 70, 50, 0].map((T) => pipeline(withTest(T), S, projectTwenty).need!);
+    for (const f of flat) expect(f).toBeCloseTo(80.1, 1);
+    for (const f of flat) expect(f).toBeCloseTo(flat[0]!, 10);
+    // 而 86 已经不一样了 —— 分界点确实在 85
+    expect(pipeline(withTest(86), S, projectTwenty).need!).toBeLessThan(flat[0]! - 0.5);
+  });
+
+  it('⭐⭐ 斜率:T 每高 1 分,期末要求低 0.65 分(四项计分)', () => {
+    const a = pipeline(withTest(90), S, projectTwenty).need!;
+    const b = pipeline(withTest(100), S, projectTwenty).need!;
+    expect((a - b) / 10).toBeCloseTo(0.65, 10);
+  });
+
+  it('⭐⭐ 两边同分(T = F)时是 80.1', () => {
+    let lo = 0;
+    let hi = 120;
+    for (let k = 0; k < 200; k += 1) {
+      const T = (lo + hi) / 2;
+      if (pipeline(withTest(T), S, projectTwenty).need! > T) lo = T;
+      else hi = T;
+    }
+    expect((lo + hi) / 2).toBeCloseTo(80.1, 1);
+  });
+
+  it('⭐⭐ 不做项目时:两边同分是 87.9,T=90 时期末要 86.6(文档写的 84.8 是错的)', () => {
+    const none = withP({ doing: false });
+    let lo = 0;
+    let hi = 120;
+    for (let k = 0; k < 200; k += 1) {
+      const T = (lo + hi) / 2;
+      if (pipeline(withTest(T), S, none).need! > T) lo = T;
+      else hi = T;
+    }
+    expect((lo + hi) / 2).toBeCloseTo(87.9, 1);
+    const at90 = pipeline(withTest(90), S, none).need!;
+    expect(at90).toBeCloseTo(86.6, 1);
+    expect(at90).not.toBeCloseTo(84.8, 1);
+  });
+
+  it('⭐⭐ 项目值大约 7.8 分的"所需表现"', () => {
+    const solve = (p: Project) => {
+      let lo = 0;
+      let hi = 120;
+      for (let k = 0; k < 200; k += 1) {
+        const T = (lo + hi) / 2;
+        if (pipeline(withTest(T), S, p).need! > T) lo = T;
+        else hi = T;
+      }
+      return (lo + hi) / 2;
+    };
+    expect(solve(withP({ doing: false })) - solve(projectTwenty)).toBeCloseTo(7.8, 1);
+  });
+
+  /**
+   * ⭐⭐⭐ 风险的真正形状:
+   *   丢最低**成立**时,违规的 −50 自己变成被丢的那条,
+   *   和"根本不做项目"**结果完全一样** —— 代价是 0。
+   *   丢最低**不成立**时,同样的违规要在期末上多考 26 分。
+   */
+  it('⭐⭐⭐ 丢最低成立时,违规一条准则的代价是 0(相对于不做)', () => {
+    const failed = withP({ doing: true, met: { ...SEED_PROJECT.met, beautiful: false }, target: 0 });
+    const none = withP({ doing: false });
+    for (const T of [85, 90, 100]) {
+      const a = pipeline(withTest(T), S, failed).need!;
+      const b = pipeline(withTest(T), S, none).need!;
+      expect(a, `T=${T}`).toBeCloseTo(b, 10);
+    }
+  });
+
+  it('⭐⭐⭐ 丢最低不成立时,同样的违规要多考 26 分', () => {
+    const noDrop = withS({ dropLowest: false });
+    const failed = withP({ doing: true, met: { ...SEED_PROJECT.met, beautiful: false }, target: 0 });
+    const none = withP({ doing: false });
+    const a = pipeline(withTest(90), noDrop, failed).need!;
+    const b = pipeline(withTest(90), noDrop, none).need!;
+    expect(a - b).toBeCloseTo(26, 6);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════
+   类目均分、丢最低、两种算法
+   ════════════════════════════════════════════════════════════════ */
+
+describe('meanOf', () => {
   it('⭐⭐ 第二条路径:排序后丢掉第一个,结果一样', () => {
     const sets: Item[][] = [
-      [item(83), item(91), item(85)],
-      [item(100), item(0), item(50), item(50)],
-      [item(70), item(70), item(70)],
-      [item(88), item(92, true), item(60), item(75)],
+      [pts(83), pts(91), pts(85)],
+      [pts(100), pts(0), pts(50), pts(50)],
+      [pts(70), pts(70), pts(70)],
+      [pts(88), pts(92, 100, true), pts(60), pts(75)],
     ];
     for (const items of sets) {
-      const got = counted(items, true);
-      const live = items.filter((i) => !i.muted).map((i) => percentOf(i));
+      const got = plainMean(items);
+      const live = items.filter((i) => !i.muted).map(percentOf);
       const bySort = [...live].sort((a, b) => a - b).slice(1);
-      const want = bySort.length ? bySort.reduce((a, b) => a + b, 0) / bySort.length : null;
-      expect(got.mean).toBeCloseTo(want!, 10);
+      expect(got.mean).toBeCloseTo(bySort.reduce((a, b) => a + b, 0) / bySort.length, 10);
       expect(got.counted).toBe(bySort.length);
     }
   });
 
-  it('⚠️ 只剩一条时不丢 —— 丢了就算不出均分,那是实现的副作用,不是规则', () => {
-    const c = counted([item(70), item(90, true)], true);
-    expect(c.live).toBe(1);
-    expect(c.droppedIndex).toBe(-1);
-    expect(c.counted).toBe(1);
-    expect(c.mean).toBe(70);
+  it('⭐⭐⭐ 丢的是百分比最低的那条,不是卷面分最低的那条', () => {
+    // 46/50 = 92% 不该因为"46 < 83"而被丢掉
+    const items = [pts(83), pts(46, 50), pts(91)];
+    expect(plainMean(items).droppedIndex).toBe(0);
+    // 最低百分比(75% = 30/40)不等于任何一条卷面分时,照样挑得对
+    const tricky = [pts(46, 50), pts(30, 40), pts(90)];
+    expect(tricky.some((i) => i.earned === 75)).toBe(false);
+    expect(plainMean(tricky).droppedIndex).toBe(1);
   });
 
-  it('⚠️ 全静音时 mean 是 null,不是 0,也不是 NaN', () => {
-    const c = counted([item(70, true), item(90, true)], true);
-    expect(c.mean).toBeNull();
-    expect(c.counted).toBe(0);
-    expect(c.live).toBe(0);
-    expect(Number.isNaN(c.mean as unknown as number)).toBe(false);
-  });
-
-  it('⚠️ 空列表也不炸', () => {
-    const c = counted([], true);
-    expect(c.mean).toBeNull();
-    expect(c.droppedIndex).toBe(-1);
+  it('⚠️ 只剩一条时不丢;全静音时 mean 是 null 而不是 NaN', () => {
+    expect(plainMean([pts(70), pts(90, 100, true)]).droppedIndex).toBe(-1);
+    const none = plainMean([pts(70, 100, true)]);
+    expect(none.mean).toBeNull();
+    expect(Number.isNaN(none.mean as unknown as number)).toBe(false);
+    expect(plainMean([]).mean).toBeNull();
   });
 
   it('⚠️ 并列最低取最靠前的那条,而且是定死的', () => {
-    const items = [item(90), item(70), item(70), item(95)];
-    const c = counted(items, true);
-    expect(c.droppedIndex).toBe(1);
-    // 跑几次都一样 —— 不许依赖排序的稳定性或遍历顺序
-    for (let k = 0; k < 5; k += 1) expect(counted(items, true).droppedIndex).toBe(1);
+    const items = [pts(90), pts(70), pts(70), pts(95)];
+    for (let k = 0; k < 5; k += 1) expect(plainMean(items).droppedIndex).toBe(1);
   });
 
   it('⚠️ 静音的那条永远不会被选中丢掉', () => {
-    // 最低分是静音的 0 分;丢掉的必须是未静音里最低的 60
-    const items = [item(0, true), item(60), item(80)];
-    const c = counted(items, true);
-    expect(c.droppedIndex).toBe(1);
-    expect(c.mean).toBe(80);
+    expect(plainMean([pts(0, 100, true), pts(60), pts(80)]).droppedIndex).toBe(1);
   });
 
-  it('关掉丢最低就一条都不丢', () => {
-    const c = counted([item(10), item(90)], false);
-    expect(c.droppedIndex).toBe(-1);
-    expect(c.counted).toBe(2);
-    expect(c.mean).toBe(50);
+  /**
+   * ⭐⭐⭐ 两种算法:每一项满分相同时**逐位相同**。
+   *   这是个真的代数恒等式,而两边代码路径完全不同 ——
+   *   目前全部测验都是 100 分制,所以这个开关现在不影响任何数字。
+   */
+  it('⭐⭐⭐ 全是 100 分制时,两种算法给出同一个数', () => {
+    let checked = 0;
+    for (const drop of [true, false]) {
+      for (const m of METHODS) {
+        const got = plainMean(SEED_ITEMS, drop, m).mean!;
+        expect(got).toBeCloseTo(plainMean(SEED_ITEMS, drop, 'mean-of-grades').mean!, 12);
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(4);
+  });
+
+  it('⭐⭐ 一旦出现别的分值,两种算法就分开了', () => {
+    const mixed = [pts(46, 50), pts(80), pts(80)];
+    const a = plainMean(mixed, false, 'mean-of-grades').mean!;
+    const b = plainMean(mixed, false, 'total-points').mean!;
+    expect(a).toBeCloseTo((92 + 80 + 80) / 3, 10);
+    expect(b).toBeCloseTo(((46 + 80 + 80) / 250) * 100, 10);
+    expect(Math.abs(a - b)).toBeGreaterThan(1);
+  });
+
+  it('⚠️ 两种算法都有名字可显示', () => {
+    expect(METHODS).toEqual(['mean-of-grades', 'total-points']);
+    for (const m of METHODS) expect(METHOD_NAME[m].length).toBeGreaterThan(5);
+    expect(S.method).toBe('mean-of-grades'); // 大纲原文
   });
 });
 
+/* ════════════════════════════════════════════════════════════════
+   结论、夹取、迁移、文字
+   ════════════════════════════════════════════════════════════════ */
+
 describe('verdicts', () => {
-  it('⭐⭐ 六档都够得着 —— 死界面自查', () => {
+  it('⭐⭐ 七档都够得着 —— 死界面自查', () => {
     const seen = new Set<string>();
-    // no-data:全静音
     seen.add(verdictOf(S, null));
-    // final-does-not-count:期末 0 权重
     seen.add(verdictOf(withS({ wFinal: 0, wAssess: 90 }), 80));
-    // locked:目标很低
     seen.add(verdictOf(withS({ targetA: 50 }), 95));
-    // comfortable / doable / tight:三个不同的均分
-    seen.add(verdictOf(S, 95));
+    seen.add(verdictOf(S, 97));
     seen.add(verdictOf(S, 88.6667));
     seen.add(verdictOf(S, 84));
-    // unreachable:均分太低
     seen.add(verdictOf(S, 60));
     expect([...seen].sort()).toEqual(
       ['comfortable', 'doable', 'final-does-not-count', 'locked', 'no-data', 'tight', 'unreachable'],
     );
   });
 
-  /**
-   * ⭐⭐ 变异测试逼出来的:把 `mean === null` 那条判断删掉,41 个变异体里
-   *   只有它活了下来 —— 因为单独看,后面 `need === null` 那条会兜住。
-   *   可两个条件**同时**成立时(全静音 + 期末不计分)就不一样了:
-   *   删掉之后会先返回 "final does not count",而那时候根本没有成绩可言,
-   *   页面会显示一个说法却给不出数。没有数据的时候,"没有数据"必须赢。
-   */
+  it('⚠️ 期末权重为 0 时反解不出来 —— 返回 null,不是 Infinity', () => {
+    // 不拦住的话这里会除以 0。`verdictOf` 碰巧会先返回别的档,
+    // 所以只测 verdict 是测不到这一条的。
+    const noFinal = withS({ wFinal: 0, wAssess: 90 });
+    expect(finalNeeded(noFinal, 80)).toBeNull();
+    expect(finalNeededByBisection(noFinal, 80)).toBeNull();
+    expect(missBy(noFinal, 80)).toBeNull();
+    expect(spareBy(noFinal, 80)).toBeNull();
+    // 负权重同理
+    expect(finalNeeded(withS({ wFinal: -5 }), 80)).toBeNull();
+  });
+
   it('⭐⭐ 全静音又碰上期末不计分时,"没有数据"优先', () => {
     const noFinal = withS({ wFinal: 0, wAssess: 90 });
     expect(verdictOf(noFinal, null)).toBe('no-data');
-    // 而有数据时,才轮到"期末不计分"
     expect(verdictOf(noFinal, 80)).toBe('final-does-not-count');
-    // 两个状态都给不出可显示的成绩/分数时,别的读数也必须是 null
-    expect(lockedGrade(noFinal, null)).toBeNull();
-    expect(missBy(noFinal, null)).toBeNull();
-    expect(spareBy(noFinal, null)).toBeNull();
-  });
-
-  it('⚠️ 每一档都有一句能显示的话', () => {
-    for (const v of Object.keys(VERDICT_WORD)) {
-      expect(VERDICT_WORD[v as keyof typeof VERDICT_WORD].length).toBeGreaterThan(4);
-    }
-    expect(Object.keys(VERDICT_WORD)).toHaveLength(7);
-  });
-
-  it('⭐ 分档的界只管措辞,一个数都不改', () => {
-    // 同一个均分,改措辞的界,need 必须纹丝不动。
-    const need = finalNeeded(S, 88.6667);
-    expect(need).toBeCloseTo(87.4666, 3);
-    // 界本身的位置关系
-    expect(COMFORTABLE_BELOW).toBeLessThan(TIGHT_ABOVE);
-    expect(TIGHT_ABOVE).toBeLessThan(100);
-    expect(COMFORTABLE_BELOW).toBeGreaterThan(0);
-  });
-
-  it('⚠️ 边界两侧确实分到不同的档', () => {
-    // 找一个 need 刚好跨过 92 的均分,两侧的档必须不同
-    const justOver = withS({ targetA: 89.5 });
-    const meanTight = (89.5 - 10 - 0.25 * 93) / 0.65;
-    const meanDoable = (89.5 - 10 - 0.25 * 91) / 0.65;
-    expect(verdictOf(justOver, meanTight)).toBe('tight');
-    expect(verdictOf(justOver, meanDoable)).toBe('doable');
+    expect(lockedGrade(noFinal, 80)).toBeCloseTo(0.1 * 100 + 0.9 * 80, 10);
   });
 
   it('⚠️ need 正好 0 算"稳了",正好 100 不算"够不到"', () => {
-    // 端点归哪一边必须说死,否则同一个分数两次刷新显示不同结论。
-    const atZero = (89.5 - 10 - 0) / 0.65;
+    const atZero = (89.5 - 10) / 0.65;
     expect(finalNeeded(S, atZero)).toBeCloseTo(0, 9);
     expect(verdictOf(S, atZero)).toBe('locked');
-    const atHundred = (89.5 - 10 - 0.25 * 100) / 0.65;
+    const atHundred = (89.5 - 10 - 25) / 0.65;
     expect(finalNeeded(S, atHundred)).toBeCloseTo(100, 9);
     expect(verdictOf(S, atHundred)).toBe('tight');
   });
+
+  it('⭐⭐ 够不到时报的是总评的差距,不是期末卷面的差距', () => {
+    const mean = 70;
+    expect(finalNeeded(S, mean)).toBeCloseTo(136, 10);
+    expect(gradeWith(S, mean, 100)).toBeCloseTo(80.5, 10);
+    expect(missBy(S, mean)).toBeCloseTo(9, 10);
+    // 把错法本身钉死:谁再写回 need − 100,这条就红
+    expect(finalNeeded(S, mean)! - 100).not.toBeCloseTo(missBy(S, mean)!, 2);
+  });
+
+  it('⭐ 稳了的时候,富余也按总评算', () => {
+    const s = withS({ targetA: 60 });
+    expect(spareBy(s, 95)).toBeCloseTo(gradeWith(s, 95, 0) - 60, 10);
+    expect(missBy(S, 95)).toBeNull();
+    expect(spareBy(S, 88.6667)).toBeNull();
+  });
+
+  it('⭐ 分档的界只管措辞', () => {
+    expect(COMFORTABLE_BELOW).toBeLessThan(TIGHT_ABOVE);
+    expect(TIGHT_ABOVE).toBeLessThan(100);
+    expect(Object.keys(VERDICT_WORD)).toHaveLength(7);
+    for (const w of Object.values(VERDICT_WORD)) expect(w.length).toBeGreaterThan(4);
+  });
 });
 
-describe('the final not counting', () => {
-  it('⭐⭐ 期末 0 权重时:解不出来,但成绩是定死的', () => {
-    const s = withS({ wFinal: 0, wAssess: 90 });
-    expect(finalNeeded(s, 80)).toBeNull();
-    expect(finalNeededByBisection(s, 80)).toBeNull();
-    expect(verdictOf(s, 80)).toBe('final-does-not-count');
-    // 0.10×100 + 0.90×80 = 10 + 72 = 82
-    expect(lockedGrade(s, 80)).toBeCloseTo(82, 10);
+describe('targets, clamping, migration', () => {
+  it('⭐⭐ 三档 89.5 / 79.5 / 69.5,越低期末要求越低', () => {
+    expect(GOALS).toEqual(['A', 'B', 'C']);
+    expect(GOALS.map((g) => cutoffOf(S, g))).toEqual([89.5, 79.5, 69.5]);
+    const needs = GOALS.map((g: Goal) => finalNeeded(withS({ goal: g }), 88.6667)!);
+    expect(needs[0]).toBeGreaterThan(needs[1]!);
+    expect(needs[1]).toBeGreaterThan(needs[2]!);
   });
 
-  it('⚠️ 期末有权重时 lockedGrade 是 null —— 两个状态不许同时成立', () => {
-    expect(lockedGrade(S, 80)).toBeNull();
-    expect(lockedGrade(withS({ wFinal: 0 }), null)).toBeNull();
+  it('⚠️ 得分夹在 0..满分,满分至少 1', () => {
+    expect(clampEarned(-5, 100)).toBe(0);
+    expect(clampEarned(105, 100)).toBe(100);
+    expect(clampEarned(52, 50)).toBe(50);
+    expect(clampEarned(Number.NaN, 50)).toBe(0);
+    expect(clampPossible(0)).toBe(1);
+    expect(clampPossible(-20)).toBe(1);
+    expect(clampPossible(Number.NaN)).toBe(1);
   });
 
-  it('⚠️ 负权重当作不计分处理,不许算出个负数来', () => {
-    const s = withS({ wFinal: -10 });
-    expect(finalNeeded(s, 80)).toBeNull();
-    expect(missBy(s, 80)).toBeNull();
-    expect(spareBy(s, 80)).toBeNull();
-  });
-});
-
-describe('weights', () => {
-  it('加起来 100 就不报警', () => {
+  it('⚠️ 权重浮点容差', () => {
     expect(weightSum(S)).toBe(100);
-    expect(weightsBalanced(S)).toBe(true);
-  });
-
-  it('⭐ 加起来不是 100 要能看出来', () => {
-    const off = withS({ wAssess: 60 });
-    expect(weightSum(off)).toBe(95);
-    expect(weightsBalanced(off)).toBe(false);
-  });
-
-  it('⚠️ 浮点容差:99.995 还算平,99.9 不算', () => {
-    // 不能写 === 100:0.1 + 0.2 那套问题在这里一样会咬人。
     expect(weightsBalanced(withS({ wAssign: 10.005 }))).toBe(true);
     expect(weightsBalanced(withS({ wAssign: 9.9 }))).toBe(false);
     expect(WEIGHT_SLOP).toBeGreaterThan(0);
-    expect(WEIGHT_SLOP).toBeLessThan(0.5);
-  });
-
-  it('百分数换成小数', () => {
     const w = weightsOf(S);
-    expect(w.assign).toBeCloseTo(0.1, 12);
-    expect(w.assess).toBeCloseTo(0.65, 12);
-    expect(w.final).toBeCloseTo(0.25, 12);
-  });
-});
-
-describe('targets and clamping', () => {
-  it('⭐⭐ 三档都切得动,而且默认分数线是 89.5 / 79.5 / 69.5', () => {
-    expect(GOALS).toEqual(['A', 'B', 'C']);
-    expect(targetOf(withS({ goal: 'A' }))).toBe(89.5);
-    expect(targetOf(withS({ goal: 'B' }))).toBe(79.5);
-    expect(targetOf(withS({ goal: 'C' }))).toBe(69.5);
-    // `cutoffOf` 查任意一档,`targetOf` 查当前那一档 —— 两者必须一致
-    for (const g of GOALS) {
-      expect(cutoffOf(S, g)).toBe(targetOf(withS({ goal: g })));
-    }
+    expect([w.assign, w.assess, w.final]).toEqual([0.1, 0.65, 0.25]);
   });
 
-  it('⭐⭐ 目标越低,期末要求越低 —— 三档严格递减', () => {
-    // ⚠️ 用精确的 532/6,不用 88.6667 那个截断值:
-    //   手算的期望值 7.4666… 是从精确均分来的,拿截断值去对会差在小数第五位,
-    //   那是**我抄错了数**,不是代码错了。
-    const mean = 532 / 6;
-    const needs = GOALS.map((g) => finalNeeded(withS({ goal: g }), mean)!);
-    expect(needs[0]).toBeGreaterThan(needs[1]!);
-    expect(needs[1]).toBeGreaterThan(needs[2]!);
-    // 手算一组:C 档 = (69.5 − 10 − 0.65×88.6667) / 0.25 = 7.4666…
-    expect(needs[2]).toBeCloseTo((69.5 - 10 - 0.65 * mean) / 0.25, 9);
-    expect(needs[2]).toBeCloseTo(7.4666666667, 6);
-  });
-
-  it('⭐ C 档在默认数据下是"稳了" —— 新加的这一档真的会走到别的分支', () => {
-    // 加一个选项却只能看到和原来一样的结论,等于没加。
-    const c = counted(SEED_ITEMS, true);
-    expect(verdictOf(withS({ goal: 'C' }), c.mean)).toBe('comfortable');
-    expect(verdictOf(withS({ goal: 'A' }), c.mean)).toBe('doable');
-  });
-
-  it('⚠️ 分数线之间没有强制的大小关系 —— 模型不管,别有人假设它管', () => {
-    // 有人把 C 设成 95 是他自己的事,算出来仍然自洽;
-    // 这条写在这里,是防止后来者"顺手"加一个会改变数值的排序假设。
-    const odd = withS({ goal: 'C', targetC: 95 });
-    expect(targetOf(odd)).toBe(95);
-    expect(gradeWith(odd, 80, finalNeeded(odd, 80)!)).toBeCloseTo(95, 9);
-  });
-
-  it('⚠️ 得分夹在 0..满分 之间', () => {
-    expect(clampEarned(-5, 100)).toBe(0);
-    expect(clampEarned(105, 100)).toBe(100);
-    expect(clampEarned(87.5, 100)).toBe(87.5);
-    // ⭐ 50 分制:46 留着,52 夹到 50
-    expect(clampEarned(46, 50)).toBe(46);
-    expect(clampEarned(52, 50)).toBe(50);
-    expect(clampEarned(Number.NaN, 50)).toBe(0);
-  });
-
-  it('⚠️ 满分至少是 1 —— 这样 percentOf 不可能除以 0', () => {
-    expect(clampPossible(0)).toBe(1);
-    expect(clampPossible(-20)).toBe(1);
-    expect(clampPossible(50)).toBe(50);
-    expect(clampPossible(Number.NaN)).toBe(1);
-    // 任意合法输入下,百分比都是有限数
-    for (const [e, p] of [[0, 1], [46, 50], [100, 100], [3, 7]] as const) {
-      expect(Number.isFinite(percentOf({ name: 'x', earned: e, possible: p, muted: false }))).toBe(true);
+  it('⚠️ 旧存档迁移:百分制的 score 变成 earned/100,百分比不变', () => {
+    expect(migrateItem({ name: 'A', score: 83, muted: false }))
+      .toEqual({ name: 'A', earned: 83, possible: 100, muted: false });
+    expect(migrateItem({ name: 'P', earned: 46, possible: 50, muted: false }).possible).toBe(50);
+    for (const junk of [null, undefined, 42, 'nope', {}, { earned: 'x', possible: 'y' },
+      { name: 'z', earned: 5, possible: 0 }]) {
+      const it = migrateItem(junk);
+      expect(Number.isFinite(percentOf(it)), JSON.stringify(junk)).toBe(true);
+      expect(it.possible).toBeGreaterThanOrEqual(1);
+      expect(it.name.length).toBeGreaterThan(0);
     }
   });
 });
 
 describe('the words on the page', () => {
   it('⭐⭐ 全英文,没有中日韩字符', () => {
-    const all = [HEADLINE, EQUATION_TEX, AVERAGE_TEX, SOLVED_TEX, ...Object.values(VERDICT_WORD),
-      ...SEED_ITEMS.map((i) => i.name)].join(' ');
+    const all = [HEADLINE, EQUATION_TEX, SOLVED_TEX, IN_PROGRESS_TEX, PROJECT_TEX,
+      ...Object.values(VERDICT_WORD), ...Object.values(METHOD_NAME),
+      ...GUIDELINES.map((g) => g.text), ...SEED_ITEMS.map((i) => i.name)].join(' ');
     expect(all).not.toMatch(/[　-〿぀-ヿ㐀-䶿一-鿿豈-﫿]/);
   });
 
-  it('⭐ 标题说的是"把式子反过来解",而不是"这是个计算器"', () => {
-    expect(HEADLINE.toLowerCase()).toContain('solve');
-    expect(HEADLINE.length).toBeGreaterThan(20);
-    expect(EQUATION_TEX).toContain('w_');
+  it('⭐ 五条准则都写出来了,而且写的是"做到了什么"', () => {
+    expect(GUIDELINES).toHaveLength(5);
+    for (const g of GUIDELINES) expect(g.text.length).toBeGreaterThan(25);
+    expect(new Set(GUIDELINES.map((g) => g.key)).size).toBe(5);
+  });
+
+  it('⭐ 公式里该出现的东西都在', () => {
+    expect(EQUATION_TEX).toContain('0.65');
     expect(SOLVED_TEX).toContain('frac');
-    // 类目均分那条式子必须把"加分在分子上"画出来
-    expect(AVERAGE_TEX).toContain('EC');
-    expect(AVERAGE_TEX).toContain('frac');
+    expect(IN_PROGRESS_TEX).toContain('0.75');
+    expect(PROJECT_TEX).toContain('prod'); // 那个乘积是要害
+    expect(HEADLINE.toLowerCase()).toContain('solve');
   });
 });
