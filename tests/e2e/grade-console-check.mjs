@@ -83,13 +83,25 @@ await fresh();
 
 /* ── ① 当前真实处境 ──────────────────────────────────────── */
 {
-  if ((await count('[data-strip]')) !== 6) note(`expected 5 assessments + master, got ${await count('[data-strip]')}`);
+  if ((await count('[data-strip]')) !== 5) note(`expected 4 assessments + master, got ${await count('[data-strip]')}`);
   const earned = await page.$$eval('[data-earned]', (els) => els.map((e) => Number(e.value)));
-  if (JSON.stringify(earned) !== JSON.stringify([83, 91, 85, 90, 90])) {
-    note(`seeded scores should be 83, 91, 85, 90 plus a muted 90 — got [${earned}]`);
+  if (JSON.stringify(earned) !== JSON.stringify([83, 91, 85, 90])) {
+    note(`the strips should hold only the four graded assessments — got [${earned}]`);
   }
-  const muted = await count('[data-strip][data-state="muted"]');
-  if (muted !== 1) note(`the antiderivative test should start muted — ${muted} muted strips`);
+  if ((await count('[data-strip][data-state="muted"]')) !== 0) {
+    note('nothing should start muted — upcoming tests live in the scenario panel now');
+  }
+
+  // ⭐⭐⭐ PowerSchool **今天**显示的必须是没丢最低的 88.95 → 89 (B)
+  const shownNow = await val('shown');
+  if (Math.abs(shownNow - 88.95) > 1e-9) note(`today's PowerSchool figure should be 88.95, got ${shownNow}`);
+  if ((await text('[data-read="shown"]')) !== '89') note('today should display 89');
+  // 丢完之后是 90 (A),但必须单独标成"after the drop"
+  const after = await page.$eval('[data-after-drop]', (el) => Number(el.dataset.value)).catch(() => null);
+  if (after === null) note('the after-the-drop projection is missing');
+  else if (Math.abs(after - 90.18) > 0.01) note(`after the drop it should read 90.18, got ${after}`);
+  const afterText = (await text('[data-after-drop]')) ?? '';
+  if (!/after the drop/.test(afterText)) note(`the projection must be labelled: "${afterText}"`);
 
   // 丢最低成立 → 丢 83 → (91+85+90)/3 = 88.6667
   const mean = await val('mean');
@@ -97,28 +109,37 @@ await fresh();
   const dropped = await page.$$eval('[data-strip][data-state="dropped"]', (e) => e.map((x) => x.dataset.strip));
   if (dropped.join(',') !== '0') note(`should drop the 83 (strip 0), got [${dropped}]`);
 
-  const shown = await val('shown');
-  if (Math.abs(shown - shownFor(266 / 3)) > 1e-9) note(`PowerSchool figure is ${shown}, hand-computed ${shownFor(266 / 3)}`);
-  if (Math.abs(shown - 90.18) > 0.01) note(`with the drop PowerSchool should read 90.18, got ${shown}`);
-
   const need = await val('need');
   if (Math.abs(need - needFor(266 / 3)) > 1e-9) note(`final needed is ${need}, hand-computed ${needFor(266 / 3)}`);
   if (Math.abs(need - 87.4667) > 1e-3) note(`final needed should be 87.47, got ${need}`);
 }
 
-/* ── ② 关掉丢最低 → 这是没有那条规则时的真实处境 ───────────── */
+/* ── ②⭐⭐⭐ 还剩几场:丢最低只能保一场 ──────────────────── */
 {
-  await toggle('[data-field="dropLowest"]', false);
-  const mean = await val('mean');
-  const shown = await val('shown');
-  if (Math.abs(mean - 87.25) > 1e-9) note(`without the drop the mean should be 87.25, got ${mean}`);
-  if (Math.abs(shown - 88.95) > 1e-9) note(`without the drop PowerSchool should read 88.95, got ${shown}`);
-  // 这正是他现在屏幕上看到的 89 (B)
-  const line = (await text('[data-read="shown"]')) ?? '';
-  if (line !== '89') note(`the PowerSchool readout should show exactly "89" — got "${line}"`);
-  const detail = (await text('[data-panel="master"]')) ?? '';
-  if (!/88\.95 · B/.test(detail)) note(`the detail line should read "88.95 · B" — got "${detail}"`);
-  await toggle('[data-field="dropLowest"]', true);
+  const needFor2 = (m) => (89.5 - 10 - 0.65 * m) / 0.25;
+  const scNeed = (n) => page.$eval(`[data-scenario-need="${n}"]`, (el) => Number(el.dataset.value));
+
+  if ((await count('[data-scenario]')) !== 2) note(`expected two scenarios, got ${await count('[data-scenario]')}`);
+  // 默认预估 90,项目还没打开 → 只剩一场 {83,91,85,90,90} 丢 83 → 356/4 = 89
+  if ((await page.$eval('[data-field="projected"]', (el) => Number(el.value))) !== 90) {
+    note('the projected score should default to 90');
+  }
+  const one = await scNeed(1);
+  if (Math.abs(one - needFor2(356 / 4)) > 1e-9) note(`scenario 1 is ${one}, hand-computed ${needFor2(356 / 4)}`);
+
+  // ⭐ 地板:只剩一场时,那场考多差都一样
+  await setField('projected', 60);
+  const floorA = await scNeed(1);
+  await setField('projected', 20);
+  const floorB = await scNeed(1);
+  if (Math.abs(floorA - floorB) > 1e-9) note(`with one test left the final needed should stop moving (${floorA} vs ${floorB})`);
+  // ⭐⭐ 而两场时地板没了
+  await setField('projected', 60);
+  const twoA = await scNeed(2);
+  await setField('projected', 20);
+  const twoB = await scNeed(2);
+  if (!(twoB > twoA + 1)) note(`with two tests left a worse score must cost more (${twoA} -> ${twoB})`);
+  await setField('projected', 90);
 }
 
 /* ── ③ 项目:准则是乘积,一条不合格就 −50 ─────────────────── */
@@ -151,8 +172,9 @@ await fresh();
 
 /* ── ④⭐⭐⭐ 饱和:+20 之后再高也一样 ────────────────────── */
 {
-  // 反导数那场设成 90 并取消静音 —— 这是规划表的基准情形
-  await toggle('[data-mute="4"]', false);
+  // ⚠️ 推子里现在只有已考的四场,所以先**加一条**当反导数那场 —— 这是规划表的基准情形
+  await page.click('[data-action="add"]');
+  await page.waitForTimeout(180);
   await setEarned(4, 90);
 
   const needAt = async (math, artistic, explanation) => {
@@ -327,7 +349,6 @@ await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForTimeout(250);
 await page.screenshot({ path: join(OUT, 'grade-console-top.png'), clip: { x: 0, y: 0, width: 1280, height: 1000 } });
 await toggle('[data-field="doing"]', true);
-await toggle('[data-mute="4"]', false);
 await page.waitForTimeout(250);
 await page.evaluate(() => window.scrollTo(0, 0));
 await page.screenshot({ path: join(OUT, 'grade-console-project.png'), clip: { x: 0, y: 0, width: 1280, height: 1000 } });
@@ -346,4 +367,4 @@ if (fail.length) {
   process.exit(1);
 }
 console.log('✓ grade-console:87.25 / 88.95 / 88.67 / 90.18 / 87.47 全部手算一致、+20 之后饱和、'
-  + '加分落点三种情形三种答案、T ≤ 85 时曲线变平(不是 70)、丢最低已确认、准则按清单呈现且假设写明、饱和线提示正确、无 CJK');
+  + '加分落点三种情形三种答案、T ≤ 85 时曲线变平(不是 70)、今天 89(B)与丢完后 90(A)分开显示、两种剩余情形、丢最低已确认、准则按清单呈现且假设写明、饱和线提示正确、无 CJK');

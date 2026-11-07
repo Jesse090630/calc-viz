@@ -23,11 +23,11 @@ import {
   IN_PROGRESS_TEX, MATH_SCORES, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS, SEED_PROJECT,
   SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
   type Item, type Project, type Setup, type Verdict,
-  SATURATING_SCORE,
+  SATURATING_SCORE, SCENARIOS,
   applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, gradeWith,
   inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem, missBy, percentOf,
-  projectPoints, projectScore, roundedPercent, spareBy, targetOf, verdictOf, weightSum,
-  weightsBalanced,
+  projectPoints, projectScore, roundedPercent, scenarioWith, spareBy, targetOf, verdictOf,
+  weightSum, weightsBalanced,
 } from '../../math/gradeTarget';
 import { LAB } from '../shared/theme';
 import { Tex } from '../shared/Tex';
@@ -139,7 +139,18 @@ export function GradeConsoleLab() {
   }, [items, project, setup]);
 
   const need = finalNeeded(setup, counted.mean);
-  const shown = inProgressDisplay(setup, counted.mean);
+  /**
+   * ⚠️⚠️ PowerSchool **今天**显示的数要用**没丢最低**的均分算。
+   *   丢最低是学期末才发生的事,现在还没发生 ——
+   *   拿丢完的均分去算"今天显示多少",会把一个预测说成现状(实测 90 vs 真实 89)。
+   *   期末需求则相反:等期末录分时丢最低已经生效了,所以它用丢完的均分。
+   */
+  const undropped = useMemo(
+    () => meanOf(items, applied.percents, false, setup.method),
+    [items, applied, setup.method],
+  );
+  const shown = inProgressDisplay(setup, undropped.mean);
+  const shownAfterDrop = inProgressDisplay(setup, counted.mean);
   const verdict = verdictOf(setup, counted.mean);
   const miss = missBy(setup, counted.mean);
   const spare = spareBy(setup, counted.mean);
@@ -206,6 +217,13 @@ export function GradeConsoleLab() {
               {shown.toFixed(2)} · {letterFor(shown)}
             </p>
           )}
+          {/* ⭐ 丢最低是学期末的事,所以它是**预测**,和上面那个今天的数分开写。 */}
+          {setup.dropLowest && shownAfterDrop !== null && (
+            <p data-after-drop data-value={shownAfterDrop}
+              className="mt-0.5 font-mono text-[11px] tabular-nums" style={{ color: LAB.pass }}>
+              {roundedPercent(shownAfterDrop)} · {letterFor(shownAfterDrop)} after the drop
+            </p>
+          )}
         </div>
 
         <div className="sm:text-right">
@@ -245,6 +263,60 @@ export function GradeConsoleLab() {
             {applied.percents[counted.droppedIndex]!.toFixed(1)}% — lowest percentage, not lowest raw points.
           </p>
         )}
+      </section>
+
+      {/* ── ⭐⭐⭐ 还剩几场没考 ──────────────────────────────── */}
+      <section data-panel="scenarios" className={`mt-3 p-5 ${panel}`}>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div>
+            <p className={label}>Still to come — assume you score</p>
+            <span className="mt-2 flex items-center gap-1.5">
+              <input type="number" min={0} max={100} step={1} value={setup.projected}
+                data-field="projected" aria-label="Projected score on upcoming assessments"
+                onChange={(e) => patch({ projected: Math.max(0, Math.min(100, num(e.target.value, setup.projected))) })}
+                className="pts-input w-[76px] rounded-md border bg-slate-950 px-2 py-1.5 text-center font-mono text-[16px] tabular-nums"
+                style={{ borderColor: `${LAB.x1}99`, color: LAB.x1 }} />
+              <span className="font-mono text-[12px] text-slate-500">% on each</span>
+            </span>
+          </div>
+          {/*
+            ⚠️ 这一句是整块的要害:**丢最低只能保一场**。
+              只剩一场时它考多差都会被丢掉,期末需求有地板;
+              多出第二场,地板就没了。
+          */}
+          <p data-floor-note className="max-w-md text-[12px] leading-relaxed text-slate-400">
+            The drop only insures one test. With a single test left, a bad one is simply dropped
+            and the final needed stops moving. With two, that floor is gone.
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {SCENARIOS.map((extra) => {
+            const sc = scenarioWith(items, project, setup, setup.projected, extra);
+            const v = verdictOf(setup, sc.mean);
+            const t = TONE[v];
+            return (
+              <div key={extra} data-scenario={extra}
+                className="rounded-xl border border-slate-800 px-4 py-3">
+                <p className="font-mono text-[11px] text-slate-400">
+                  {extra === 1 ? 'Only the antiderivative test left' : 'One more test after that'}
+                </p>
+                <p className="mt-2 flex items-baseline gap-3">
+                  <span data-scenario-need={extra} data-value={sc.need ?? ''}
+                    className="font-mono text-[30px] leading-none tabular-nums" style={{ color: t.color }}>
+                    {sc.need === null ? '—' : sc.need.toFixed(1)}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500">on the final</span>
+                </p>
+                <p data-scenario-mean={extra} data-value={sc.mean ?? ''}
+                  className="mt-1.5 font-mono text-[11px] tabular-nums text-slate-500">
+                  assessments {sc.mean === null ? '—' : sc.mean.toFixed(2)}
+                  {sc.droppedPercent !== null && ` · dropping ${sc.droppedPercent.toFixed(0)}`}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {/* ── 推子 ───────────────────────────────────────────── */}

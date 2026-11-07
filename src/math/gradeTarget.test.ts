@@ -5,7 +5,7 @@ import {
   SEED_PROJECT, SEED_SETUP, SOLVED_TEX, TIGHT_ABOVE, VERDICT_WORD, WEIGHT_SLOP,
   type Goal, type Item, type Project, type Setup,
   applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, finalNeededByBisection,
-  SATURATING_SCORE, gradeWith, inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem,
+  SATURATING_SCORE, SCENARIOS, gradeWith, inProgressDisplay, scenarioWith, letterFor, lockedGrade, meanOf, migrateItem,
   missBy, percentOf, projectPoints, projectScore, roundedPercent, scoreNeededFor, spareBy,
   targetOf, verdictOf, weightSum, weightsBalanced, weightsOf,
 } from './gradeTarget';
@@ -86,8 +86,10 @@ describe('⭐⭐⭐ where the grade actually stands', () => {
    *   四场测验 83, 91, 85, 90 → (83+91+85+90)/4 = 349/4 = 87.25
    */
   it('⭐⭐ 四场测验的均分是 87.25', () => {
-    const live = SEED_ITEMS.filter((i) => !i.muted);
-    expect(live).toHaveLength(4);
+    // ⚠️ 推子里只放**已经进成绩册**的四场;还没考的交给 `scenarioWith`。
+    expect(SEED_ITEMS).toHaveLength(4);
+    expect(SEED_ITEMS.every((i) => !i.muted)).toBe(true);
+    const live = SEED_ITEMS;
     expect(live.map((i) => i.earned)).toEqual([83, 91, 85, 90]);
     expect(plainMean(SEED_ITEMS, false).mean).toBeCloseTo(349 / 4, 10);
     expect(plainMean(SEED_ITEMS, false).mean).toBeCloseTo(87.25, 10);
@@ -131,6 +133,105 @@ describe('⭐⭐⭐ where the grade actually stands', () => {
     // (89.5 − 10 − 0.65×88.6667) / 0.25 = 21.8667 / 0.25 = 87.4667
     const need = finalNeeded(S, plainMean(SEED_ITEMS, true).mean)!;
     expect(need).toBeCloseTo(87.4667, 4);
+  });
+});
+
+
+/* ════════════════════════════════════════════════════════════════
+   还剩几场没考 —— 丢最低只能保一场
+   ════════════════════════════════════════════════════════════════ */
+
+describe('⭐⭐⭐ scenarios for the tests still to come', () => {
+  const twenty = withP({ doing: true, math: 8, artistic: 4, explanation: 2, target: 'auto' });
+
+  it('⭐⭐ 只剩一场、预估 90:期末要 76.85', () => {
+    // 项目 +20 把 83 顶到 100 → {100, 91, 85, 90, 90},丢 85 → 371/4 = 92.75
+    const sc = scenarioWith(SEED_ITEMS, twenty, S, 90, 1);
+    expect(sc.mean).toBeCloseTo(371 / 4, 10);
+    expect(sc.need).toBeCloseTo(76.85, 2);
+    expect(sc.droppedPercent).toBe(85);
+  });
+
+  it('⭐⭐ 还有两场、都预估 90:期末要 78.28 —— 多考一场反而更难', () => {
+    // {100, 91, 85, 90, 90, 90},丢 85 → 461/5 = 92.2
+    const sc = scenarioWith(SEED_ITEMS, twenty, S, 90, 2);
+    expect(sc.mean).toBeCloseTo(461 / 5, 10);
+    expect(sc.need).toBeCloseTo(78.28, 2);
+    // ⭐ 多出来的那场把那个 100 稀释了,所以期末要求反而上去
+    expect(sc.need!).toBeGreaterThan(scenarioWith(SEED_ITEMS, twenty, S, 90, 1).need!);
+  });
+
+  /**
+   * ⭐⭐⭐ 这一条是整块的要害:**丢最低只能保一场。**
+   *   只剩一场时,它考多差都会被丢掉,期末需求有地板(80.1);
+   *   一旦变成两场,地板就没了。
+   */
+  it('⭐⭐⭐ 只剩一场时有地板,剩两场时没有', () => {
+    const one = [85, 70, 50, 0].map((p) => scenarioWith(SEED_ITEMS, twenty, S, p, 1).need!);
+    for (const n of one) expect(n).toBeCloseTo(80.1, 1);
+    for (const n of one) expect(n).toBeCloseTo(one[0]!, 10);
+
+    const two = [85, 70, 50, 0].map((p) => scenarioWith(SEED_ITEMS, twenty, S, p, 2).need!);
+    // 两场时每差一分都会落到期末上 —— 严格递增,没有地板
+    for (let i = 1; i < two.length; i += 1) expect(two[i]!).toBeGreaterThan(two[i - 1]!);
+    /**
+     * ⭐⭐⭐ 两场都 70 时是 **89.72**,不是手算的 91.3。
+     *   我手推时默认把 +20 加在 83 上(→100,但封顶吃掉了 3 分);
+     *   自动挑发现加在**其中一个 70** 上更划算:+20 一分不浪费地变成 90,
+     *   而另一个 70 反正要被丢掉。87.8 的均分胜过 87.2。
+     *   —— 这正是"落点交给代码试"的理由:人会默认去补最低的那一个。
+     */
+    expect(two[1]).toBeCloseTo(89.72, 2);
+    // 负向对照:硬加在 83 上确实更差
+    const forced = scenarioWith(SEED_ITEMS, withP({ ...twenty, target: 0 }), S, 70, 2).need!;
+    expect(forced).toBeGreaterThan(two[1]!);
+    expect(forced).toBeCloseTo(91.28, 2);
+  });
+
+  it('⚠️ 预估分被夹在 0..100', () => {
+    expect(scenarioWith(SEED_ITEMS, twenty, S, 150, 1).need)
+      .toBeCloseTo(scenarioWith(SEED_ITEMS, twenty, S, 100, 1).need!, 10);
+    expect(scenarioWith(SEED_ITEMS, twenty, S, -20, 1).need)
+      .toBeCloseTo(scenarioWith(SEED_ITEMS, twenty, S, 0, 1).need!, 10);
+  });
+
+  it('⚠️ 两种情形都要算,而且确实不同', () => {
+    expect(SCENARIOS).toEqual([1, 2]);
+    const a = scenarioWith(SEED_ITEMS, twenty, S, 90, 1).need!;
+    const b = scenarioWith(SEED_ITEMS, twenty, S, 90, 2).need!;
+    expect(Math.abs(a - b)).toBeGreaterThan(1);
+  });
+
+  it('⚠️ extra = 0 时就是现在的状态', () => {
+    const none = scenarioWith(SEED_ITEMS, twenty, S, 90, 0);
+    const applied = applyProject(SEED_ITEMS, twenty, S.dropLowest, S.method);
+    expect(none.mean).toBeCloseTo(meanOf(SEED_ITEMS, applied.percents, S.dropLowest, S.method).mean!, 10);
+  });
+});
+
+/**
+ * ⭐⭐⭐ PowerSchool **今天**显示的数,必须用**没丢最低**的均分算。
+ *   丢最低是学期末才发生的 —— 拿丢完的去算"今天显示多少",
+ *   会把一个预测说成现状(90 vs 真实的 89)。
+ */
+describe('⭐⭐⭐ today versus end of term', () => {
+  it('⭐⭐⭐ 今天 PowerSchool 是 88.95(89, B),不是 90', () => {
+    const noDrop = plainMean(SEED_ITEMS, false).mean!;
+    expect(noDrop).toBeCloseTo(87.25, 10);
+    const today = inProgressDisplay(S, noDrop)!;
+    expect(today).toBeCloseTo(88.95, 10);
+    expect(roundedPercent(today)).toBe(89);
+    expect(letterFor(today)).toBe('B');
+  });
+
+  it('⭐⭐ 丢完之后是 90.18(90, A)—— 那是预测,不是现状', () => {
+    const dropped = plainMean(SEED_ITEMS, true).mean!;
+    const later = inProgressDisplay(S, dropped)!;
+    expect(later).toBeCloseTo(90.18, 2);
+    expect(roundedPercent(later)).toBe(90);
+    expect(letterFor(later)).toBe('A');
+    // 两个数必须不一样 —— 否则这条区分就是空的
+    expect(Math.abs(later - inProgressDisplay(S, plainMean(SEED_ITEMS, false).mean!)!)).toBeGreaterThan(1);
   });
 });
 
@@ -287,7 +388,7 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
   };
 
   it('⭐⭐ +20 时,加在 83 还是 85 上完全一样(两者都封顶到 100)', () => {
-    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it)); // 反导数 90
+    const items: Item[] = [...SEED_ITEMS, pts(90)]; // 反导数 90
     const a = pipeline(items, S, projectWorth(20, 0)).need!;
     const b = pipeline(items, S, projectWorth(20, 2)).need!;
     expect(b).toBeCloseTo(a, 10);
@@ -303,7 +404,7 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
    *               85→95 则仍然丢 83,留 95、91、90。后者更好。
    */
   it('⭐⭐⭐ +10 时,加在 85 上严格更好 —— "两者一样"只在封顶时成立', () => {
-    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it));
+    const items: Item[] = [...SEED_ITEMS, pts(90)];
     const on83 = pipeline(items, S, projectWorth(10, 0)).need!;
     const on85 = pipeline(items, S, projectWorth(10, 2)).need!;
     expect(on85).toBeLessThan(on83);
@@ -318,8 +419,7 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
    *   这时候 83 留在计分集里,把它顶到 100 才划算。
    */
   it('⭐⭐⭐ 反导数考砸(70)时,+20 要加在 83 上,不是 85 上', () => {
-    const items = SEED_ITEMS.map((it, i) =>
-      (i === 4 ? { ...it, earned: 70, muted: false } : it));
+    const items: Item[] = [...SEED_ITEMS, pts(70)];
     const on83 = pipeline(items, S, projectWorth(20, 0)).need!;
     const on85 = pipeline(items, S, projectWorth(20, 2)).need!;
     expect(on83).toBeLessThan(on85);
@@ -330,7 +430,7 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
   });
 
   it('⚠️ 加在 90 或 91 上永远更差', () => {
-    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it));
+    const items: Item[] = [...SEED_ITEMS, pts(90)];
     const best = pipeline(items, S, projectWorth(20)).need!;
     for (const bad of [1, 3]) {
       expect(pipeline(items, S, projectWorth(20, bad)).need!).toBeGreaterThan(best);
@@ -338,7 +438,7 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
   });
 
   it('⚠️ 自动挑永远不比任何一个手选的差', () => {
-    const items = SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, muted: false } : it));
+    const items: Item[] = [...SEED_ITEMS, pts(90)];
     for (const points of [10, 20, 30, 50, -50]) {
       const auto = pipeline(items, S, projectWorth(points)).need!;
       for (let i = 0; i < items.length; i += 1) {
@@ -349,10 +449,10 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
   });
 
   it('⚠️ 指到一场静音的测验上时,退回自动,而不是算出个错的', () => {
-    // 第 5 项默认静音
-    const a = applyProject(SEED_ITEMS, projectWorth(20, 4), S.dropLowest, S.method);
+    const items: Item[] = [...SEED_ITEMS, pts(90, 100, true)];
+    const a = applyProject(items, projectWorth(20, 4), S.dropLowest, S.method);
     expect(a.targetIndex).not.toBe(4);
-    expect(SEED_ITEMS[a.targetIndex]!.muted).toBe(false);
+    expect(items[a.targetIndex]!.muted).toBe(false);
   });
 });
 
@@ -362,8 +462,8 @@ describe('⭐⭐⭐ which assessment to put the points on', () => {
 
 describe('⭐⭐⭐ the planning table', () => {
   const projectTwenty = withP({ doing: true, math: 8, artistic: 4, explanation: 2, target: 'auto' });
-  const withTest = (T: number) =>
-    SEED_ITEMS.map((it, i) => (i === 4 ? { ...it, earned: T, muted: false } : it));
+  /** ⚠️ 种子里只剩已考的四场,所以这里是**追加**一场,不是改第 5 条。 */
+  const withTest = (T: number): Item[] => [...SEED_ITEMS, pts(T)];
 
   /**
    * ⚠️ 期望值全部手算:项目 +20 把 83 顶到 100,

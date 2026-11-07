@@ -321,6 +321,8 @@ export interface Setup {
   readonly goal: Goal;
   /** ⚠️ 大纲原文是 "mean of grades";还没向老师确认 gradebook 是不是真这么算。 */
   readonly method: Method;
+  /** 对**还没考的**测验的预估分数(百分比)。 */
+  readonly projected: number;
 }
 
 export const SEED_SETUP: Setup = {
@@ -335,16 +337,21 @@ export const SEED_SETUP: Setup = {
   dropLowest: true,
   goal: 'A',
   method: 'mean-of-grades',
+  // 最近一次是 90,四次的走势也在往上 —— 作为预估的起点
+  projected: 90,
 };
 
-/** 2026–27 S1 的真实成绩。最后一场还没考,先静音。 */
+/**
+ * 2026–27 S1 **已经进成绩册**的四场测验(和 PowerSchool 截图逐条核对过)。
+ *
+ * ⚠️ 这里**只放已经有分数的**。还没考的测验交给下面的 `scenarioWith` ——
+ *   把"已发生"和"还没发生"混在同一排推子里,很容易把一个假设当成事实。
+ */
 export const SEED_ITEMS: readonly Item[] = [
   { name: 'Precalc', earned: 83, possible: 100, muted: false },
   { name: 'Limits', earned: 91, possible: 100, muted: false },
   { name: 'Deriv apps', earned: 85, possible: 100, muted: false },
   { name: 'Related rates', earned: 90, possible: 100, muted: false },
-  // 反导数那场大约 11/20 —— 还没发生,默认静音
-  { name: 'Antiderivs', earned: 90, possible: 100, muted: true },
 ];
 
 export const SEED_PROJECT: Project = {
@@ -520,6 +527,53 @@ export function spareBy(s: Setup, assessMean: number | null): number | null {
 export function lockedGrade(s: Setup, assessMean: number | null): number | null {
   if (assessMean === null || weightsOf(s).final > 0) return null;
   return gradeWith(s, assessMean, 0);
+}
+
+/* ── 还没考的测验 ──────────────────────────────────────────── */
+
+/** 要算几种"还剩几场"的情形。⭐ 两种:只剩反导数那场,或者再多一场。 */
+export const SCENARIOS = [1, 2] as const;
+
+export interface Scenario {
+  /** 还剩几场没考。 */
+  readonly extra: number;
+  readonly mean: number | null;
+  readonly need: number | null;
+  /** 这种情形下被丢掉的那个百分比;没丢则为 null。 */
+  readonly droppedPercent: number | null;
+}
+
+/**
+ * ⭐⭐⭐ 假设后面还有 `extra` 场测验、每场都考 `projected` 分,算期末要多少。
+ *
+ * ⚠️ 这不是锦上添花,它会**改变结论**:丢最低只能保一场。
+ *   只剩一场时,那一场考多差都会被丢掉,期末需求有个地板;
+ *   一旦变成两场,地板就没了 —— 两场都考 70 的话期末要 91.3,
+ *   而同样考 70 但只有一场时只要 80.1。
+ */
+export function scenarioWith(
+  items: readonly Item[],
+  project: Project,
+  setup: Setup,
+  projected: number,
+  extra: number,
+): Scenario {
+  const pct = Math.max(0, Math.min(100, projected));
+  const upcoming: Item[] = Array.from({ length: Math.max(0, extra) }, (_, k) => ({
+    name: `Upcoming ${k + 1}`,
+    earned: pct,
+    possible: 100,
+    muted: false,
+  }));
+  const all = [...items, ...upcoming];
+  const applied = applyProject(all, project, setup.dropLowest, setup.method);
+  const counted = meanOf(all, applied.percents, setup.dropLowest, setup.method);
+  return {
+    extra,
+    mean: counted.mean,
+    need: finalNeeded(setup, counted.mean),
+    droppedPercent: counted.droppedIndex >= 0 ? applied.percents[counted.droppedIndex]! : null,
+  };
 }
 
 /* ── 旧存档迁移 ────────────────────────────────────────────── */
