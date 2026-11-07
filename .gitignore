@@ -12,3 +12,7 @@ tests/e2e/screenshots/*.actual.png
 !.vscode/extensions.json
 .idea
 .mutation-backup.ts
+
+# the one-file build output (regenerate with standalone/)
+/grade-console.html
+standalone/out/
