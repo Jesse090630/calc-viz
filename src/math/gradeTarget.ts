@@ -12,11 +12,12 @@
  *   ② `gradeWith(…, finalNeeded(…))` 必须**正好落在目标上**。正向代回去。
  *   ③ `finalNeededByBisection` —— 对正向函数二分,完全不碰那条反解公式。
  *
- * ⚠️ 两件**尚未向老师确认**的事,都做成了开关,默认按最可能的那一侧:
- *   · 丢最低分:老师课上说过,但大纲里没有(`Setup.dropLowest`,默认开)。
- *   · 类目平均用 mean-of-grades 还是 total-points:大纲原文写的是
- *     "mean of grades",所以默认它;但目前每场测验都是 100 分制,
- *     两种算法给出的数**完全一样**,所以现有成绩分不出来 —— 开关留着。
+ * ⭐ 丢最低**已确认**:学期末丢掉最低的那一场测验。开关留着是为了做对比,
+ *   不再标成"未确认"。
+ *
+ * ⚠️ 还没确认的只剩一件:类目平均用 mean-of-grades 还是 total-points。
+ *   大纲原文写的是 "mean of grades",所以默认它;但目前每场测验都是 100 分制,
+ *   两种算法给出的数**完全一样**,所以现有成绩分不出来 —— 开关留着。
  */
 
 /* ── 目标档位 ──────────────────────────────────────────────── */
@@ -117,7 +118,6 @@ export const EXPLANATION_SCORES = [0, 2] as const;
 export interface Project {
   /** 做不做。不做的时候,下面的字段一概不影响任何结果。 */
   readonly doing: boolean;
-  readonly met: Readonly<Record<GuidelineKey, boolean>>;
   readonly math: number;
   readonly artistic: number;
   readonly explanation: number;
@@ -129,23 +129,33 @@ export interface Project {
   readonly target: 'auto' | number;
 }
 
-export function guidelinesAllMet(p: Project): boolean {
-  return GUIDELINES.every((g) => p.met[g.key]);
-}
-
 export function projectScore(p: Project): number {
   return p.math + p.artistic + p.explanation;
 }
 
 /**
  * 项目最终折算成多少个百分点。
+ *
+ * ⚠️⚠️ 式子里那个"五条准则的乘积"在这里**固定为 1** —— Jesse 明确说过
+ *   违规拿 −50 对他来说不会发生,所以不按那种情形做规划。
+ *   五条准则仍然列在页面上当**清单**,但不再是可以拨动的开关:
+ *   留一个界面上点不到的分支,就是这个项目一直在清的死代码。
+ *   ⚠️ 这是一个**被写出来的假设**,不是一个被忽略的风险 ——
+ *     真要出现违规,这个模型会高估成绩,页面上也明说了这一点。
+ *
  * ⚠️ 不做项目时是 0(而不是 −50)—— "没交"和"交了但违规"是两回事。
  */
 export function projectPoints(p: Project): number {
   if (!p.doing) return 0;
-  const product = guidelinesAllMet(p) ? 1 : 0;
-  return 5 * product * projectScore(p) - 50;
+  return 5 * projectScore(p) - 50;
 }
+
+/**
+ * ⭐⭐ 实际要瞄的那条线:最低的一场是 83,离 100% 只差 17 分,
+ *   而点数是 10 的倍数,所以 **SCORE 14(+20)一步就顶满**,再往上买不到东西。
+ *   这个函数把"还差多少 SCORE"算出来,页面直接显示。
+ */
+export const SATURATING_SCORE = 14;
 
 /** 达到某个点数所需的最低 SCORE。⭐ +20 对应 SCORE 14,这是实际要瞄的线。 */
 export function scoreNeededFor(points: number): number {
@@ -306,7 +316,7 @@ export interface Setup {
   readonly targetA: number;
   readonly targetB: number;
   readonly targetC: number;
-  /** ⚠️ 老师课上说过要丢最低,但**大纲里没有**。还没确认。 */
+  /** ⭐ 已和老师确认:学期末丢掉最低的那一场测验。 */
   readonly dropLowest: boolean;
   readonly goal: Goal;
   /** ⚠️ 大纲原文是 "mean of grades";还没向老师确认 gradebook 是不是真这么算。 */
@@ -340,7 +350,6 @@ export const SEED_ITEMS: readonly Item[] = [
 export const SEED_PROJECT: Project = {
   // ⚠️ 默认不做:页面一打开显示的应该是**当前真实处境**,而不是一个计划。
   doing: false,
-  met: { ownWork: true, noWords: true, beautiful: true, paper: true, safe: true },
   // 推荐线:SCORE 14 → +20,刚好把最低的那场顶到 100%
   math: 8,
   artistic: 4,

@@ -5,7 +5,7 @@ import {
   SEED_PROJECT, SEED_SETUP, SOLVED_TEX, TIGHT_ABOVE, VERDICT_WORD, WEIGHT_SLOP,
   type Goal, type Item, type Project, type Setup,
   applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, finalNeededByBisection,
-  gradeWith, guidelinesAllMet, inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem,
+  SATURATING_SCORE, gradeWith, inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem,
   missBy, percentOf, projectPoints, projectScore, roundedPercent, scoreNeededFor, spareBy,
   targetOf, verdictOf, weightSum, weightsBalanced, weightsOf,
 } from './gradeTarget';
@@ -139,16 +139,18 @@ describe('⭐⭐⭐ where the grade actually stands', () => {
    ════════════════════════════════════════════════════════════════ */
 
 describe('⭐⭐⭐ the project', () => {
-  it('⭐⭐⭐ 任何一条准则没做到 → 整个乘积是 0 → 直接 −50', () => {
-    const good = withP({ doing: true, math: 12, artistic: 6, explanation: 2 });
-    expect(projectScore(good)).toBe(20);
-    expect(projectPoints(good)).toBe(50);
-    // 满分的作品,只要有一条准则没做到,就从 +50 掉到 −50
-    for (const g of GUIDELINES) {
-      const failed = withP({ ...good, met: { ...good.met, [g.key]: false } });
-      expect(guidelinesAllMet(failed), g.key).toBe(false);
-      expect(projectPoints(failed), g.key).toBe(-50);
-    }
+  /**
+   * ⚠️ 式子里那个"五条准则的乘积"现在**固定为 1**:Jesse 说过违规拿 −50
+   *   对他不会发生,所以不按那种情形规划。五条仍然列在页面上当清单。
+   *   这条测试守住的是:那个假设**被写出来了**,而且清单没丢。
+   */
+  it('⚠️ 五条准则仍然列着,但不再参与计算', () => {
+    expect(GUIDELINES).toHaveLength(5);
+    for (const g of GUIDELINES) expect(g.text.length).toBeGreaterThan(25);
+    // 同样的 SCORE,点数只由 SCORE 决定
+    const a = withP({ doing: true, math: 8, artistic: 4, explanation: 2 });
+    expect(projectPoints(a)).toBe(20);
+    expect(projectPoints({ ...a })).toBe(20);
   });
 
   it('⭐⭐⭐ 点数恒为 10 的倍数,范围 −50..+50 —— 没有"38 分"', () => {
@@ -168,6 +170,21 @@ describe('⭐⭐⭐ the project', () => {
     }
     // 三个分项全是偶数 ⇒ SCORE 偶数 ⇒ 5×SCORE 是 10 的倍数
     expect([...seen].sort((a, b) => a - b)).toEqual([-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]);
+  });
+
+  /**
+   * ⭐⭐ 唯一真正的决策:够不够到饱和线。
+   *   最低那场是 83,离 100% 差 17;点数是 10 的倍数,所以 SCORE 14(+20)
+   *   一步顶满,再往上一分钱都买不到东西。
+   */
+  it('⭐⭐ 饱和线就是 SCORE 14,而且它确实让最低那场刚好顶到 100', () => {
+    expect(SATURATING_SCORE).toBe(14);
+    expect(scoreNeededFor(20)).toBe(SATURATING_SCORE);
+    const lowest = Math.min(...SEED_ITEMS.filter((i) => !i.muted).map(percentOf));
+    expect(lowest).toBe(83);
+    // 差 17 分,而点数只能是 10 的倍数 ⇒ 20 是第一个够的
+    expect(100 - lowest).toBe(17);
+    expect(Math.ceil(17 / 10) * 10).toBe(20);
   });
 
   it('⭐⭐ +20 需要 SCORE 14(math 8 + art 4 + paper 2)', () => {
@@ -195,7 +212,7 @@ describe('⭐⭐⭐ the project', () => {
 
   it('⚠️ 不做项目是 0,不是 −50 —— "没交"和"交了但违规"是两回事', () => {
     expect(projectPoints(withP({ doing: false }))).toBe(0);
-    expect(projectPoints(withP({ doing: false, met: { ...SEED_PROJECT.met, paper: false } }))).toBe(0);
+    expect(projectPoints(withP({ doing: false }))).toBe(0);
     expect(SEED_PROJECT.doing).toBe(false);
   });
 
@@ -209,13 +226,16 @@ describe('⭐⭐⭐ the project', () => {
     expect(a.percents[1]).toBe(91);  // 别的场不动
   });
 
-  it('⚠️ 负点数会把分数压下去,但不低于 0', () => {
-    const items = [pts(83), pts(91)];
-    const failed = withP({ doing: true, met: { ...SEED_PROJECT.met, noWords: false }, target: 0 });
-    const a = applyProject(items, failed, false, S.method);
-    expect(a.points).toBe(-50);
+  /**
+   * ⚠️ 点数仍然可能是负的 —— SCORE 低于 10 时 `5·S − 50 < 0`。
+   *   (违规那条路已经不建模了,但这条还在,所以 0 下限必须守住。)
+   */
+  it('⚠️ SCORE 很低时点数为负,分数被压下去但不低于 0', () => {
+    const weak = withP({ doing: true, math: 0, artistic: 0, explanation: 0, target: 0 });
+    expect(projectPoints(weak)).toBe(-50);
+    const a = applyProject([pts(83), pts(91)], weak, false, S.method);
     expect(a.percents[0]).toBe(33); // 83 − 50
-    const tiny = applyProject([pts(20)], failed, false, S.method);
+    const tiny = applyProject([pts(20)], weak, false, S.method);
     expect(tiny.percents[0]).toBe(0); // 20 − 50 → 夹到 0,不是 −30
   });
 
@@ -433,30 +453,6 @@ describe('⭐⭐⭐ the planning table', () => {
     expect(solve(withP({ doing: false })) - solve(projectTwenty)).toBeCloseTo(7.8, 1);
   });
 
-  /**
-   * ⭐⭐⭐ 风险的真正形状:
-   *   丢最低**成立**时,违规的 −50 自己变成被丢的那条,
-   *   和"根本不做项目"**结果完全一样** —— 代价是 0。
-   *   丢最低**不成立**时,同样的违规要在期末上多考 26 分。
-   */
-  it('⭐⭐⭐ 丢最低成立时,违规一条准则的代价是 0(相对于不做)', () => {
-    const failed = withP({ doing: true, met: { ...SEED_PROJECT.met, beautiful: false }, target: 0 });
-    const none = withP({ doing: false });
-    for (const T of [85, 90, 100]) {
-      const a = pipeline(withTest(T), S, failed).need!;
-      const b = pipeline(withTest(T), S, none).need!;
-      expect(a, `T=${T}`).toBeCloseTo(b, 10);
-    }
-  });
-
-  it('⭐⭐⭐ 丢最低不成立时,同样的违规要多考 26 分', () => {
-    const noDrop = withS({ dropLowest: false });
-    const failed = withP({ doing: true, met: { ...SEED_PROJECT.met, beautiful: false }, target: 0 });
-    const none = withP({ doing: false });
-    const a = pipeline(withTest(90), noDrop, failed).need!;
-    const b = pipeline(withTest(90), noDrop, none).need!;
-    expect(a - b).toBeCloseTo(26, 6);
-  });
 });
 
 /* ════════════════════════════════════════════════════════════════

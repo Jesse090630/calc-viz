@@ -130,15 +130,13 @@ await fresh();
   const pts = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
   if (pts !== 20) note(`the seeded project should be worth +20, got ${pts}`);
 
-  // ⭐⭐⭐ 取消任意一条准则 → −50,而且要有醒目的警告
-  for (const key of ['ownWork', 'noWords', 'beautiful', 'paper', 'safe']) {
-    await toggle(`[data-guideline="${key}"]`, false);
-    const p = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
-    if (p !== -50) note(`unchecking "${key}" should make the project -50, got ${p}`);
-    if (!(await has('[data-guideline-warn]'))) note(`unchecking "${key}" shows no warning`);
-    await toggle(`[data-guideline="${key}"]`, true);
-  }
-  if (await has('[data-guideline-warn]')) note('the guideline warning stays up when all five are met');
+  // ⚠️ 五条准则现在是**清单**,不是开关 —— 违规那条路不建模了,
+  //   但页面必须把这个假设**写出来**,而不是让它看起来像"违规也没事"。
+  if ((await count('[data-assumption]')) !== 1) note('the page does not state that all five guidelines are assumed to hold');
+  const assume = (await text('[data-assumption]')) ?? '';
+  // ⚠️ 页面用的是真正的减号 U+2212(−),不是 ASCII 连字符 —— 两个都认。
+  if (!/[-\u2212]50/.test(assume)) note(`the assumption note should say what an unmet guideline would cost: "${assume}"`);
+  if (await has('[data-guideline] input')) note('the guidelines should be a checklist, not toggles that change the maths');
 
   // 满分作品
   await page.click('[data-score="math-12"]');
@@ -235,30 +233,22 @@ await fresh();
   // T=90:不做 86.6,做 +20 则 76.85 → 值 9.75
   if (Math.abs(worth - (86.6 - 76.85)) > 0.05) note(`the project should be worth about 9.75 points here, page says ${worth}`);
 
-  // ⭐⭐⭐ 违规 −50:丢最低成立时,和"根本不做"结果完全一样
-  await toggle('[data-guideline="beautiful"]', false);
-  const failedNeed = await val('need');
-  await toggle('[data-field="doing"]', false);
-  const noneNeed = await val('need');
-  if (Math.abs(failedNeed - noneNeed) > 1e-9) {
-    note(`with the drop on, a failed guideline should cost nothing versus not doing it (${failedNeed} vs ${noneNeed})`);
-  }
-  // 而丢最低关掉时,同样的违规要多考 26 分
-  await toggle('[data-field="doing"]', true);
-  await toggle('[data-field="dropLowest"]', false);
-  const failedNoDrop = await val('need');
-  await toggle('[data-field="doing"]', false);
-  const noneNoDrop = await val('need');
-  if (Math.abs((failedNoDrop - noneNoDrop) - 26) > 0.05) {
-    note(`without the drop a failed guideline should cost 26 points on the final, got ${failedNoDrop - noneNoDrop}`);
-  }
-  await toggle('[data-field="dropLowest"]', true);
+  // ⭐ 饱和提示:SCORE 14 之后再加码毫无意义,页面要直说
+  const sat = (await text('[data-saturation]')) ?? '';
+  if (!/worth nothing/i.test(sat)) note(`at SCORE 14 the page should say more is worth nothing: "${sat}"`);
+  await page.click('[data-score="artistic-0"]');
+  await page.waitForTimeout(170);
+  const below = (await text('[data-saturation]')) ?? '';
+  if (!/to go/.test(below)) note(`below the saturating score the page should say how far: "${below}"`);
+  await page.click('[data-score="artistic-4"]');
+  await page.waitForTimeout(150);
 }
 
-/* ── ⑦ 两件没确认的事都标出来了 ─────────────────────────── */
+/* ── ⑦ 丢最低已确认;算法仍未确认 ───────────────────────── */
 {
   await fresh();
-  if (!(await has('[data-unconfirmed="drop"]'))) note('the drop rule is not marked unconfirmed');
+  if (!(await has('[data-confirmed="drop"]'))) note('the drop rule should now be marked confirmed');
+  if (await has('[data-unconfirmed="drop"]')) note('the drop rule is still marked unconfirmed');
   if (!(await has('[data-unconfirmed="method"]'))) note('the averaging method is not marked unconfirmed');
   // 目前两种算法必须给出完全一样的数(所有测验都是 100 分制)
   const a = await val('need');
@@ -355,5 +345,5 @@ if (fail.length) {
   for (const f of fail) console.error('  - ' + f);
   process.exit(1);
 }
-console.log('✓ grade-console:87.25 / 88.95 / 88.67 / 90.18 / 87.47 全部手算一致、项目准则是乘积(任一不合格 −50)、+20 之后饱和、'
-  + '加分落点三种情形三种答案、T ≤ 85 时曲线变平(不是 70)、丢最低成立时违规代价为 0、两处 unconfirmed 已标注、无 CJK');
+console.log('✓ grade-console:87.25 / 88.95 / 88.67 / 90.18 / 87.47 全部手算一致、+20 之后饱和、'
+  + '加分落点三种情形三种答案、T ≤ 85 时曲线变平(不是 70)、丢最低已确认、准则按清单呈现且假设写明、饱和线提示正确、无 CJK');

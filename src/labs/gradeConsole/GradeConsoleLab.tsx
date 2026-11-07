@@ -23,7 +23,8 @@ import {
   IN_PROGRESS_TEX, MATH_SCORES, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS, SEED_PROJECT,
   SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
   type Item, type Project, type Setup, type Verdict,
-  applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, gradeWith, guidelinesAllMet,
+  SATURATING_SCORE,
+  applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, gradeWith,
   inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem, missBy, percentOf,
   projectPoints, projectScore, roundedPercent, spareBy, targetOf, verdictOf, weightSum,
   weightsBalanced,
@@ -59,7 +60,7 @@ function restore(): Saved | null {
     return {
       setup: { ...SEED_SETUP, ...o.setup },
       items: o.items.map(migrateItem),
-      project: { ...SEED_PROJECT, ...(o.project ?? {}), met: { ...SEED_PROJECT.met, ...(o.project?.met ?? {}) } },
+      project: { ...SEED_PROJECT, ...(o.project ?? {}) },
     };
   } catch {
     return null;
@@ -146,7 +147,6 @@ export function GradeConsoleLab() {
   const target = targetOf(setup);
   const tone = TONE[verdict];
   const points = projectPoints(project);
-  const allMet = guidelinesAllMet(project);
 
   const patch = useCallback((o: Partial<Setup>) => setSetup((s) => ({ ...s, ...o })), []);
   const patchP = useCallback((o: Partial<Project>) => setProject((p) => ({ ...p, ...o })), []);
@@ -346,43 +346,48 @@ export function GradeConsoleLab() {
             Doing the project — <span className="text-slate-400">The Art of Calculus (Without Words)</span>
           </label>
           {project.doing && (
-            <p data-project-points data-value={points}
-              className="font-mono text-[22px] leading-none tabular-nums"
-              style={{ color: points > 0 ? LAB.pass : points < 0 ? LAB.fail : LAB.muted }}>
-              {points > 0 ? '+' : ''}{points}
-              <span className="ml-2 text-[11px] text-slate-500">points · SCORE {projectScore(project)}</span>
-            </p>
+            <div className="text-right">
+              <p data-project-points data-value={points}
+                className="font-mono text-[22px] leading-none tabular-nums"
+                style={{ color: points > 0 ? LAB.pass : LAB.muted }}>
+                {points > 0 ? '+' : ''}{points}
+                <span className="ml-2 text-[11px] text-slate-500">points · SCORE {projectScore(project)}</span>
+              </p>
+              {/* ⭐ 唯一真正的决策:够不够到饱和线。过了就别再加码了。 */}
+              <p data-saturation className="mt-1 font-mono text-[10px]"
+                style={{ color: projectScore(project) >= SATURATING_SCORE ? LAB.pass : LAB.x2 }}>
+                {projectScore(project) >= SATURATING_SCORE
+                  ? `At or past SCORE ${SATURATING_SCORE} — more is worth nothing`
+                  : `SCORE ${SATURATING_SCORE} is where it stops helping — ${SATURATING_SCORE - projectScore(project)} to go`}
+              </p>
+            </div>
           )}
         </div>
 
         {project.doing && (
           <>
-            {/* ⚠️ 五条准则是**乘积**,任何一条 0 就全盘归零 —— 所以警告要响。 */}
-            {!allMet && (
-              <p data-guideline-warn className="mt-3 rounded-lg px-3 py-2 text-[12px] leading-relaxed"
-                style={{ background: `${LAB.fail}14`, color: LAB.fail }}>
-                <span aria-hidden>× </span>
-                One guideline unmet makes the whole product zero, so the project scores −50 no matter
-                how good the work is.
-              </p>
-            )}
-
             <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
               <div>
-                <p className={label}>All five must hold</p>
+                {/*
+                  ⚠️ 这五条是**清单,不是开关**。式子里那个乘积固定为 1 ——
+                    Jesse 说过违规拿 −50 对他不会发生,所以不按那种情形规划。
+                    但这是个**写出来的假设**:下面那句话把它说明白,
+                    而不是让页面看起来像"违规也没事"。
+                */}
+                <p className={label}>All five are assumed to hold</p>
                 <ul className="mt-2 space-y-1.5">
                   {GUIDELINES.map((g) => (
-                    <li key={g.key}>
-                      <label className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-300">
-                        <input type="checkbox" checked={project.met[g.key]}
-                          data-guideline={g.key}
-                          onChange={(e) => patchP({ met: { ...project.met, [g.key]: e.target.checked } })}
-                          className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-amber-400" />
-                        <span className={project.met[g.key] ? '' : 'text-rose-300'}>{g.text}</span>
-                      </label>
+                    <li key={g.key} data-guideline={g.key}
+                      className="flex items-start gap-2 text-[12px] leading-relaxed text-slate-300">
+                      <span aria-hidden className="mt-px shrink-0" style={{ color: LAB.pass }}>✓</span>
+                      <span>{g.text}</span>
                     </li>
                   ))}
                 </ul>
+                <p data-assumption className="mt-2 font-mono text-[10px] leading-relaxed text-slate-500">
+                  Any one of them unmet would zero the product and score −50 instead. Not modelled
+                  here.
+                </p>
               </div>
 
               <div className="flex flex-col gap-3">
@@ -491,8 +496,8 @@ export function GradeConsoleLab() {
                 className="h-3.5 w-3.5 accent-amber-400" />
               Drop the lowest assessment
             </label>
-            <p data-unconfirmed="drop" className="mt-1 font-mono text-[10px] text-amber-300/80">
-              Unconfirmed — said in class, not in the syllabus.
+            <p data-confirmed="drop" className="mt-1 font-mono text-[10px]" style={{ color: LAB.pass }}>
+              <span aria-hidden>✓ </span>Confirmed with the teacher.
             </p>
           </div>
           <div>
