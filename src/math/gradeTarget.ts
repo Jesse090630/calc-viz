@@ -96,8 +96,8 @@ export type GuidelineKey = 'ownWork' | 'noWords' | 'beautiful' | 'paper' | 'safe
  *   五条准则每条 0 或 1,所以**任何一条没做到,整个乘积就是 0,项目直接 −50**。
  *   SCORE = Mathematics(0/4/8/12) + Artistic(0/2/4/6) + Explanation(0/2),满分 20。
  *
- * ⭐ 三个分项都是偶数 ⇒ SCORE 恒为偶数 ⇒ **points 恒为 10 的倍数**,
- *   范围 −50 到 +50。没有"38 分"这种东西。
+ * ⚠️ 老师会给部分分,所以 SCORE 是**连续的**,不是只能取偶数 ——
+ *   points = 5·S − 50 在 −50..+50 之间连续取值。
  *
  * ⚠️ 这些点数是加到**某一场测验的百分比**上的(自己选哪一场,12/04 前定),
  *   **上限 100%**,可以是负的。加完之后再重新算丢哪一场。
@@ -110,10 +110,25 @@ export const GUIDELINES: readonly { readonly key: GuidelineKey; readonly text: s
   { key: 'safe', text: 'No money spent, nothing dangerous, nothing against school policy' },
 ];
 
-/** 三个分项各自允许的取值。⚠️ 全是偶数,这正是 points 恒为 10 的倍数的原因。 */
-export const MATH_SCORES = [0, 4, 8, 12] as const;
-export const ARTISTIC_SCORES = [0, 2, 4, 6] as const;
-export const EXPLANATION_SCORES = [0, 2] as const;
+/**
+ * 三个分项的满分。
+ * ⚠️ 老师**会给部分分**,所以这三项不是只能取 0/4/8/12 这种离散值 ——
+ *   小数也可以,SCORE 因此可以是 15 这样的奇数。
+ *   (早先按"全是偶数 ⇒ points 恒为 10 的倍数"写过,那是错的,已经改掉。)
+ */
+export const COMPONENTS = [
+  { key: 'math', name: 'Mathematics', max: 12 },
+  { key: 'artistic', name: 'Artistic', max: 6 },
+  { key: 'explanation', name: 'Explanation', max: 2 },
+] as const;
+
+export type ComponentKey = (typeof COMPONENTS)[number]['key'];
+
+/** 分项得分夹在 0..满分。 */
+export function clampComponent(x: number, max: number): number {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(max, x));
+}
 
 export interface Project {
   /** 做不做。不做的时候,下面的字段一概不影响任何结果。 */
@@ -151,11 +166,41 @@ export function projectPoints(p: Project): number {
 }
 
 /**
- * ⭐⭐ 实际要瞄的那条线:最低的一场是 83,离 100% 只差 17 分,
- *   而点数是 10 的倍数,所以 **SCORE 14(+20)一步就顶满**,再往上买不到东西。
- *   这个函数把"还差多少 SCORE"算出来,页面直接显示。
+ * ⭐⭐⭐ 项目做到多少分就**不再有用**了。
+ *
+ * ⚠️ 这个数**算出来,不写死**。凭直觉会说"最低的是 83,差 17 分,
+ *   所以 SCORE = (17+50)/5 = 13.4" —— 但实测是 **13**:
+ *   +15 刚好把 **85** 顶到 100,而 83 反正要被丢掉,
+ *   所以真正要封顶的是 85 不是 83。只有让代码搜一遍才看得出来。
+ *
+ * 做法:二分找出"结果开始和满分项目一样"的那个 SCORE。
+ * 返回 `null` 表示没在做项目 / 算不出来。
  */
-export const SATURATING_SCORE = 14;
+export function saturatingScore(
+  items: readonly Item[],
+  project: Project,
+  setup: Setup,
+): number | null {
+  const at = (score: number): number | null => {
+    const p: Project = { ...project, doing: true, math: score, artistic: 0, explanation: 0 };
+    const applied = applyProject(items, p, setup.dropLowest, setup.method);
+    return finalNeeded(setup, meanOf(items, applied.percents, setup.dropLowest, setup.method).mean);
+  };
+  const top = at(20);
+  if (top === null) return null;
+  // ⚠️ 已经到顶了(比如所有分数都已经是 100),再找就没意义
+  if (at(0) !== null && Math.abs(at(0)! - top) < 1e-12) return 0;
+  let lo = 0;
+  let hi = 20;
+  for (let i = 0; i < 80; i += 1) {
+    const mid = (lo + hi) / 2;
+    const v = at(mid);
+    if (v === null) return null;
+    if (v > top + 1e-12) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
 
 /** 达到某个点数所需的最低 SCORE。⭐ +20 对应 SCORE 14,这是实际要瞄的线。 */
 export function scoreNeededFor(points: number): number {
@@ -357,9 +402,9 @@ export const SEED_ITEMS: readonly Item[] = [
 export const SEED_PROJECT: Project = {
   // ⚠️ 默认不做:页面一打开显示的应该是**当前真实处境**,而不是一个计划。
   doing: false,
-  // 推荐线:SCORE 14 → +20,刚好把最低的那场顶到 100%
+  // Jesse 说至少能拿 15 分(部分分是允许的),8 + 5 + 2 = 15 → +25
   math: 8,
-  artistic: 4,
+  artistic: 5,
   explanation: 2,
   target: 'auto',
 };

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARTISTIC_SCORES, COMFORTABLE_BELOW, EQUATION_TEX, EXPLANATION_SCORES, GOALS, GUIDELINES,
-  HEADLINE, IN_PROGRESS_TEX, MATH_SCORES, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS,
+  COMFORTABLE_BELOW, COMPONENTS, EQUATION_TEX, GOALS, GUIDELINES,
+  HEADLINE, IN_PROGRESS_TEX, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS,
   SEED_PROJECT, SEED_SETUP, SOLVED_TEX, TIGHT_ABOVE, VERDICT_WORD, WEIGHT_SLOP,
   type Goal, type Item, type Project, type Setup,
   applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, finalNeededByBisection,
-  SATURATING_SCORE, SCENARIOS, gradeWith, inProgressDisplay, scenarioWith, letterFor, lockedGrade, meanOf, migrateItem,
+  SCENARIOS, clampComponent, gradeWith, inProgressDisplay, saturatingScore, scenarioWith, letterFor, lockedGrade, meanOf, migrateItem,
   missBy, percentOf, projectPoints, projectScore, roundedPercent, scoreNeededFor, spareBy,
   targetOf, verdictOf, weightSum, weightsBalanced, weightsOf,
 } from './gradeTarget';
@@ -254,23 +254,32 @@ describe('⭐⭐⭐ the project', () => {
     expect(projectPoints({ ...a })).toBe(20);
   });
 
-  it('⭐⭐⭐ 点数恒为 10 的倍数,范围 −50..+50 —— 没有"38 分"', () => {
-    const seen = new Set<number>();
-    for (const math of MATH_SCORES) {
-      for (const artistic of ARTISTIC_SCORES) {
-        for (const explanation of EXPLANATION_SCORES) {
-          const p = withP({ doing: true, math, artistic, explanation });
-          const pt = projectPoints(p);
-          // ⚠️ `-50 % 10` 在 JS 里是 `-0`,Object.is 下不等于 0 —— 取绝对值。
-          expect(Math.abs(pt % 10), `${math}+${artistic}+${explanation}`).toBe(0);
-          expect(pt).toBeGreaterThanOrEqual(-50);
-          expect(pt).toBeLessThanOrEqual(50);
-          seen.add(pt);
-        }
-      }
-    }
-    // 三个分项全是偶数 ⇒ SCORE 偶数 ⇒ 5×SCORE 是 10 的倍数
-    expect([...seen].sort((a, b) => a - b)).toEqual([-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]);
+  /**
+   * ⚠️ **更正**:这里原来断言"点数恒为 10 的倍数,没有 38 分这种东西",
+   *   依据是三个分项都只能取偶数。那是错的 —— 老师**会给部分分**,
+   *   所以 SCORE 连续,points = 5·S − 50 也连续。
+   */
+  it('⭐⭐ 分项可以是小数,SCORE 因此能取到 15 这种奇数', () => {
+    const odd = withP({ doing: true, math: 8, artistic: 5, explanation: 2 });
+    expect(projectScore(odd)).toBe(15);
+    expect(projectPoints(odd)).toBe(25); // 5×15 − 50,不是 10 的倍数
+    const frac = withP({ doing: true, math: 7.5, artistic: 4.5, explanation: 1.5 });
+    expect(projectScore(frac)).toBe(13.5);
+    expect(projectPoints(frac)).toBeCloseTo(17.5, 10);
+    // 种子就是 Jesse 说的 15
+    expect(projectScore(SEED_PROJECT)).toBe(15);
+  });
+
+  it('⚠️ 三个分项各自夹在 0..满分', () => {
+    expect(COMPONENTS.map((c) => c.max)).toEqual([12, 6, 2]);
+    expect(clampComponent(-3, 12)).toBe(0);
+    expect(clampComponent(99, 12)).toBe(12);
+    expect(clampComponent(7.5, 12)).toBe(7.5);
+    expect(clampComponent(Number.NaN, 6)).toBe(0);
+    // 三项全满就是 SCORE 20 → +50
+    const full = withP({ doing: true, math: 12, artistic: 6, explanation: 2 });
+    expect(projectScore(full)).toBe(20);
+    expect(projectPoints(full)).toBe(50);
   });
 
   /**
@@ -278,23 +287,54 @@ describe('⭐⭐⭐ the project', () => {
    *   最低那场是 83,离 100% 差 17;点数是 10 的倍数,所以 SCORE 14(+20)
    *   一步顶满,再往上一分钱都买不到东西。
    */
-  it('⭐⭐ 饱和线就是 SCORE 14,而且它确实让最低那场刚好顶到 100', () => {
-    expect(SATURATING_SCORE).toBe(14);
-    expect(scoreNeededFor(20)).toBe(SATURATING_SCORE);
-    const lowest = Math.min(...SEED_ITEMS.filter((i) => !i.muted).map(percentOf));
-    expect(lowest).toBe(83);
-    // 差 17 分,而点数只能是 10 的倍数 ⇒ 20 是第一个够的
-    expect(100 - lowest).toBe(17);
-    expect(Math.ceil(17 / 10) * 10).toBe(20);
+  /**
+   * ⭐⭐⭐ 饱和线是**算出来的**,而且算出来的答案推翻了直觉。
+   *   直觉:最低的是 83,差 17 分,所以 SCORE = (17+50)/5 = 13.4。
+   *   实际:**13**。因为 +15 刚好把 **85** 顶到 100,而 83 反正要被丢掉 ——
+   *   真正该封顶的是 85,不是 83。
+   */
+  it('⭐⭐⭐ 饱和线是 13,不是直觉上的 13.4', () => {
+    const items: Item[] = [...SEED_ITEMS, pts(90)];
+    const sat = saturatingScore(items, withP({ doing: true }), S)!;
+    expect(sat).toBeCloseTo(13, 2);
+    // 直觉那个数会算成 13.4 —— 钉住它别被写回去
+    expect(sat).toBeLessThan(13.4);
+
+    const at = (score: number) => {
+      const p = withP({ doing: true, math: score, artistic: 0, explanation: 0 });
+      const a = applyProject(items, p, S.dropLowest, S.method);
+      return finalNeeded(S, meanOf(items, a.percents, S.dropLowest, S.method).mean)!;
+    };
+    // 到了饱和线就不再变好
+    expect(at(13)).toBeCloseTo(at(20), 10);
+    expect(at(15)).toBeCloseTo(at(20), 10);
+    // 差一点点就还不够
+    expect(at(12.8)).toBeGreaterThan(at(13) + 0.1);
   });
 
-  it('⭐⭐ +20 需要 SCORE 14(math 8 + art 4 + paper 2)', () => {
+  it('⭐⭐ Jesse 说的 15 分已经越过饱和线', () => {
+    const items: Item[] = [...SEED_ITEMS, pts(90)];
+    const doing = withP({ doing: true }); // ⚠️ 种子默认不做项目,这里要打开
+    const sat = saturatingScore(items, doing, S)!;
+    expect(projectScore(doing)).toBe(15);
+    expect(projectScore(doing)).toBeGreaterThan(sat);
+    // 所以 15 和满分 20 给出同一个结果
+    const need15 = scenarioWith(SEED_ITEMS, doing, S, 90, 1).need!;
+    const need20 = scenarioWith(SEED_ITEMS,
+      withP({ doing: true, math: 12, artistic: 6, explanation: 2 }), S, 90, 1).need!;
+    expect(need15).toBeCloseTo(need20, 10);
+    expect(need15).toBeCloseTo(76.85, 2);
+  });
+
+  it('⭐ points 和 SCORE 之间的换算是可逆的', () => {
     expect(scoreNeededFor(20)).toBe(14);
-    const aim = withP({ doing: true, math: 8, artistic: 4, explanation: 2 });
-    expect(projectScore(aim)).toBe(14);
-    expect(projectPoints(aim)).toBe(20);
-    // 种子就是这条推荐线
-    expect(projectScore(SEED_PROJECT)).toBe(14);
+    expect(scoreNeededFor(25)).toBe(15);
+    expect(scoreNeededFor(0)).toBe(10);
+    expect(scoreNeededFor(-50)).toBe(0);
+    for (const sc of [0, 7.5, 13, 15, 20]) {
+      expect(scoreNeededFor(projectPoints(withP({ doing: true, math: sc, artistic: 0, explanation: 0 }))))
+        .toBeCloseTo(sc, 10);
+    }
   });
 
   /**

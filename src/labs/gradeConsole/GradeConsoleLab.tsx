@@ -19,15 +19,15 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ARTISTIC_SCORES, EQUATION_TEX, EXPLANATION_SCORES, GOALS, GUIDELINES, HEADLINE,
-  IN_PROGRESS_TEX, MATH_SCORES, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS, SEED_PROJECT,
+  COMPONENTS, EQUATION_TEX, GOALS, GUIDELINES, HEADLINE,
+  IN_PROGRESS_TEX, METHODS, METHOD_NAME, PROJECT_TEX, SEED_ITEMS, SEED_PROJECT,
   SEED_SETUP, SOLVED_TEX, VERDICT_WORD,
   type Item, type Project, type Setup, type Verdict,
-  SATURATING_SCORE, SCENARIOS,
-  applyProject, clampEarned, clampPossible, cutoffOf, finalNeeded, gradeWith,
+  SCENARIOS,
+  applyProject, clampComponent, clampEarned, clampPossible, cutoffOf, finalNeeded, gradeWith,
   inProgressDisplay, letterFor, lockedGrade, meanOf, migrateItem, missBy, percentOf,
-  projectPoints, projectScore, roundedPercent, scenarioWith, spareBy, targetOf, verdictOf,
-  weightSum, weightsBalanced,
+  projectPoints, projectScore, roundedPercent, saturatingScore, scenarioWith, spareBy, targetOf,
+  verdictOf, weightSum, weightsBalanced,
 } from '../../math/gradeTarget';
 import { LAB } from '../shared/theme';
 import { Tex } from '../shared/Tex';
@@ -158,6 +158,11 @@ export function GradeConsoleLab() {
   const target = targetOf(setup);
   const tone = TONE[verdict];
   const points = projectPoints(project);
+  /** ⭐ 饱和线是**算出来的**,不是写死的 —— 它取决于当前这组分数。 */
+  const saturate = useMemo(
+    () => (project.doing ? saturatingScore(items, project, setup) : null),
+    [items, project, setup],
+  );
 
   const patch = useCallback((o: Partial<Setup>) => setSetup((s) => ({ ...s, ...o })), []);
   const patchP = useCallback((o: Partial<Project>) => setProject((p) => ({ ...p, ...o })), []);
@@ -422,16 +427,18 @@ export function GradeConsoleLab() {
               <p data-project-points data-value={points}
                 className="font-mono text-[22px] leading-none tabular-nums"
                 style={{ color: points > 0 ? LAB.pass : LAB.muted }}>
-                {points > 0 ? '+' : ''}{points}
-                <span className="ml-2 text-[11px] text-slate-500">points · SCORE {projectScore(project)}</span>
+                {points > 0 ? '+' : ''}{show(points)}
+                <span className="ml-2 text-[11px] text-slate-500">points · SCORE {show(projectScore(project))}</span>
               </p>
               {/* ⭐ 唯一真正的决策:够不够到饱和线。过了就别再加码了。 */}
-              <p data-saturation className="mt-1 font-mono text-[10px]"
-                style={{ color: projectScore(project) >= SATURATING_SCORE ? LAB.pass : LAB.x2 }}>
-                {projectScore(project) >= SATURATING_SCORE
-                  ? `At or past SCORE ${SATURATING_SCORE} — more is worth nothing`
-                  : `SCORE ${SATURATING_SCORE} is where it stops helping — ${SATURATING_SCORE - projectScore(project)} to go`}
-              </p>
+              {saturate !== null && (
+                <p data-saturation data-value={saturate} className="mt-1 font-mono text-[10px]"
+                  style={{ color: projectScore(project) >= saturate - 1e-9 ? LAB.pass : LAB.x2 }}>
+                  {projectScore(project) >= saturate - 1e-9
+                    ? `Past SCORE ${show(saturate)} — more is worth nothing`
+                    : `SCORE ${show(saturate)} is where it stops helping — ${show(saturate - projectScore(project))} to go`}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -463,24 +470,20 @@ export function GradeConsoleLab() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {([
-                  ['Mathematics', MATH_SCORES, project.math, (v: number) => patchP({ math: v }), 'math'],
-                  ['Artistic', ARTISTIC_SCORES, project.artistic, (v: number) => patchP({ artistic: v }), 'artistic'],
-                  ['Explanation', EXPLANATION_SCORES, project.explanation, (v: number) => patchP({ explanation: v }), 'explanation'],
-                ] as const).map(([name, options, value, set, key]) => (
-                  <div key={key}>
-                    <p className={label}>{name}</p>
-                    <div className="mt-1.5 flex gap-1">
-                      {options.map((o) => (
-                        <button key={o} type="button" data-score={`${key}-${o}`}
-                          data-active={value === o ? 'yes' : 'no'}
-                          onClick={() => set(o)}
-                          className={`${chip} ${value === o ? chipOn : chipOff}`}>
-                          {o}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                {/*
+                  ⚠️ 这里原来是 0/4/8/12 这种离散按钮。错了 —— 老师**会给部分分**,
+                    所以三项都可以是小数,SCORE 因此能取到 15 这种奇数。
+                    改成自由输入,只夹在 0..满分。
+                */}
+                {COMPONENTS.map((c) => (
+                  <label key={c.key} className="block">
+                    <span className={label}>{c.name} <span className="text-slate-600">/ {c.max}</span></span>
+                    <input type="number" min={0} max={c.max} step={0.5}
+                      value={project[c.key]} data-component={c.key}
+                      aria-label={`${c.name} score out of ${c.max}`}
+                      onChange={(e) => patchP({ [c.key]: clampComponent(num(e.target.value, project[c.key]), c.max) })}
+                      className="pts-input mt-1 w-[90px] rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-center font-mono text-[14px] tabular-nums text-slate-100" />
+                  </label>
                 ))}
               </div>
             </div>

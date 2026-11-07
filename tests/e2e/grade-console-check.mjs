@@ -62,6 +62,16 @@ async function setEarned(i, value) {
   }, value);
   await page.waitForTimeout(120);
 }
+
+/** 三个分项现在是自由数字框,不再是离散按钮。 */
+async function setComponent(key, value) {
+  await page.$eval(`[data-component="${key}"]`, (el, v) => {
+    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    set.call(el, String(v));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
+  await page.waitForTimeout(150);
+}
 async function toggle(sel, want) {
   const on = await page.$eval(sel, (el) => el.checked ?? el.getAttribute('aria-pressed') === 'true');
   if (on !== want) { await page.click(sel); await page.waitForTimeout(140); }
@@ -147,9 +157,11 @@ await fresh();
   await toggle('[data-field="doing"]', true);
   if ((await count('[data-guideline]')) !== 5) note(`expected 5 guideline checkboxes, got ${await count('[data-guideline]')}`);
 
-  // 种子是 SCORE 14 → +20
+  // 种子是 SCORE 15(8 + 5 + 2)→ +25。⚠️ 15 是奇数,这正是"可以拿部分分"的后果。
+  const comps = await page.$$eval('[data-component]', (els) => els.map((e) => Number(e.value)));
+  if (JSON.stringify(comps) !== JSON.stringify([8, 5, 2])) note(`seeded components should be 8/5/2, got [${comps}]`);
   const pts = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
-  if (pts !== 20) note(`the seeded project should be worth +20, got ${pts}`);
+  if (pts !== 25) note(`the seeded project should be worth +25, got ${pts}`);
 
   // ⚠️ 五条准则现在是**清单**,不是开关 —— 违规那条路不建模了,
   //   但页面必须把这个假设**写出来**,而不是让它看起来像"违规也没事"。
@@ -159,15 +171,24 @@ await fresh();
   if (!/[-\u2212]50/.test(assume)) note(`the assumption note should say what an unmet guideline would cost: "${assume}"`);
   if (await has('[data-guideline] input')) note('the guidelines should be a checklist, not toggles that change the maths');
 
-  // 满分作品
-  await page.click('[data-score="math-12"]');
-  await page.click('[data-score="artistic-6"]');
-  await page.waitForTimeout(140);
+  // ⭐ 小数也要能输:7.5 + 4.5 + 1.5 = 13.5 → +17.5,根本不是 10 的倍数
+  await setComponent('math', 7.5);
+  await setComponent('artistic', 4.5);
+  await setComponent('explanation', 1.5);
+  const frac = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
+  if (Math.abs(frac - 17.5) > 1e-9) note(`fractional components should give +17.5, got ${frac}`);
+  // 满分
+  await setComponent('math', 12);
+  await setComponent('artistic', 6);
+  await setComponent('explanation', 2);
   const best = await page.$eval('[data-project-points]', (el) => Number(el.dataset.value));
   if (best !== 50) note(`a perfect project should be +50, got ${best}`);
-  await page.click('[data-score="math-8"]');
-  await page.click('[data-score="artistic-4"]');
-  await page.waitForTimeout(140);
+  // 夹取
+  await setComponent('math', 99);
+  if ((await page.$eval('[data-component="math"]', (el) => Number(el.value))) !== 12) note('Mathematics should clamp at 12');
+  await setComponent('math', 8);
+  await setComponent('artistic', 5);
+  await setComponent('explanation', 2);
 }
 
 /* ── ④⭐⭐⭐ 饱和:+20 之后再高也一样 ────────────────────── */
@@ -178,10 +199,9 @@ await fresh();
   await setEarned(4, 90);
 
   const needAt = async (math, artistic, explanation) => {
-    await page.click(`[data-score="math-${math}"]`);
-    await page.click(`[data-score="artistic-${artistic}"]`);
-    await page.click(`[data-score="explanation-${explanation}"]`);
-    await page.waitForTimeout(170);
+    await setComponent('math', math);
+    await setComponent('artistic', artistic);
+    await setComponent('explanation', explanation);
     return val('need');
   };
   const twenty = await needAt(8, 4, 2);   // SCORE 14 → +20
@@ -217,8 +237,7 @@ await fresh();
   }
 
   // +10:加在 85 上严格更好
-  await page.click('[data-score="artistic-2"]');
-  await page.waitForTimeout(170);
+  await setComponent('artistic', 2);
   const atTen = await appliedName();
   // ⚠️ 这里**确实有并列**,而且是对的:+10 加在 85 上得 95,加在某个 90 上封顶到 100,
   //   两种都让计分集之和变成 366。要钉的是"不许落在 83 上",不是"没有并列"。
@@ -226,8 +245,7 @@ await fresh();
   const tenNeed = await val('need');
   // 手算:+10 的最优落点给出计分集 {91, 95, 90, 90} = 366 → 均分 91.5 → 期末 80.1
   if (Math.abs(tenNeed - needFor(91.5)) > 1e-9) note(`at +10 the final should need ${needFor(91.5)}, got ${tenNeed}`);
-  await page.click('[data-score="artistic-4"]');
-  await page.waitForTimeout(150);
+  await setComponent('artistic', 4);
 
   // 反导数考砸(70):它自己被丢掉,这时该加在 83 上,而且没有并列
   await setEarned(4, 70);
@@ -256,14 +274,17 @@ await fresh();
   if (Math.abs(worth - (86.6 - 76.85)) > 0.05) note(`the project should be worth about 9.75 points here, page says ${worth}`);
 
   // ⭐ 饱和提示:SCORE 14 之后再加码毫无意义,页面要直说
+  // ⭐ 饱和线是算出来的 13,不是直觉的 13.4
+  const satVal = await page.$eval('[data-saturation]', (el) => Number(el.dataset.value));
+  if (Math.abs(satVal - 13) > 0.05) note(`the saturating SCORE should compute to 13, got ${satVal}`);
   const sat = (await text('[data-saturation]')) ?? '';
-  if (!/worth nothing/i.test(sat)) note(`at SCORE 14 the page should say more is worth nothing: "${sat}"`);
-  await page.click('[data-score="artistic-0"]');
-  await page.waitForTimeout(170);
+  if (!/worth nothing/i.test(sat)) note(`past the saturating score the page should say so: "${sat}"`);
+  await setComponent('artistic', 0);
+  await setComponent('math', 4);
   const below = (await text('[data-saturation]')) ?? '';
   if (!/to go/.test(below)) note(`below the saturating score the page should say how far: "${below}"`);
-  await page.click('[data-score="artistic-4"]');
-  await page.waitForTimeout(150);
+  await setComponent('math', 8);
+  await setComponent('artistic', 4);
 }
 
 /* ── ⑦ 丢最低已确认;算法仍未确认 ───────────────────────── */
@@ -366,5 +387,5 @@ if (fail.length) {
   for (const f of fail) console.error('  - ' + f);
   process.exit(1);
 }
-console.log('✓ grade-console:87.25 / 88.95 / 88.67 / 90.18 / 87.47 全部手算一致、+20 之后饱和、'
+console.log('✓ grade-console:87.25 / 88.95 / 88.67 / 90.18 / 87.47 全部手算一致、分项可填小数(SCORE 15 → +25)、饱和线算出来是 13、'
   + '加分落点三种情形三种答案、T ≤ 85 时曲线变平(不是 70)、今天 89(B)与丢完后 90(A)分开显示、两种剩余情形、丢最低已确认、准则按清单呈现且假设写明、饱和线提示正确、无 CJK');
